@@ -15,7 +15,15 @@ namespace ProxyMapService.Controllers
         {
             return Ok(new StatsResponse
             {
-                serviceInfo = service.GetServiceInfo()
+                serviceInfo = service.GetServiceInfo(),
+                sessionsCount = service.GetSessionsCount(),
+                authenticationNotRequired = service.GetAuthenticationNotRequired(),
+                authenticationRequired = service.GetAuthenticationRequired(),
+                authenticated = service.GetAuthenticated(),
+                authenticationInvalid = service.GetAuthenticationInvalid(),
+                httpRejected = service.GetHttpRejected(),
+                totalBytesRead = service.GetTotalBytesRead(),
+                totalBytesSent = service.GetTotalBytesSent()
             });
         }
     }

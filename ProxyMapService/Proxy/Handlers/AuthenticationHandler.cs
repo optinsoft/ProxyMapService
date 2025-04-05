@@ -15,22 +15,27 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (!IsAuthenticationRequired(context))
                 {
+                    context.SessionsCounter?.OnAuthenticationNotRequired();
                     return HandleStep.AuthenticationNotRequired;
                 }
+                context.SessionsCounter?.OnAuthenticationRequired();
                 await SendProxyAuthenticationRequired(context);
                 return HandleStep.Terminate;
             }
 
             if (!IsVerifyAuthentication(context))
             {
+                context.SessionsCounter?.OnAuthenticated();
                 return HandleStep.Authenticated;
             }
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
+                context.SessionsCounter?.OnAuthenticated();
                 return HandleStep.Authenticated;
             }
 
+            context.SessionsCounter?.OnAuthenticationInvalid();
             await SendProxyAuthenticationInvalid(context);
             return HandleStep.Terminate;
         }
@@ -42,7 +47,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static bool IsAuthenticationRequired(SessionContext context)
         {
-            return context.mapping.Authentication.Required;
+            return context.Mapping.Authentication.Required;
         }
 
         private static bool IsProxyAuthorizationHeaderPresent(SessionContext context)
@@ -52,7 +57,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static bool IsVerifyAuthentication(SessionContext context)
         {
-            return context.mapping.Authentication.Verify;
+            return context.Mapping.Authentication.Verify;
         }
 
         private static bool IsProxyAuthorizationCredentialsCorrect(SessionContext context)
@@ -61,7 +66,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (proxyAuthorization == null) return false;
 
-            return Encoding.ASCII.GetString(Convert.FromBase64String(proxyAuthorization)) == $"{context.mapping.Authentication.Username}:{context.mapping.Authentication.Password}";
+            return Encoding.ASCII.GetString(Convert.FromBase64String(proxyAuthorization)) == $"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}";
         }
 
         private static async Task SendProxyAuthenticationRequired(SessionContext context)

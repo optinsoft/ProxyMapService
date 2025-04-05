@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Listeners;
 using ProxyMapService.Proxy.Sessions;
 using System.Data;
@@ -7,10 +8,8 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy
 {
-    public class ProxyMapper(ProxyMapping mapping, ILogger logger) : IDisposable
+    public class ProxyMapper : IDisposable
     {
-        private readonly ProxyMapping _mapping = mapping;
-        private readonly ILogger _logger = logger;
         private Listener? _listener;
 
         public void Dispose()
@@ -30,13 +29,16 @@ namespace ProxyMapService.Proxy
             }
         }
 
-        public async Task Start()
+        public async Task Start(ProxyMapping mapping,
+            SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
+            ILogger logger)
         {
-            var localEndPoint = new IPEndPoint(IPAddress.Loopback, _mapping.Listen.Port);
+            var localEndPoint = new IPEndPoint(IPAddress.Loopback, mapping.Listen.Port);
 
-            async void clientHandler(TcpClient client, CancellationToken token) => await Session.Run(client, _mapping, _logger, token);
+            async void clientHandler(TcpClient client, CancellationToken token) => 
+                await Session.Run(client, mapping, sessionsCounter, readCounter, sentCounter, logger, token);
 
-            _listener = new Listener(localEndPoint, clientHandler, _logger);
+            _listener = new Listener(localEndPoint, clientHandler, logger);
 
             await _listener.Start();
         }

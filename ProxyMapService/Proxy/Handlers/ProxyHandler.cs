@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Counters;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -14,19 +15,20 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.mapping.Listen.RejectHttpProxy && context.Header?.Verb != "CONNECT")
+            if (context.Mapping.Listen.RejectHttpProxy && context.Header?.Verb != "CONNECT")
             {
+                context.SessionsCounter?.OnHttpRejected();
                 await SendMethodNotAllowed(context);
                 return HandleStep.Terminate;
             }
 
-            string? proxyAuthorization = !context.mapping.Authentication.SetHeader 
+            string? proxyAuthorization = !context.Mapping.Authentication.SetHeader 
                 ? null 
-                : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.mapping.Authentication.Username}:{context.mapping.Authentication.Password}"));
+                : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
 
             var headerBytes = context.Header?.GetBytes(proxyAuthorization);
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.mapping.ProxyServer.Host, context.mapping.ProxyServer.Port);
+            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.Mapping.ProxyServer.Host, context.Mapping.ProxyServer.Port);
 
             using var remoteClient = new TcpClient();
 
@@ -40,13 +42,14 @@ namespace ProxyMapService.Proxy.Handlers
                 if (headerBytes != null && headerBytes.Length > 0)
                 {
                     await remoteStream.WriteAsync(headerBytes, context.Token);
+                    context.SentCounter?.OnBytesSent(headerBytes.Length);
                 }
 
                 //var forwardTask = localStream.CopyToAsync(remoteStream, context.Token);
                 //var reverseTask = remoteStream.CopyToAsync(localStream, context.Token);
 
-                var forwardTask = Tunnel(localStream, remoteStream, context);
-                var reverseTask = Tunnel(remoteStream, localStream, context);
+                var forwardTask = Tunnel(localStream, remoteStream, context, null, context.SentCounter);
+                var reverseTask = Tunnel(remoteStream, localStream, context, context.ReadCounter, null);
 
                 await Task.WhenAny(forwardTask, reverseTask);
             }
@@ -54,7 +57,7 @@ namespace ProxyMapService.Proxy.Handlers
             return HandleStep.Terminate;
         }
 
-        private static async Task Tunnel(Stream source, Stream destination, SessionContext context)
+        private static async Task Tunnel(Stream source, Stream destination, SessionContext context, BytesReadCounter? readCounter, BytesSentCounter? sentCounter)
         {
             var buffer = new byte[BufferSize];
 
@@ -66,7 +69,9 @@ namespace ProxyMapService.Proxy.Handlers
                 do
                 {
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
+                    readCounter?.OnBytesRead(bytesRead);
                     await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
+                    sentCounter?.OnBytesSent(bytesRead);
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
             }
             catch (ObjectDisposedException)

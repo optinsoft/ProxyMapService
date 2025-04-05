@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Proxy;
 using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Counters;
 using System.Net;
 
 namespace ProxyMapService.Services
@@ -13,6 +14,9 @@ namespace ProxyMapService.Services
         private readonly List<Task> _tasks = [];
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
+        private readonly SessionsCounter _sessionsCounter = new();
+        private readonly BytesReadCounter _readCounter = new();
+        private readonly BytesSentCounter _sentCounter = new();
 
         public ProxyService(IConfiguration configuration, ILogger<ProxyService> logger)
         {
@@ -33,11 +37,8 @@ namespace ProxyMapService.Services
             {
                 foreach (var mapping in proxyMappings)
                 {
-                    _tasks.Add(
-                        new ProxyMapper(
-                            mapping,
-                            _logger
-                        ).Start());
+                    _tasks.Add(new ProxyMapper().Start(
+                        mapping, _sessionsCounter, _readCounter, _sentCounter, _logger));
                 }
             }
         }
@@ -45,6 +46,46 @@ namespace ProxyMapService.Services
         public string GetServiceInfo()
         {
             return _serviceInfo;
+        }
+
+        public int GetSessionsCount()
+        {
+            return _sessionsCounter.Count;
+        }
+
+        public int GetAuthenticationNotRequired()
+        {
+            return _sessionsCounter.AuthenticationNotRequired;
+        }
+        
+        public int GetAuthenticationRequired()
+        {
+            return _sessionsCounter.AuthenticationRequired;
+        }
+        
+        public int GetAuthenticated()
+        {
+            return _sessionsCounter.Authenticated;
+        }
+        
+        public int GetAuthenticationInvalid()
+        {
+            return _sessionsCounter.AuthenticationInvalid;
+        }
+
+        public int GetHttpRejected()
+        {
+            return _sessionsCounter.HttpRejected;
+        }
+
+        public long GetTotalBytesRead()
+        {
+            return _readCounter.TotalBytesRead;
+        }
+
+        public long GetTotalBytesSent()
+        {
+            return _sentCounter.TotalBytesSent;
         }
     }
 }

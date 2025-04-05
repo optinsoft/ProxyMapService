@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using System.Net;
 using System.Net.Sockets;
@@ -16,10 +17,13 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Authenticated, ProxyHandler.Instance() }
         };
 
-        public static async Task Run(TcpClient client, ProxyMapping mapping, ILogger logger, CancellationToken token)
+        public static async Task Run(TcpClient client, ProxyMapping mapping, 
+            SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
+            ILogger logger, CancellationToken token)
         {
+            sessionsCounter?.OnSessionStarted();
             var step = HandleStep.Initialize;
-            using var context = new SessionContext(client, mapping, logger, token);
+            using var context = new SessionContext(client, mapping, sessionsCounter, readCounter, sentCounter, logger, token);
             do
             {
                 try
