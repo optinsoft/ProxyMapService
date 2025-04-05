@@ -9,6 +9,8 @@
         public int Authenticated { get; private set; }
         public int AuthenticationInvalid { get; private set; }
         public int HttpRejected { get; private set; }
+        public int Connected { get; private set; }
+        public int ConnectionFailed { get; private set; }
 
         public void OnSessionStarted()
         {
@@ -64,11 +66,31 @@
             HttpRejectedHandler?.Invoke(this, EventArgs.Empty);
         }
 
+        public void OnConnected()
+        {
+            lock (_lock)
+            {
+                Connected += 1;
+            }
+            ConnectedHandler?.Invoke(this, EventArgs.Empty);
+        }
+
+        public void OnConnectionFailed()
+        {
+            lock (_lock)
+            {
+                ConnectionFailed += 1;
+            }
+            ConnectionFailedHandler?.Invoke(this, EventArgs.Empty);
+        }
+
         public event EventHandler? SessionStartedHandler;
         public event EventHandler? AuthenticationNotRequiredHandler;
         public event EventHandler? AuthenticationRequiredHandler;
         public event EventHandler? AuthenticatedHandler;
         public event EventHandler? AuthenticationInvalidHandler;
         public event EventHandler? HttpRejectedHandler;
+        public event EventHandler? ConnectedHandler;
+        public event EventHandler? ConnectionFailedHandler;
     }
 }

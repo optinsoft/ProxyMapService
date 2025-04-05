@@ -32,7 +32,17 @@ namespace ProxyMapService.Proxy.Handlers
 
             using var remoteClient = new TcpClient();
 
-            await remoteClient.ConnectAsync(remoteEndPoint, context.Token);
+            try
+            {
+                await remoteClient.ConnectAsync(remoteEndPoint, context.Token);
+            }
+            catch (Exception)
+            {
+                context.SessionsCounter?.OnConnectionFailed();
+                throw;
+            }
+
+            context.SessionsCounter?.OnConnected();
 
             if (!context.Token.IsCancellationRequested)
             {

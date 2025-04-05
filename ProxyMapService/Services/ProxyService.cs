@@ -78,6 +78,16 @@ namespace ProxyMapService.Services
             return _sessionsCounter.HttpRejected;
         }
 
+        public int GetConnected()
+        {
+            return _sessionsCounter.Connected;
+        }
+        
+        public int GetConnectionFailed()
+        {
+            return _sessionsCounter.ConnectionFailed;
+        }
+
         public long GetTotalBytesRead()
         {
             return _readCounter.TotalBytesRead;
