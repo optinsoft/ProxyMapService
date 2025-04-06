@@ -11,6 +11,7 @@
         public int HttpRejected { get; private set; }
         public int Connected { get; private set; }
         public int ConnectionFailed { get; private set; }
+        public int HeaderFailed { get; private set; }
 
         public void OnSessionStarted()
         {
@@ -84,6 +85,15 @@
             ConnectionFailedHandler?.Invoke(this, EventArgs.Empty);
         }
 
+        public void OnHeaderFailed()
+        {
+            lock (_lock)
+            {
+                HeaderFailed += 1;
+            }
+            HeaderFailedHander?.Invoke(this, EventArgs.Empty);
+        }
+
         public event EventHandler? SessionStartedHandler;
         public event EventHandler? AuthenticationNotRequiredHandler;
         public event EventHandler? AuthenticationRequiredHandler;
@@ -92,5 +102,6 @@
         public event EventHandler? HttpRejectedHandler;
         public event EventHandler? ConnectedHandler;
         public event EventHandler? ConnectionFailedHandler;
+        public event EventHandler? HeaderFailedHander;
     }
 }

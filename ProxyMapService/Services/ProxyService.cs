@@ -88,6 +88,11 @@ namespace ProxyMapService.Services
             return _sessionsCounter.ConnectionFailed;
         }
 
+        public int GetHeaderFailed()
+        {
+            return _sessionsCounter.HeaderFailed;
+        }
+
         public long GetTotalBytesRead()
         {
             return _readCounter.TotalBytesRead;

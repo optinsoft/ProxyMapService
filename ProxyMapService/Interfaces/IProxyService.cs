@@ -13,6 +13,7 @@ namespace ProxyMapService.Interfaces
         int GetHttpRejected();
         int GetConnected();
         int GetConnectionFailed();
+        int GetHeaderFailed();
         long GetTotalBytesRead();
         long GetTotalBytesSent();
     }

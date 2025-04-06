@@ -12,6 +12,7 @@
         public int? httpRejected { get; set; }
         public int? connected { get; set; }
         public int? connectionFailed { get; set; }
+        public int? headerFailed { get; set; }
         public long? totalBytesRead { get; set; }
         public long? totalBytesSent { get; set; }
 #pragma warning restore IDE1006 // Naming Styles

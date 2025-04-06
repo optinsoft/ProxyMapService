@@ -9,9 +9,22 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            context.ClientStream = context.Client.GetStream();
-            context.Header = await HttpHeaderStream.Instance().GetHeader(context.ClientStream, context.Token);
-            return context.Header != null ? HandleStep.Initialized : HandleStep.Terminate;
+            try
+            {
+                context.ClientStream = context.Client.GetStream();
+                context.Header = await HttpHeaderStream.Instance().GetHeader(context.ClientStream, context.Token);
+            }
+            catch(Exception)
+            {
+                context.SessionsCounter?.OnHeaderFailed();
+                throw;
+            }
+            if (context.Header == null)
+            {
+                context.SessionsCounter?.OnHeaderFailed();
+                return HandleStep.Terminate;
+            }
+            return HandleStep.Initialized;
         }
 
         public static InitializeHandler Instance()

@@ -24,6 +24,7 @@ namespace ProxyMapService.Controllers
                 httpRejected = service.GetHttpRejected(),
                 connected = service.GetConnected(),
                 connectionFailed = service.GetConnectionFailed(),
+                headerFailed = service.GetHeaderFailed(),
                 totalBytesRead = service.GetTotalBytesRead(),
                 totalBytesSent = service.GetTotalBytesSent()
             });
