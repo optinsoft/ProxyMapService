@@ -67,6 +67,8 @@ app.UseCors(AllowAllCors);
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapGet("/", () => "Hello World!");
+
 app.MapControllers();
 
 app.Run();
