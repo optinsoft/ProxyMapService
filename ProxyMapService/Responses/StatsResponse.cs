@@ -1,4 +1,6 @@
-﻿namespace ProxyMapService.Responses
+﻿using Newtonsoft.Json;
+
+namespace ProxyMapService.Responses
 {
     public class StatsResponse
     {
@@ -13,8 +15,10 @@
         public int? connected { get; set; }
         public int? connectionFailed { get; set; }
         public int? headerFailed { get; set; }
+        public int? HostFailed { get; set; }
         public long? totalBytesRead { get; set; }
         public long? totalBytesSent { get; set; }
+        public List<HostStatsResponse>? hosts { get; set; }
 #pragma warning restore IDE1006 // Naming Styles
     }
 }

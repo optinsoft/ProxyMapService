@@ -15,27 +15,27 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (!IsAuthenticationRequired(context))
                 {
-                    context.SessionsCounter?.OnAuthenticationNotRequired();
+                    context.SessionsCounter?.OnAuthenticationNotRequired(context);
                     return HandleStep.AuthenticationNotRequired;
                 }
-                context.SessionsCounter?.OnAuthenticationRequired();
+                context.SessionsCounter?.OnAuthenticationRequired(context);
                 await SendProxyAuthenticationRequired(context);
                 return HandleStep.Terminate;
             }
 
             if (!IsVerifyAuthentication(context))
             {
-                context.SessionsCounter?.OnAuthenticated();
+                context.SessionsCounter?.OnAuthenticated(context);
                 return HandleStep.Authenticated;
             }
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
-                context.SessionsCounter?.OnAuthenticated();
+                context.SessionsCounter?.OnAuthenticated(context);
                 return HandleStep.Authenticated;
             }
 
-            context.SessionsCounter?.OnAuthenticationInvalid();
+            context.SessionsCounter?.OnAuthenticationInvalid(context);
             await SendProxyAuthenticationInvalid(context);
             return HandleStep.Terminate;
         }

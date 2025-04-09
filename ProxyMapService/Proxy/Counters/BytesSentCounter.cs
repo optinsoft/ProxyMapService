@@ -1,4 +1,6 @@
-﻿namespace ProxyMapService.Proxy.Counters
+﻿using ProxyMapService.Proxy.Sessions;
+
+namespace ProxyMapService.Proxy.Counters
 {
     public class BytesSentCounter
     {
@@ -24,7 +26,7 @@
             }
         }
 
-        public void OnBytesSent(int bytesSent)
+        public void OnBytesSent(SessionContext context, int bytesSent)
         {
             lock(_lock)
             {
@@ -34,7 +36,7 @@
             {
                 BytesSent = bytesSent
             };
-            BytesSentHandler?.Invoke(this, args);
+            BytesSentHandler?.Invoke(context, args);
         }
 
         public event EventHandler<BytesSentEventArgs>? BytesSentHandler;

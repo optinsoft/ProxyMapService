@@ -15,9 +15,16 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
+            if (context.Header?.Host == null || context.Header.Host.Hostname.Length == 0)
+            {
+                context.SessionsCounter?.OnHostFailed(context);
+                return HandleStep.Terminate;
+            }
+            context.SessionsCounter?.OnHTTPRequest(context);
+
             if (context.Mapping.Listen.RejectHttpProxy && context.Header?.Verb != "CONNECT")
             {
-                context.SessionsCounter?.OnHttpRejected();
+                context.SessionsCounter?.OnHttpRejected(context);
                 await SendMethodNotAllowed(context);
                 return HandleStep.Terminate;
             }
@@ -38,11 +45,11 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (Exception)
             {
-                context.SessionsCounter?.OnConnectionFailed();
+                context.SessionsCounter?.OnConnectionFailed(context);
                 throw;
             }
 
-            context.SessionsCounter?.OnConnected();
+            context.SessionsCounter?.OnConnected(context);
 
             if (!context.Token.IsCancellationRequested)
             {
@@ -52,7 +59,7 @@ namespace ProxyMapService.Proxy.Handlers
                 if (headerBytes != null && headerBytes.Length > 0)
                 {
                     await remoteStream.WriteAsync(headerBytes, context.Token);
-                    context.SentCounter?.OnBytesSent(headerBytes.Length);
+                    context.SentCounter?.OnBytesSent(context, headerBytes.Length);
                 }
 
                 //var forwardTask = localStream.CopyToAsync(remoteStream, context.Token);
@@ -79,9 +86,9 @@ namespace ProxyMapService.Proxy.Handlers
                 do
                 {
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
-                    readCounter?.OnBytesRead(bytesRead);
+                    readCounter?.OnBytesRead(context, bytesRead);
                     await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
-                    sentCounter?.OnBytesSent(bytesRead);
+                    sentCounter?.OnBytesSent(context, bytesRead);
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
             }
             catch (ObjectDisposedException)

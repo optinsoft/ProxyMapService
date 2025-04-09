@@ -1,9 +1,13 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Proxy.Network;
+using ProxyMapService.Counters;
 using ProxyMapService.Interfaces;
+using ProxyMapService.Models;
 using ProxyMapService.Proxy;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Sessions;
 using System.Net;
 
 namespace ProxyMapService.Services
@@ -15,6 +19,7 @@ namespace ProxyMapService.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
         private readonly SessionsCounter _sessionsCounter = new();
+        private readonly HostsCounter? _hostsCounter = null;
         private readonly BytesReadCounter _readCounter = new();
         private readonly BytesSentCounter _sentCounter = new();
 
@@ -22,6 +27,18 @@ namespace ProxyMapService.Services
         {
             _configuration = configuration;
             _logger = logger;
+            var HostStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("Enabled") ?? false;
+            if (HostStatsEnabled)
+            {
+                _hostsCounter = new();
+                _sessionsCounter.HTTPRequestHandler += _hostsCounter.SessionHTTPRequest;
+                var HostTrafficStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("TrafficStats") ?? false;
+                if (HostTrafficStatsEnabled)
+                {
+                    _readCounter.BytesReadHandler += _hostsCounter.SessionBytesRead;
+                    _sentCounter.BytesSentHandler += _hostsCounter.SessionBytesSent;
+                }
+            }
             AddProxyMappingTasks();
         }
 
@@ -93,6 +110,11 @@ namespace ProxyMapService.Services
             return _sessionsCounter.HeaderFailed;
         }
 
+        public int GetHostFailed()
+        {
+            return _sessionsCounter.HostFailed;
+        }
+
         public long GetTotalBytesRead()
         {
             return _readCounter.TotalBytesRead;
@@ -101,6 +123,15 @@ namespace ProxyMapService.Services
         public long GetTotalBytesSent()
         {
             return _sentCounter.TotalBytesSent;
+        }
+
+        public IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats()
+        {
+            if (_hostsCounter == null)
+            {
+                return [];
+            }
+            return _hostsCounter.GetHostStats();
         }
     }
 }

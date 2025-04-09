@@ -21,9 +21,9 @@ namespace ProxyMapService.Proxy.Sessions
             SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
             ILogger logger, CancellationToken token)
         {
-            sessionsCounter?.OnSessionStarted();
-            var step = HandleStep.Initialize;
             using var context = new SessionContext(client, mapping, sessionsCounter, readCounter, sentCounter, logger, token);
+            sessionsCounter?.OnSessionStarted(context);
+            var step = HandleStep.Initialize;
             do
             {
                 try

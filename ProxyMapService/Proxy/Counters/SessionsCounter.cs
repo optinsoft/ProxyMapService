@@ -1,4 +1,7 @@
-﻿namespace ProxyMapService.Proxy.Counters
+﻿using Proxy.Network;
+using ProxyMapService.Proxy.Sessions;
+
+namespace ProxyMapService.Proxy.Counters
 {
     public class SessionsCounter
     {
@@ -12,86 +15,106 @@
         public int Connected { get; private set; }
         public int ConnectionFailed { get; private set; }
         public int HeaderFailed { get; private set; }
+        public int HostFailed { get; private set; }
+        public int HTTPRequests { get; private set; }
 
-        public void OnSessionStarted()
+        public void OnSessionStarted(SessionContext context)
         {
             lock (_lock)
             {
                 Count += 1;
             }
-            SessionStartedHandler?.Invoke(this, EventArgs.Empty);
+            SessionStartedHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnAuthenticationNotRequired()
+        public void OnAuthenticationNotRequired(SessionContext context)
         {
             lock (_lock)
             {
                 AuthenticationNotRequired += 1;
             }
-            AuthenticationNotRequiredHandler?.Invoke(this, EventArgs.Empty);
+            AuthenticationNotRequiredHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnAuthenticationRequired()
+        public void OnAuthenticationRequired(SessionContext context)
         {
             lock (_lock)
             {
                 AuthenticationRequired += 1;
             }
-            AuthenticationRequiredHandler?.Invoke(this, EventArgs.Empty);
+            AuthenticationRequiredHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnAuthenticated()
+        public void OnAuthenticated(SessionContext context)
         {
             lock (_lock)
             {
                 Authenticated += 1;
             }
-            AuthenticatedHandler?.Invoke(this, EventArgs.Empty);
+            AuthenticatedHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnAuthenticationInvalid()
+        public void OnAuthenticationInvalid(SessionContext context)
         {
             lock (_lock)
             {
                 AuthenticationInvalid += 1;
             }
-            AuthenticationInvalidHandler?.Invoke(this, EventArgs.Empty);
+            AuthenticationInvalidHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnHttpRejected()
+        public void OnHttpRejected(SessionContext context)
         {
             lock (_lock)
             {
                 HttpRejected += 1;
             }
-            HttpRejectedHandler?.Invoke(this, EventArgs.Empty);
+            HttpRejectedHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnConnected()
+        public void OnConnected(SessionContext context)
         {
             lock (_lock)
             {
                 Connected += 1;
             }
-            ConnectedHandler?.Invoke(this, EventArgs.Empty);
+            ConnectedHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnConnectionFailed()
+        public void OnConnectionFailed(SessionContext context)
         {
             lock (_lock)
             {
                 ConnectionFailed += 1;
             }
-            ConnectionFailedHandler?.Invoke(this, EventArgs.Empty);
+            ConnectionFailedHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnHeaderFailed()
+        public void OnHeaderFailed(SessionContext context)
         {
             lock (_lock)
             {
                 HeaderFailed += 1;
             }
-            HeaderFailedHander?.Invoke(this, EventArgs.Empty);
+            HeaderFailedHander?.Invoke(context, EventArgs.Empty);
+        }
+
+        public void OnHostFailed(SessionContext context)
+        {
+            lock (_lock)
+            {
+                HostFailed += 1;
+            }
+            HostFailedHander?.Invoke(context, EventArgs.Empty);
+        }
+
+        public void OnHTTPRequest(SessionContext context)
+        {
+            lock (_lock)
+            {
+                HTTPRequests += 1;
+            }
+            HTTPRequestHandler?.Invoke(context, EventArgs.Empty);
         }
 
         public event EventHandler? SessionStartedHandler;
@@ -103,5 +126,7 @@
         public event EventHandler? ConnectedHandler;
         public event EventHandler? ConnectionFailedHandler;
         public event EventHandler? HeaderFailedHander;
+        public event EventHandler? HostFailedHander;
+        public event EventHandler? HTTPRequestHandler;
     }
 }

@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using ProxyMapService.Models;
+using ProxyMapService.Proxy.Counters;
 
 namespace ProxyMapService.Interfaces
 {
@@ -14,7 +15,9 @@ namespace ProxyMapService.Interfaces
         int GetConnected();
         int GetConnectionFailed();
         int GetHeaderFailed();
+        int GetHostFailed();
         long GetTotalBytesRead();
         long GetTotalBytesSent();
+        IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats();
     }
 }

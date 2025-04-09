@@ -1,4 +1,6 @@
-﻿namespace ProxyMapService.Proxy.Counters
+﻿using ProxyMapService.Proxy.Sessions;
+
+namespace ProxyMapService.Proxy.Counters
 {
     public class BytesReadCounter
     {
@@ -21,7 +23,7 @@
             }
         }
 
-        public void OnBytesRead(int bytesRead)
+        public void OnBytesRead(SessionContext context, int bytesRead)
         {
             lock(_lock)
             {
@@ -31,7 +33,7 @@
             {
                 BytesRead = bytesRead
             };
-            BytesReadHandler?.Invoke(this, args);
+            BytesReadHandler?.Invoke(context, args);
         }
 
         public event EventHandler<BytesReadEventArgs>? BytesReadHandler;

@@ -16,12 +16,12 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch(Exception)
             {
-                context.SessionsCounter?.OnHeaderFailed();
+                context.SessionsCounter?.OnHeaderFailed(context);
                 throw;
             }
             if (context.Header == null)
             {
-                context.SessionsCounter?.OnHeaderFailed();
+                context.SessionsCounter?.OnHeaderFailed(context);
                 return HandleStep.Terminate;
             }
             return HandleStep.Initialized;
