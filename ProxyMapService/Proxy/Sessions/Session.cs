@@ -13,15 +13,19 @@ namespace ProxyMapService.Proxy.Sessions
             //{ HandleStep.Initialize, ForwardHandler.Instance() },
             { HandleStep.Initialize, InitializeHandler.Instance() },
             { HandleStep.Initialized, AuthenticationHandler.Instance() },
-            { HandleStep.AuthenticationNotRequired, ProxyHandler.Instance() },
-            { HandleStep.Authenticated, ProxyHandler.Instance() }
+            { HandleStep.AuthenticationNotRequired, HostActionHandler.Instance() },
+            { HandleStep.Authenticated, HostActionHandler.Instance() },
+            { HandleStep.Proxy, ProxyHandler.Instance() },
+            { HandleStep.Bypass, BypassHandler.Instance() },
+            { HandleStep.Tunnel, TunnelHandler.Instance() }
         };
 
-        public static async Task Run(TcpClient client, ProxyMapping mapping, 
+        public static async Task Run(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules,
             SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
             ILogger logger, CancellationToken token)
         {
-            using var context = new SessionContext(client, mapping, sessionsCounter, readCounter, sentCounter, logger, token);
+            using var context = new SessionContext(client, mapping, hostRules, 
+                sessionsCounter, readCounter, sentCounter, logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do

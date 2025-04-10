@@ -6,12 +6,14 @@ using ProxyMapService.Proxy.Counters;
 
 namespace ProxyMapService.Proxy.Sessions
 {
-    public class SessionContext(TcpClient client, ProxyMapping mapping,
+    public class SessionContext(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules,
         SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter, 
         ILogger logger, CancellationToken token) : IDisposable
     {
         public TcpClient Client { get; private set; } = client;
+        public TcpClient RemoteClient { get; set; } = new TcpClient();
         public ProxyMapping Mapping { get; private set; } = mapping;
+        public List<HostRule>? HostRules { get; private set; } = hostRules;
         public SessionsCounter? SessionsCounter { get; private set; } = sessionsCounter;
         public BytesReadCounter? ReadCounter { get; private set; } = readCounter;
         public BytesSentCounter? SentCounter { get; private set; } = sentCounter;
@@ -20,6 +22,12 @@ namespace ProxyMapService.Proxy.Sessions
 
         public NetworkStream? ClientStream { get; set; }
         public HttpHeader? Header { get; set; }
+        public string HostName { get; set; } = "";
+        public int HostPort { get; set; }
+        public ActionEnum? HostAction { get; set; }
+        public bool Proxified { get; set; }
+        public bool Bypassed { get; set; }
+        public byte[]? TunnelHeaderBytes { get; set; }
 
         public void Dispose()
         {
@@ -38,6 +46,7 @@ namespace ProxyMapService.Proxy.Sessions
                     }
                     ClientStream = null;
                 }
+                RemoteClient.Dispose();
             }
         }
     }

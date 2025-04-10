@@ -15,6 +15,37 @@ namespace ProxyMapService.Controllers
         [HttpGet(Name = "getStats")]
         public ActionResult<StatsResponse> GetStats()
         {
+            return Ok(new StatsResponse
+            {
+                serviceInfo = service.GetServiceInfo(),
+                currentTime = service.GetCurrentTime(),
+                sessionsCount = service.GetSessionsCount(),
+                authenticationNotRequired = service.GetAuthenticationNotRequired(),
+                authenticationRequired = service.GetAuthenticationRequired(),
+                authenticated = service.GetAuthenticated(),
+                authenticationInvalid = service.GetAuthenticationInvalid(),
+                httpRejected = service.GetHttpRejected(),
+                headerFailed = service.GetHeaderFailed(),
+                noHost = service.GetNoHost(),
+                hostRejected = service.GetHostRejected(),
+                hostProxified = service.GetHostProxified(),
+                hostBypassed = service.GetHostBypassed(),
+                proxyConnected = service.GetProxyConnected(),
+                proxyFailed = service.GetProxyFailed(),
+                bypassConnected = service.GetBypassConnected(),
+                bypassFailed = service.GetBypassFailed(),
+                totalBytesRead = service.GetTotalBytesRead(),
+                totalBytesSent = service.GetTotalBytesSent(),
+                proxyBytesRead = service.GetProxyBytesRead(),
+                proxyBytesSent = service.GetProxyBytesSent(),
+                bypassBytesRead = service.GetBypassBytesRead(),
+                bypassBytesSent = service.GetBypassBytesSent()
+            });
+        }
+
+        [HttpGet("Hosts")]
+        public ActionResult<HostsResponse> GetHosts()
+        {
             List<HostStatsResponse>? responseHosts = null;
             var hostStats = service.GetHostStats();
             if (hostStats != null)
@@ -23,29 +54,19 @@ namespace ProxyMapService.Controllers
                 foreach (var entry in hostStats)
                 {
                     HostStats hs = entry.Value;
-                    responseHosts.Add(new HostStatsResponse() { 
+                    responseHosts.Add(new HostStatsResponse()
+                    {
                         hostName = entry.Key,
+                        proxified = hs.Proxified,
+                        bypassed = hs.Bypassed,
                         requestsCount = hs.Count,
                         bytesRead = hs.BytesRead,
                         bytesSent = hs.BytesSent
                     });
                 }
             }
-            return Ok(new StatsResponse
+            return Ok(new HostsResponse
             {
-                serviceInfo = service.GetServiceInfo(),
-                sessionsCount = service.GetSessionsCount(),
-                authenticationNotRequired = service.GetAuthenticationNotRequired(),
-                authenticationRequired = service.GetAuthenticationRequired(),
-                authenticated = service.GetAuthenticated(),
-                authenticationInvalid = service.GetAuthenticationInvalid(),
-                httpRejected = service.GetHttpRejected(),
-                connected = service.GetConnected(),
-                connectionFailed = service.GetConnectionFailed(),
-                headerFailed = service.GetHeaderFailed(),
-                HostFailed = service.GetHostFailed(),
-                totalBytesRead = service.GetTotalBytesRead(),
-                totalBytesSent = service.GetTotalBytesSent(),
                 hosts = responseHosts
             });
         }

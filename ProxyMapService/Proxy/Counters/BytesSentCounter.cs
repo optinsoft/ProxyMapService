@@ -6,6 +6,8 @@ namespace ProxyMapService.Proxy.Counters
     {
         private readonly object _lock = new();
         private long _total;
+        private long _proxified;
+        private long _bypassed;
 
         public long TotalBytesSent
         {
@@ -26,17 +28,60 @@ namespace ProxyMapService.Proxy.Counters
             }
         }
 
+        public long ProxyBytesSent
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _proxified;
+                }
+            }
+            private set
+            {
+                lock (_lock)
+                {
+                    _proxified = value;
+                }
+            }
+        }
+
+        public long BypassBytesSent
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _bypassed;
+                }
+            }
+            private set
+            {
+                lock (_lock)
+                {
+                    _bypassed = value;
+                }
+            }
+        }
+
         public void OnBytesSent(SessionContext context, int bytesSent)
         {
             lock(_lock)
             {
                 _total += bytesSent;
+                if (context.Proxified)
+                {
+                    _proxified += (long)bytesSent;
+                }
+                if (context.Bypassed)
+                {
+                    _bypassed += (long)bytesSent;
+                }
             }
-            BytesSentEventArgs args = new()
+            BytesSentHandler?.Invoke(context, new()
             {
                 BytesSent = bytesSent
-            };
-            BytesSentHandler?.Invoke(context, args);
+            });
         }
 
         public event EventHandler<BytesSentEventArgs>? BytesSentHandler;

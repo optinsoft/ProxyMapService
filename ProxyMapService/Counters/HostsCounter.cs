@@ -20,67 +20,49 @@ namespace ProxyMapService.Counters
             return stats;
         }
 
-        public void SessionHTTPRequest(object? sender, EventArgs e)
+        public void OnHostConnected(object? sender, EventArgs e)
         {
-            var context = (SessionContext?)sender;
-            if (context?.Header?.Host != null)
+            if (sender == null) return;
+            var context = (SessionContext)sender;
+            lock (_lock)
             {
-                Address host = context.Header.Host;
-                if (host.Hostname.Length > 0)
+                var hostStats = _hostStats.GetValueOrDefault(context.HostName, new()
                 {
-                    lock (_lock)
-                    {
-                        var hostStats = _hostStats.GetValueOrDefault(host.Hostname, new()
-                        {
-                            Count = 0,
-                            BytesRead = 0,
-                            BytesSent = 0
-                        });
-                        hostStats.Count += 1;
-                        _hostStats[host.Hostname] = hostStats;
-                    }
+                    Count = 0,
+                    Proxified = context.Proxified,
+                    Bypassed = context.Bypassed,
+                    BytesRead = 0,
+                    BytesSent = 0
+                });
+                hostStats.Count += 1;
+                _hostStats[context.HostName] = hostStats;
+            }
+        }
+
+        public void OnBytesRead(object? sender, BytesReadEventArgs e)
+        {
+            if (sender == null) return;
+            var context = (SessionContext)sender;
+            lock (_lock)
+            {
+                if (_hostStats.TryGetValue(context.HostName, out HostStats? hostStats))
+                {
+                    hostStats.BytesRead += e.BytesRead;
+                    _hostStats[context.HostName] = hostStats;
                 }
             }
         }
 
-        public void SessionBytesRead(object? sender, BytesReadEventArgs e)
+        public void OnBytesSent(object? sender, BytesSentEventArgs e)
         {
-            var context = (SessionContext?)sender;
-            if (context?.Header?.Host != null)
+            if (sender == null) return;
+            var context = (SessionContext)sender;
+            lock (_lock)
             {
-                Address host = context.Header.Host;
-                if (host.Hostname.Length > 0)
+                if (_hostStats.TryGetValue(context.HostName, out HostStats? hostStats))
                 {
-                    lock (_lock)
-                    {
-                        HostStats? hostStats;
-                        if (_hostStats.TryGetValue(host.Hostname, out hostStats))
-                        {
-                            hostStats.BytesRead += e.BytesRead;
-                            _hostStats[host.Hostname] = hostStats;
-                        }
-                    }
-                }
-            }
-        }
-
-        public void SessionBytesSent(object? sender, BytesSentEventArgs e)
-        {
-            var context = (SessionContext?)sender;
-            if (context?.Header?.Host != null)
-            {
-                Address host = context.Header.Host;
-                if (host.Hostname.Length > 0)
-                {
-                    lock (_lock)
-                    {
-                        HostStats? hostStats;
-                        if (_hostStats.TryGetValue(host.Hostname, out hostStats))
-                        {
-                            hostStats.BytesSent += e.BytesSent;
-                            _hostStats[host.Hostname] = hostStats;
-                        }
-                    }
+                    hostStats.BytesSent += e.BytesSent;
+                    _hostStats[context.HostName] = hostStats;
                 }
             }
         }

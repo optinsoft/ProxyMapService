@@ -29,14 +29,14 @@ namespace ProxyMapService.Proxy
             }
         }
 
-        public async Task Start(ProxyMapping mapping,
+        public async Task Start(ProxyMapping mapping, List<HostRule>? hostRules,
             SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
             ILogger logger)
         {
             var localEndPoint = new IPEndPoint(IPAddress.Loopback, mapping.Listen.Port);
 
             async void clientHandler(TcpClient client, CancellationToken token) => 
-                await Session.Run(client, mapping, sessionsCounter, readCounter, sentCounter, logger, token);
+                await Session.Run(client, mapping, hostRules, sessionsCounter, readCounter, sentCounter, logger, token);
 
             _listener = new Listener(localEndPoint, clientHandler, logger);
 

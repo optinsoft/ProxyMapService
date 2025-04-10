@@ -19,7 +19,7 @@ namespace ProxyMapService.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
         private readonly SessionsCounter _sessionsCounter = new();
-        private readonly HostsCounter? _hostsCounter = null;
+        private readonly HostsCounter _hostsCounter = new();
         private readonly BytesReadCounter _readCounter = new();
         private readonly BytesSentCounter _sentCounter = new();
 
@@ -30,13 +30,13 @@ namespace ProxyMapService.Services
             var HostStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("Enabled") ?? false;
             if (HostStatsEnabled)
             {
-                _hostsCounter = new();
-                _sessionsCounter.HTTPRequestHandler += _hostsCounter.SessionHTTPRequest;
+                _sessionsCounter.HostProxifiedHandler += _hostsCounter.OnHostConnected;
+                _sessionsCounter.HostBypassedHandler += _hostsCounter.OnHostConnected;
                 var HostTrafficStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("TrafficStats") ?? false;
                 if (HostTrafficStatsEnabled)
                 {
-                    _readCounter.BytesReadHandler += _hostsCounter.SessionBytesRead;
-                    _sentCounter.BytesSentHandler += _hostsCounter.SessionBytesSent;
+                    _readCounter.BytesReadHandler += _hostsCounter.OnBytesRead;
+                    _sentCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
                 }
             }
             AddProxyMappingTasks();
@@ -49,13 +49,14 @@ namespace ProxyMapService.Services
 
         private void AddProxyMappingTasks()
         {
+            var hostRules = _configuration.GetSection("HostRules").Get<List<HostRule>>();
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
             if (proxyMappings != null)
             {
                 foreach (var mapping in proxyMappings)
                 {
-                    _tasks.Add(new ProxyMapper().Start(
-                        mapping, _sessionsCounter, _readCounter, _sentCounter, _logger));
+                    _tasks.Add(new ProxyMapper().Start(mapping, hostRules,
+                        _sessionsCounter, _readCounter, _sentCounter, _logger));
                 }
             }
         }
@@ -63,6 +64,11 @@ namespace ProxyMapService.Services
         public string GetServiceInfo()
         {
             return _serviceInfo;
+        }
+
+        public string GetCurrentTime()
+        {
+            return $"{DateTime.Now}";
         }
 
         public int GetSessionsCount()
@@ -95,14 +101,24 @@ namespace ProxyMapService.Services
             return _sessionsCounter.HttpRejected;
         }
 
-        public int GetConnected()
+        public int GetProxyConnected()
         {
-            return _sessionsCounter.Connected;
+            return _sessionsCounter.ProxyConnected;
         }
         
-        public int GetConnectionFailed()
+        public int GetProxyFailed()
         {
-            return _sessionsCounter.ConnectionFailed;
+            return _sessionsCounter.ProxyFailed;
+        }
+
+        public int GetBypassConnected()
+        {
+            return _sessionsCounter.BypassConnected;
+        }
+
+        public int GetBypassFailed()
+        {
+            return _sessionsCounter.BypassFailed;
         }
 
         public int GetHeaderFailed()
@@ -110,9 +126,24 @@ namespace ProxyMapService.Services
             return _sessionsCounter.HeaderFailed;
         }
 
-        public int GetHostFailed()
+        public int GetNoHost()
         {
-            return _sessionsCounter.HostFailed;
+            return _sessionsCounter.NoHost;
+        }
+
+        public int GetHostRejected()
+        {
+            return _sessionsCounter.HostRejected;
+        }
+
+        public int GetHostProxified()
+        {
+            return _sessionsCounter.HostProxified;
+        }
+
+        public int GetHostBypassed()
+        {
+            return _sessionsCounter.HostBypassed;
         }
 
         public long GetTotalBytesRead()
@@ -123,6 +154,26 @@ namespace ProxyMapService.Services
         public long GetTotalBytesSent()
         {
             return _sentCounter.TotalBytesSent;
+        }
+
+        public long GetProxyBytesRead()
+        {
+            return _readCounter.ProxyBytesRead;
+        }
+
+        public long GetProxyBytesSent()
+        {
+            return _sentCounter.ProxyBytesSent;
+        }
+
+        public long GetBypassBytesRead()
+        {
+            return _readCounter.BypassBytesRead;
+        }
+
+        public long GetBypassBytesSent()
+        {
+            return _sentCounter.BypassBytesSent;
         }
 
         public IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats()

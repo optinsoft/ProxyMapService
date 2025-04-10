@@ -17,9 +17,9 @@ namespace Proxy.Headers
         public string? ProxyAuthorization { get; private set; }
         public IEnumerable<string>? ArrayList { get; private set; }
 
-        public byte[] GetBytes(string? customProxyAuthorization)
+        public byte[] GetBytes(bool keepProxyAuthorization, string? customProxyAuthorization)
         {
-            return GetBytes(ArrayList, customProxyAuthorization);
+            return GetBytes(ArrayList, keepProxyAuthorization, customProxyAuthorization);
         }
 
         private static void Parse(HttpHeader self, byte[] array)
@@ -33,21 +33,22 @@ namespace Proxy.Headers
             self.ArrayList = strings;
         }
 
-        private static byte[] GetBytes(IEnumerable<string>? arrayList, string? customProxyAuthorization)
+        private static byte[] GetBytes(IEnumerable<string>? arrayList, bool keepProxyAuthorization, string? customProxyAuthorization)
         {
             var builder = new StringBuilder();
 
             if (arrayList != null)
             {
-                var enumerable = customProxyAuthorization == null ? arrayList : arrayList
-                    .Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase));
+                var enumerable = keepProxyAuthorization && (customProxyAuthorization == null) 
+                    ? arrayList 
+                    : arrayList.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase));
 
                 foreach (var @string in enumerable)
                 {
                     builder.Append(@string).Append("\r\n");
                 }
 
-                if (customProxyAuthorization != null)
+                if (keepProxyAuthorization && (customProxyAuthorization != null))
                 {
                     builder.Append($"Proxy-Authorization: Basic {customProxyAuthorization}\r\n");
                 }

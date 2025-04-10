@@ -12,11 +12,15 @@ namespace ProxyMapService.Proxy.Counters
         public int Authenticated { get; private set; }
         public int AuthenticationInvalid { get; private set; }
         public int HttpRejected { get; private set; }
-        public int Connected { get; private set; }
-        public int ConnectionFailed { get; private set; }
+        public int ProxyConnected { get; private set; }
+        public int ProxyFailed { get; private set; }
+        public int BypassConnected { get; private set; }
+        public int BypassFailed { get; private set; }
         public int HeaderFailed { get; private set; }
-        public int HostFailed { get; private set; }
-        public int HTTPRequests { get; private set; }
+        public int NoHost { get; private set; }
+        public int HostRejected { get; private set; }
+        public int HostProxified { get; private set; }
+        public int HostBypassed { get; private set; }
 
         public void OnSessionStarted(SessionContext context)
         {
@@ -72,22 +76,40 @@ namespace ProxyMapService.Proxy.Counters
             HttpRejectedHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnConnected(SessionContext context)
+        public void OnProxyConnected(SessionContext context)
         {
             lock (_lock)
             {
-                Connected += 1;
+                ProxyConnected += 1;
             }
-            ConnectedHandler?.Invoke(context, EventArgs.Empty);
+            ProxyConnectedHandler?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnConnectionFailed(SessionContext context)
+        public void OnProxyFailed(SessionContext context)
         {
             lock (_lock)
             {
-                ConnectionFailed += 1;
+                ProxyFailed += 1;
             }
-            ConnectionFailedHandler?.Invoke(context, EventArgs.Empty);
+            ProxyFailedHandler?.Invoke(context, EventArgs.Empty);
+        }
+
+        public void OnBypassConnected(SessionContext context)
+        {
+            lock (_lock)
+            {
+                BypassConnected += 1;
+            }
+            BypassConnectedHandler?.Invoke(context, EventArgs.Empty);
+        }
+
+        public void OnBypassFailed(SessionContext context)
+        {
+            lock (_lock)
+            {
+                BypassFailed += 1;
+            }
+            BypassFailedHandler?.Invoke(context, EventArgs.Empty);
         }
 
         public void OnHeaderFailed(SessionContext context)
@@ -99,22 +121,40 @@ namespace ProxyMapService.Proxy.Counters
             HeaderFailedHander?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnHostFailed(SessionContext context)
+        public void OnNoHost(SessionContext context)
         {
             lock (_lock)
             {
-                HostFailed += 1;
+                NoHost += 1;
             }
-            HostFailedHander?.Invoke(context, EventArgs.Empty);
+            NoHostHander?.Invoke(context, EventArgs.Empty);
         }
 
-        public void OnHTTPRequest(SessionContext context)
+        public void OnHostRejected(SessionContext context)
         {
             lock (_lock)
             {
-                HTTPRequests += 1;
+                HostRejected += 1;
             }
-            HTTPRequestHandler?.Invoke(context, EventArgs.Empty);
+            HostRejectedHandler?.Invoke(context, EventArgs.Empty);
+        }
+
+        public void OnHostProxified(SessionContext context)
+        {
+            lock (_lock)
+            {
+                HostProxified += 1;
+            }
+            HostProxifiedHandler?.Invoke(context, EventArgs.Empty);
+        }
+
+        public void OnHostBypassed(SessionContext context)
+        {
+            lock (_lock)
+            {
+                HostBypassed += 1;
+            }
+            HostBypassedHandler?.Invoke(context, EventArgs.Empty);
         }
 
         public event EventHandler? SessionStartedHandler;
@@ -123,10 +163,14 @@ namespace ProxyMapService.Proxy.Counters
         public event EventHandler? AuthenticatedHandler;
         public event EventHandler? AuthenticationInvalidHandler;
         public event EventHandler? HttpRejectedHandler;
-        public event EventHandler? ConnectedHandler;
-        public event EventHandler? ConnectionFailedHandler;
+        public event EventHandler? ProxyConnectedHandler;
+        public event EventHandler? ProxyFailedHandler;
+        public event EventHandler? BypassConnectedHandler;
+        public event EventHandler? BypassFailedHandler;
         public event EventHandler? HeaderFailedHander;
-        public event EventHandler? HostFailedHander;
-        public event EventHandler? HTTPRequestHandler;
+        public event EventHandler? NoHostHander;
+        public event EventHandler? HostRejectedHandler;
+        public event EventHandler? HostProxifiedHandler;
+        public event EventHandler? HostBypassedHandler;
     }
 }

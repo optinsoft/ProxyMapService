@@ -6,6 +6,9 @@
         Initialized,
         AuthenticationNotRequired,
         Authenticated,
+        Proxy,
+        Bypass,
+        Tunnel,
         Terminate,
     }
 }
