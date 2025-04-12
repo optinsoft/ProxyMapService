@@ -15,6 +15,12 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostBypassed(context);
 
+            if (context.Header?.HTTPVerb != "CONNECT")
+            {
+                var firstLine = $"{context.Header?.HTTPVerb} {context.Header?.GetHTTPTargetPath()} {context.Header?.HTTPProtocol}";
+                context.TunnelHeaderBytes = context.Header?.GetBytes(false, null, firstLine);
+            }
+
             IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
 
             try

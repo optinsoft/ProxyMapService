@@ -10,7 +10,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.Mapping.Listen.RejectHttpProxy && context.Header?.Verb != "CONNECT")
+            if (context.Mapping.Listen.RejectHttpProxy && context.Header?.HTTPVerb != "CONNECT")
             {
                 context.SessionsCounter?.OnHttpRejected(context);
                 await SendMethodNotAllowed(context);

@@ -23,7 +23,7 @@ namespace ProxyMapService.Proxy.Handlers
                 ? null 
                 : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
 
-            context.TunnelHeaderBytes = context.Header?.GetBytes(true, proxyAuthorization);
+            context.TunnelHeaderBytes = context.Header?.GetBytes(true, proxyAuthorization, null);
 
             IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.Mapping.ProxyServer.Host, context.Mapping.ProxyServer.Port);
 

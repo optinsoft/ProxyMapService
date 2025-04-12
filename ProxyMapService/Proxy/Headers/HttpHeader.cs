@@ -13,13 +13,20 @@ namespace Proxy.Headers
 
         public Address? Host { get; private set; }
         public long? ContentLength { get; private set; }
-        public string? Verb { get; private set; }
+        public string? HTTPVerb { get; private set; }
+        public string? HTTPTarget { get; private set; }
+        public string? HTTPProtocol { get; private set; }
         public string? ProxyAuthorization { get; private set; }
         public IEnumerable<string>? ArrayList { get; private set; }
 
-        public byte[] GetBytes(bool keepProxyAuthorization, string? customProxyAuthorization)
+        public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine)
         {
-            return GetBytes(ArrayList, keepProxyAuthorization, customProxyAuthorization);
+            return GetBytes(ArrayList, keepProxyHeaders, customProxyAuthorization, customFirstLine);
+        }
+
+        public string? GetHTTPTargetPath()
+        {
+            return GetHTTPTargetPath(HTTPTarget);
         }
 
         private static void Parse(HttpHeader self, byte[] array)
@@ -28,27 +35,40 @@ namespace Proxy.Headers
 
             self.Host = GetAddress(strings);
             self.ContentLength = GetContentLength(strings);
-            self.Verb = GetVerb(strings);
+            self.HTTPVerb = GetHTTPVerb(strings);
+            self.HTTPTarget = GetHTTPTarget(strings);
+            self.HTTPProtocol = GetHTTPProtocol(strings);
             self.ProxyAuthorization = GetProxyAuthorization(strings);
             self.ArrayList = strings;
         }
 
-        private static byte[] GetBytes(IEnumerable<string>? arrayList, bool keepProxyAuthorization, string? customProxyAuthorization)
+        private static byte[] GetBytes(IEnumerable<string>? arrayList, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine)
         {
             var builder = new StringBuilder();
 
             if (arrayList != null)
             {
-                var enumerable = keepProxyAuthorization && (customProxyAuthorization == null) 
+                var enumerable = keepProxyHeaders && (customProxyAuthorization == null) 
                     ? arrayList 
-                    : arrayList.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase));
-
+                    : (keepProxyHeaders 
+                        ? arrayList.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase))
+                        : arrayList.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase)
+                                                  && !@string.StartsWith("Proxy-Connection:", StringComparison.OrdinalIgnoreCase)));
+                if (customFirstLine != null)
+                {
+                    builder.Append(customFirstLine).Append("\r\n");
+                }
+                var line = 0;
                 foreach (var @string in enumerable)
                 {
-                    builder.Append(@string).Append("\r\n");
+                    if (line > 0 || customFirstLine == null)
+                    {
+                        builder.Append(@string).Append("\r\n");
+                    }
+                    line += 1;
                 }
 
-                if (keepProxyAuthorization && (customProxyAuthorization != null))
+                if (keepProxyHeaders && (customProxyAuthorization != null))
                 {
                     builder.Append($"Proxy-Authorization: Basic {customProxyAuthorization}\r\n");
                 }
@@ -90,9 +110,25 @@ namespace Proxy.Headers
                 .TrimStart());
         }
 
-        private static string GetVerb(IEnumerable<string> strings)
+        private static string GetHTTPVerb(IEnumerable<string> strings)
         {
             return strings.First().Split(' ').First();
+        }
+
+        private static string? GetHTTPTarget(IEnumerable<string> strings)
+        {
+            var split = strings.First().Split(' ', 2);
+            if (split.Length < 2) return null;
+            return split[1].TrimStart().Split(' ').First();
+        }
+
+        private static string? GetHTTPProtocol(IEnumerable<string> strings)
+        {
+            var split1 = strings.First().Split(' ', 2);
+            if (split1.Length < 2) return null;
+            var split2 = split1[1].TrimStart().Split(' ', 2);
+            if (split2.Length < 2) return null;
+            return split2[1].Trim();
         }
 
         private static string? GetProxyAuthorization(IEnumerable<string> strings)
@@ -103,6 +139,13 @@ namespace Proxy.Headers
                 .FirstOrDefault(@string => @string.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .Trim();
+        }
+
+        private static string? GetHTTPTargetPath(string? target)
+        {
+            if (target == null) return null;
+            Uri uri = new(target);
+            return uri.PathAndQuery;
         }
     }
 }
