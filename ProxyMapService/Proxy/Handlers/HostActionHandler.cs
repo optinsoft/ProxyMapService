@@ -40,17 +40,18 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static ActionEnum GetHostAction(string Host, List<HostRule>? hostRules)
         {
+            ActionEnum hostAction = ActionEnum.Allow;
             if (hostRules != null)
             {
                 foreach (var rule in hostRules)
                 {
                     if (rule.Pattern.Match(Host).Success)
                     {
-                        return rule.Action;
+                        hostAction = rule.Action;
                     }
                 }
             }
-            return ActionEnum.Allow;
+            return hostAction;
         }
 
         public static HostActionHandler Instance()
