@@ -1,26 +1,26 @@
 ﻿# Proxy Map Service
 
-## Описание
+## Description
 
-Proxy Map Service слушает входящие TCP-соединения на одном или нескольких портах и перенаправляет трафик на внешний, определенный в конфигурации (appsettings.json), прокси сервер.
-Система правил (rules) позволяет блокировать соединения с некоторыми хостами или устанавливать соединение без использования внешнего прокси-сервера (это называется bypass).
-В случае bypass сам Proxy Map Service является прокси сервером.
+The Proxy Map Service listens for incoming TCP connections on one or more ports and redirects traffic to an external proxy server defined in the configuration (`appsettings.json`).
+The rules system allows blocking connections to certain hosts or establishing connections without using an external proxy server (this is called ""bypass"").
+In bypass mode, the Proxy Map Service itself acts as the proxy server.
 
-Это может быть нужно, чтобы:
+This may be useful for:
 
-1. Блокировать нежелательные соединения (например, отслеживание).
-2. Уменьшать (экономить) трафик, проходящий через внешний (платный) прокси сервер.
-3. Добавлять HTTP-заголовок Proxy-Authorization, если внешний прокси сервер требует авторизации, а клиентский софт такое не поддерживает.
-4. Возвращать корректный код ошибки (407 Proxy Authentication Required), если авторизация требуется, а заголовок Proxy-Authorization отсутствует. Это позволяет исправлять некорректную работу некоторых прокси серверов, которые при отсутствии авторизации просто дропают соединение.
-5. Пускать некоторый трафик, который залочен на IP вашего сервера (например, обращения к сервису решения капчи), минуя внешний прокси.
+1. Blocking unwanted connections (e.g., tracking).
+2. Reducing (saving) traffic passing through an external (paid) proxy server.
+3. Adding the Proxy-Authorization HTTP header if the external proxy server requires authentication but the client software does not support it.
+4. Returning the correct error code (`407 Proxy Authentication Required`) if authentication is required but the `Proxy-Authorization` header is missing. This fixes incorrect behavior of some proxy servers that simply drop the connection when authentication is absent.
+5. Allowing certain traffic that is blocked by your server’s IP (e.g., captcha-solving services) to bypass the external proxy.
 
-В целях безопасности Proxy Map Service слушает входящие соединения только на loopback интерфейсе (127.0.0.1).
+For security, the Proxy Map Service only listens for incoming connections on the `loopback interface` (127.0.0.1).
 
-## API для просмотра статистики
+## API for Viewing Statistics
 
 1. GET /ProxyStats
 
-Пример ответа:
+**Example** response:
 
 ```json
 {
@@ -52,10 +52,9 @@ Proxy Map Service слушает входящие TCP-соединения на 
 
 2. GET /ProxyStats/Hosts
 
-Чтобы статистика для хостов считалась нужно включить настройку `"Enabled": true` в разделе `"HostStats"`.
-А чтобы еще считался и трафик (`"bytesRead"`, `"bytesSent"`), то нужно включить `TrafficStats: true` там же.
+To enable host statistics, set `"Enabled": true` in the `"HostStats"` section. To also track traffic (`"bytesRead"`, `"bytesSent"`), set `"TrafficStats": true`.
 
-Пример ответа:
+**Example** response:
 
 ```json
 {
@@ -80,56 +79,60 @@ Proxy Map Service слушает входящие TCP-соединения на 
 }
 ```
 
-## Установка
+## Installation
 
-Требуется чтобы был установлен .NET 8.0 Hosting Bundle. Взять можно тут: https://dotnet.microsoft.com/en-us/download/dotnet/8.0.
+1. Install the .NET 8.0 Hosting Bundle (download here: https://dotnet.microsoft.com/en-us/download/dotnet/8.0).
+2. Build and Publish the application to `bin\Release\net8.0\publish`.
+3. Create a directory for the app (e.g., `ProxyMapService`) in `C:\inetpub\wwwroot`.
+4. Copy the files from `bin\Release\net8.0\publish` into this directory.
+5. Create `appsettings.Production.json` and configure it (see the `Configuration` section below).
+6. In IIS, create an application pool (e.g., `PortMapPool`) with the following settings:
+    * ""Start Mode"" = ""Always Running""
+    * ""Idle Timeout (minutes)"" = ""0"".
+7. Convert the `C:\inetpub\wwwroot\ProxyMapService` directory into an application in IIS, assigning it the `PortMapPool` app pool.
+8. In the application’s `Advanced Settings`, enable:
+    * ""Preload Enabled"" = ""True"".
 
-1. Собрать и опубликовать (Publish) приложение в bin\Release\net8.0\publish.
-2. Создать каталог для приложения с именем, например, ProxyMapService в C:\inetpub\wwwroot.
-3. Скопировать в него файлы из bin\Release\net8.0\publish.
-4. Создать appsettings.Production.json и прописать в него конфигурацию (см. ниже раздел "Настройка").
-5. Создать в IIS пул приложения с именем, например PortMapPool.
-6. В диалоговом окне ""Дополнительные параметры"" пула PortMapPool выбрать:
-    * ""Режим запуска"" = ""Always Running""
-    * ""Тайм-аут простоя (в минутах)"" = ""0"".
-7. В IIS преобразовать каталог C:\inetpub\wwwroot\PortMapService в приложение. При этом, указать для него ранее созданный ""Пул приложений"" PortMapPool.
-8. В дополнительных параметрах приложения PortMapService выбрать:
-    * ""Предварительная установка включена"" = ""True"".
+## Configuration
 
-## Настройка
+Settings are configured in `appsettings.json` (or `appsettings.Production.json for production`).
 
-Настройка параметров осуществляется в файле appsettings.json (или в appsettings.Production.json в продакшене).
+### JWT Authentication (for API Access)
 
-Для использования API следует настроить раздел "Authentication" / "Jwt".
-Сервис авторизации JWT можно использовать этот: https://github.com/optinsoft/YregAuthService (установить как отдельное приложение ASP.NET на тот же сервер, что и ProxyMapService).
+To use the API, configure the `Authentication.Jwt` section. 
+You can use this JWT authorization service: https://github.com/optinsoft/YregAuthService (you can install it as a separate ASP.NET app on the same server as `ProxyMapService`).
 
-Путь | Описание | Тип | Значение по-умолчанию |
------| ---------|-----|-----------------------|
-Authentication.Jwt.Enabled | Требуется аутентификация для доступа к API | bool | false |
-Authentication.Jwt.Issuer | Издатель JWT-токена | string | "" |
-Authentication.Jwt.Audience | Для кого предназначен JWT-токен (URL) | string | "" |
-Authentication.Jwt.Key | Ключ для верификации JWT-токена | string | "" |
+Path | Description | Type | Default Value |
+-----|-------------|------|---------------|
+Authentication.Jwt.Enabled | Require authentication for API access | bool | false |
+Authentication.Jwt.Issuer | JWT token issuer | string | "" |
+Authentication.Jwt.Audience | JWT token audience (URL) | string | "" |
+Authentication.Jwt.Key | JWT token verification key | string | "" |
 
-Открытые соединения, правила авторизации и соответствие прокси серверу задаются в разделе ProxyMappings.
+### Proxy Mappings
 
-Путь | Описание | Тип | Значение по-умолчанию |
------| ---------|-----|-----------------------|
-ProxyMappings[].Listen.Port | TCP порт | int | 5000 |
-ProxyMappings[].Listen.RejectHttpProxy | Отклонять все HTTP (не CONNECT) соединения | bool | false |
-ProxyMappings[].Authentication.Required | Проверять наличие HTTP заголовка Proxy-Authorization; если отсутствует, то возвращать ошибку 407 Proxy Authentication Required | bool | false |
-ProxyMappings[].Authentication.Verify | Проверять HTTP заголовок Proxy-Authorization. Он должен содержать Basic b64, где b64 - это закодированная с помощью Base64 строка пользователь:пароль; пользователь и пароль задаются в параметрах (см. следующие два параметра) | bool | false |
-ProxyMappings[].Authentication.Username | Имя пользователя | string | "user" |
-ProxyMappings[].Authentication.Password | Пароль | string | "pass" |
-ProxyMappings[].Authentication.SetHeader | Добавлять (при наличии - заменять) HTTP заголовок Proxy-Authorization | bool | false |
+Open connections, authentication rules, and proxy server mappings are defined in the `ProxyMappings` section.
 
-Правила для маршрутизации трафика задаются в разделе HostRules:
+Path | Description | Type | Default Value |
+-----|-------------|------|---------------|
+ProxyMappings[].Listen.Port | TCP port | int | 5000 |
+ProxyMappings[].Listen.RejectHttpProxy | Reject all HTTP (non-CONNECT) connections | bool | false |
+ProxyMappings[].Authentication.Required | Require the `Proxy-Authorization` header; return `407` error if missing | bool | false |
+ProxyMappings[].Authentication.Verify | Verify the `Proxy-Authorization` header (must be `Basic base64(user:pass)`) | bool | false |
+ProxyMappings[].Authentication.Username | Username | string | "user" |
+ProxyMappings[].Authentication.Password | Password | string | "pass" |
+ProxyMappings[].Authentication.SetHeader | Add/replace the `Proxy-Authorization` header | bool | false |
 
-Путь | Описание | Тип | Пример |
------| ---------|-----|--------|
-HostRules[].Pattern | Регулярное выражение для имени хоста | String | "mozilla\\.(com\|org\|net)$" |
-HostRules[].Action | Действие, которое нужно выполнить если имя хоста удовлетворяет выражению Pattern. Может принимать одно из трех значений: Allow (соединяться с хостом через прокси), Deny (отказывать в соединении), Bypass (соединяться с хостом напрямую, без прокси) | String | Deny |
+### Host Rules
 
-Правила просматриваются в том же порядке, что указаны в HostRules. Если несколько правил применимы к хосту, то применяется последнее. То есть, например, можно запретить все соединения, кроме соединения с www.google.com:
+Traffic routing rules are defined in the `HostRules` section.
+
+Path | Description | Type | Example |
+-----|-------------|------|---------|
+HostRules[].Pattern | Regex pattern for hostname | String | "mozilla\\.(com\|org\|net)$" |
+HostRules[].Action | Action: Allow (use proxy), Deny (block), or Bypass (direct connection) | String | Deny |
+
+Rules are processed in order. If multiple rules match a host, the last one applies. For example, to block all connections except `www.google.com`:
 
 ```json
 {
@@ -146,7 +149,7 @@ HostRules[].Action | Действие, которое нужно выполни�
 }
 ```
 
-Пример appsettings.Production.json
+**Example** `appsettings.Production.json`
 
 ```json
 {
@@ -198,6 +201,6 @@ HostRules[].Action | Действие, которое нужно выполни�
 }
 ```
 
-## Благодарности
+## Credits
 
-Код прокси сервера позаимствован (модифицирован и доработан) отсюда: https://github.com/agabani/PassThroughProxy
+The proxy server code is based on (modified and enhanced from): https://github.com/agabani/PassThroughProxy
