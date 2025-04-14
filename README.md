@@ -16,7 +16,7 @@ Proxy Map Service слушает входящие TCP-соединения на 
 
 В целях безопасности Proxy Map Service слушает входящие соединения только на loopback интерфейсе (127.0.0.1).
 
-Реализованы два API для просмотра статистики:
+## API для просмотра статистики
 
 1. GET /ProxyStats
 
@@ -80,10 +80,71 @@ Proxy Map Service слушает входящие TCP-соединения на 
 }
 ```
 
+## Установка
+
+Требуется чтобы был установлен .NET 8.0 Hosting Bundle. Взять можно тут: https://dotnet.microsoft.com/en-us/download/dotnet/8.0.
+
+1. Собрать и опубликовать (Publish) приложение в bin\Release\net8.0\publish.
+2. Создать каталог для приложения с именем, например, ProxyMapService в C:\inetpub\wwwroot.
+3. Скопировать в него файлы из bin\Release\net8.0\publish.
+4. Создать appsettings.Production.json и прописать в него конфигурацию (см. ниже раздел "Настройка").
+5. Создать в IIS пул приложения с именем, например PortMapPool.
+6. В диалоговом окне ""Дополнительные параметры"" пула PortMapPool выбрать:
+    * ""Режим запуска"" = ""Always Running""
+    * ""Тайм-аут простоя (в минутах)"" = ""0"".
+7. В IIS преобразовать каталог C:\inetpub\wwwroot\PortMapService в приложение. При этом, указать для него ранее созданный ""Пул приложений"" PortMapPool.
+8. В дополнительных параметрах приложения PortMapService выбрать:
+    * ""Предварительная установка включена"" = ""True"".
+
 ## Настройка
 
+Настройка параметров осуществляется в файле appsettings.json (или в appsettings.Production.json в продакшене).
+
 Для использования API следует настроить раздел "Authentication" / "Jwt".
-Сервис авторизации Jwt можно использовать этот: https://github.com/optinsoft/YregAuthService (установить как отдельное приложение ASP.NET на тот же сервер, что и ProxyMapService).
+Сервис авторизации JWT можно использовать этот: https://github.com/optinsoft/YregAuthService (установить как отдельное приложение ASP.NET на тот же сервер, что и ProxyMapService).
+
+Путь | Описание | Тип | Значение по-умолчанию |
+-----| ---------|-----|-----------------------|
+Authentication.Jwt.Enabled | Требуется аутентификация для доступа к API | bool | false |
+Authentication.Jwt.Issuer | Издатель JWT-токена | string | "" |
+Authentication.Jwt.Audience | Для кого предназначен JWT-токен (URL) | string | "" |
+Authentication.Jwt.Key | Ключ для верификации JWT-токена | string | "" |
+
+Открытые соединения, правила авторизации и соответствие прокси серверу задаются в разделе ProxyMappings.
+
+Путь | Описание | Тип | Значение по-умолчанию |
+-----| ---------|-----|-----------------------|
+ProxyMappings[].Listen.Port | TCP порт | int | 5000 |
+ProxyMappings[].Listen.RejectHttpProxy | Отклонять все HTTP (не CONNECT) соединения | bool | false |
+ProxyMappings[].Authentication.Required | Проверять наличие HTTP заголовка Proxy-Authorization; если отсутствует, то возвращать ошибку 407 Proxy Authentication Required | bool | false |
+ProxyMappings[].Authentication.Verify | Проверять HTTP заголовок Proxy-Authorization. Он должен содержать Basic b64, где b64 - это закодированная с помощью Base64 строка пользователь:пароль; пользователь и пароль задаются в параметрах (см. следующие два параметра) | bool | false |
+ProxyMappings[].Authentication.Username | Имя пользователя | string | "user" |
+ProxyMappings[].Authentication.Password | Пароль | string | "pass" |
+ProxyMappings[].Authentication.SetHeader | Добавлять (при наличии - заменять) HTTP заголовок Proxy-Authorization | bool | false |
+
+Правила для маршрутизации трафика задаются в разделе HostRules:
+
+Путь | Описание | Тип | Пример |
+-----| ---------|-----|--------|
+HostRules[].Pattern | Регулярное выражение для имени хоста | String | "mozilla\\.(com\|org\|net)$" |
+HostRules[].Action | Действие, которое нужно выполнить если имя хоста удовлетворяет выражению Pattern. Может принимать одно из трех значений: Allow (соединяться с хостом через прокси), Deny (отказывать в соединении), Bypass (соединяться с хостом напрямую, без прокси) | String | Deny |
+
+Правила просматриваются в том же порядке, что указаны в HostRules. Если несколько правил применимы к хосту, то применяется последнее. То есть, например, можно запретить все соединения, кроме соединения с www.google.com:
+
+```json
+{
+    "HostRules": [
+        {
+            "Pattern": ".*",
+            "Action": "Deny"
+        },
+        {
+            "Pattern": "www\\.google\\.com$",
+            "Action": "Allow"
+        }
+    ]
+}
+```
 
 Пример appsettings.Production.json
 
