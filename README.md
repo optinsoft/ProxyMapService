@@ -3,7 +3,7 @@
 ## Description
 
 The Proxy Map Service listens for incoming TCP connections on one or more ports and redirects traffic to an external proxy server defined in the configuration (`appsettings.json`).
-The rules system allows blocking connections to certain hosts or establishing connections without using an external proxy server (this is called ""bypass"").
+The rules system allows blocking connections to certain hosts or establishing connections without using an external proxy server (this is called **bypass**).
 In bypass mode, the Proxy Map Service itself acts as the proxy server.
 
 This may be useful for:
@@ -87,11 +87,11 @@ To enable host statistics, set `"Enabled": true` in the `"HostStats"` section. T
 4. Copy the files from `bin\Release\net8.0\publish` into this directory.
 5. Create `appsettings.Production.json` and configure it (see the `Configuration` section below).
 6. In IIS, create an application pool (e.g., `PortMapPool`) with the following settings:
-    * ""Start Mode"" = ""Always Running""
-    * ""Idle Timeout (minutes)"" = ""0"".
+    * **Start Mode** = **Always Running**
+    * **Idle Timeout (minutes)** = **0**.
 7. Convert the `C:\inetpub\wwwroot\ProxyMapService` directory into an application in IIS, assigning it the `PortMapPool` app pool.
 8. In the application’s `Advanced Settings`, enable:
-    * ""Preload Enabled"" = ""True"".
+    * **Preload Enabled** = **True**.
 
 ## Configuration
 
