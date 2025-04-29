@@ -1,5 +1,4 @@
-﻿using Proxy.Headers;
-using ProxyMapService.Proxy.Headers;
+﻿using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -30,9 +29,13 @@ namespace ProxyMapService.Proxy.Handlers
                 case 0x00:
                     context.Http = new HttpRequestHeader(context.HeaderBytes);
                     return HandleStep.HttpInitialized;
-                //case 0x04:
-                //    context.Socks4 = new Socks4Header(context.HeaderBytes);
-                //    return HandleStep.Socks4Initialized;
+                case 0x04:
+                    context.Socks4 = new Socks4Header(context.HeaderBytes);
+                    if (context.Socks4.IsConnectRequest(context.HeaderBytes))
+                    {
+                        return HandleStep.Socks4Initialized;
+                    }
+                    break;
                 case 0x05:
                     context.Socks5 = new Socks5Header(context.HeaderBytes);
                     return HandleStep.Socks5Initialized;

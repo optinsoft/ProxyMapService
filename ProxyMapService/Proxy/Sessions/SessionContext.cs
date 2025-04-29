@@ -1,6 +1,5 @@
 ﻿using System.Net.Sockets;
 using ProxyMapService.Proxy.Configurations;
-using Proxy.Headers;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
 
@@ -12,6 +11,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient RemoteClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
         public List<HostRule>? HostRules { get; private set; }
+        public string? UserAgent { get; private set; }
         public SessionsCounter? SessionsCounter { get; private set; }
         public BytesReadCounter? ReadCounter { get; private set; }
         public BytesSentCounter? SentCounter { get; private set; }
@@ -25,6 +25,7 @@ namespace ProxyMapService.Proxy.Sessions
         public NetworkStream? RemoteStream { get; set; }
         public byte[]? HeaderBytes { get; set; }
         public HttpRequestHeader? Http { get; set; }
+        public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }
         public string HostName { get; set; }
         public int HostPort { get; set; }
@@ -32,7 +33,7 @@ namespace ProxyMapService.Proxy.Sessions
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
 
-        public SessionContext(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules,
+        public SessionContext(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules, string? userAgent,
             SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
             ILogger logger, CancellationToken token)
         {
@@ -40,6 +41,7 @@ namespace ProxyMapService.Proxy.Sessions
             RemoteClient = new TcpClient();
             Mapping = mapping;
             HostRules = hostRules;
+            UserAgent = userAgent;
             SessionsCounter = sessionsCounter;
             ReadCounter = readCounter;
             SentCounter = sentCounter;

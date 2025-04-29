@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Primitives;
 using Proxy.Network;
 
-namespace Proxy.Headers
+namespace ProxyMapService.Proxy.Headers
 {
     public class HttpRequestHeader
     {

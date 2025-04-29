@@ -81,11 +81,12 @@ namespace ProxyMapService.Services
         {
             var hostRules = _configuration.GetSection("HostRules").Get<List<HostRule>>();
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
+            var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
             if (proxyMappings != null)
             {
                 foreach (var mapping in proxyMappings)
                 {
-                    _tasks.Add(new ProxyMapper().Start(mapping, hostRules,
+                    _tasks.Add(new ProxyMapper().Start(mapping, hostRules, userAgent,
                         _sessionsCounter, _readCounter, _sentCounter, _logger));
                 }
             }

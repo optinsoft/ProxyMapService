@@ -1,5 +1,4 @@
-﻿using Proxy.Headers;
-using Proxy.Network;
+﻿using Proxy.Network;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
 using System.Text;
@@ -26,7 +25,7 @@ namespace ProxyMapService.Proxy.Headers
         {
             if (array.Length < 1) return;
             self.Version = array[0];
-            if (self.Version != 0x5) return;
+            if (self.Version != 0x05) return;
             if (array.Length < 2) return;
             self.NMethods = array[1];
             if (self.NMethods == 0 || (int)self.NMethods + 2 != array.Length) return;

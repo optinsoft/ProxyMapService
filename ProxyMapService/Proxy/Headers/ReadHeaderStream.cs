@@ -2,7 +2,7 @@
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
 
-namespace Proxy.Headers
+namespace ProxyMapService.Proxy.Headers
 {
     public class ReadHeaderStream(SessionContext context, BytesReadCounter? readCounter) : IDisposable
     {
@@ -34,13 +34,15 @@ namespace Proxy.Headers
                 {
                     case 0x00:
                         return await ReadHttpHeaderBytes(client, token);
-                    //case 0x04:
-                    //    return await ReadSocks4HeaderBytes(client, token);
+                    case 0x04:
+                        return await ReadSocks4HeaderBytes(client, token);
                     case 0x05:
                         return await ReadSocks5HeaderBytes(client, token);
+                    default:
+                        return null;
                 }
-                return null;
-            } finally
+            }
+            finally
             {
                 if (_bufferPos > 0)
                 {
@@ -99,6 +101,38 @@ namespace Proxy.Headers
                 }
             }
             return _socksVersion == 0x0 && _delimiterCounter == Delimiter.Length ? _memoryStream.ToArray() : null;
+        }
+
+        private async Task<byte[]?> ReadSocks4HeaderBytes(Stream client, CancellationToken token)
+        {
+            if (_socksVersion != 0x04) return null;
+            byte? CD = await ReadByte(client, token);
+            if (CD == null)
+            {
+                return null;
+            }
+            for (int i = 0; i < 6; i++) {
+                if (await ReadByte(client, token) == null)
+                {
+                    break;
+                }
+
+            }
+            if (_totalRead < 8) return null;
+            if (CD == 1)
+            {
+                byte? nullByte;
+                do
+                {
+                    nullByte = await ReadByte(client, token);
+                    if (nullByte == null)
+                    {
+                        return null;
+                    }
+                } 
+                while (nullByte != 0x0);
+            }
+            return _memoryStream.ToArray();
         }
 
         private async Task<byte[]?> ReadSocks5HeaderBytes(Stream client, CancellationToken token)

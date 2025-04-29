@@ -8,9 +8,9 @@ using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5ProxyHandler : IHandler
+    public class Socks4ProxyHandler : IHandler
     {
-        private static readonly Socks5ProxyHandler Self = new();
+        private static readonly Socks4ProxyHandler Self = new();
 
         public async Task<HandleStep> Run(SessionContext context)
         {
@@ -27,7 +27,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception)
             {
                 context.SessionsCounter?.OnProxyFailed(context);
-                await SendSocks5Reply(context, Socks5Status.NetworkUnreachable);
+                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
                 throw;
             }
 
@@ -54,7 +54,7 @@ namespace ProxyMapService.Proxy.Handlers
                 ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Socks5.Username}:{context.Socks5.Password ?? String.Empty}"))
                 : null;
 
-            string ? proxyAuthorization = !context.Mapping.Authentication.SetHeader
+            string? proxyAuthorization = !context.Mapping.Authentication.SetHeader
                 ? socks5ProxyAuthorization
                 : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
 
@@ -70,24 +70,28 @@ namespace ProxyMapService.Proxy.Handlers
                 var responseHttp = new HttpResponseHeader(responseHeaderBytes);
                 if (responseHttp.StatusCode == "200")
                 {
-                    await SendSocks5Reply(context, Socks5Status.Succeeded);
+                    await SendSocks4Reply(context, Socks4Command.RequestGranted);
                     return HandleStep.Tunnel;
                 }
             }
 
-            await SendSocks5Reply(context, Socks5Status.NetworkUnreachable);
+            await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
             return HandleStep.Terminate;
         }
 
-        public static Socks5ProxyHandler Instance()
+        public static Socks4ProxyHandler Instance()
         {
             return Self;
         }
 
-        private static async Task SendSocks5Reply(SessionContext context, Socks5Status status)
+        private static async Task SendSocks4Reply(SessionContext context, Socks4Command command)
         {
             if (context.ClientStream == null) return;
-            byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];
+            byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];
+            if (context.Socks4 != null)
+            {
+                Array.Copy(context.Socks4.Bytes, 2, bytes, 2, 6);
+            }
             await context.ClientStream.WriteAsync(bytes, context.Token);
         }
 

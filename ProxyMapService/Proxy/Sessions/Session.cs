@@ -16,6 +16,9 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.HttpAuthenticated, HttpHostActionHandler.Instance() },
             { HandleStep.HttpProxy, HttpProxyHandler.Instance() },
             { HandleStep.HttpBypass, HttpBypassHandler.Instance() },
+            { HandleStep.Socks4Initialized, Socks4HostActionHandler.Instance() },
+            { HandleStep.Socks4Bypass, Socks4BypassHandler.Instance() },
+            { HandleStep.Socks4Proxy, Socks4ProxyHandler.Instance() },
             { HandleStep.Socks5Initialized, Socks5AuthenticationHandler.Instance() },
             { HandleStep.Socks5AuthenticationNotRequired, Socks5ConnectRequestHandler.Instance() },
             { HandleStep.Socks5UsernamePasswordAuthentication, Socks5UsernamePasswordHandler.Instance() },
@@ -26,12 +29,12 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Tunnel, TunnelHandler.Instance() }
         };
 
-        public static async Task Run(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules,
+        public static async Task Run(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules, string? userAgent,
             SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
             ILogger logger, CancellationToken token)
         {
             using var context = new SessionContext(client, mapping, hostRules, 
-                sessionsCounter, readCounter, sentCounter, logger, token);
+                userAgent, sessionsCounter, readCounter, sentCounter, logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do

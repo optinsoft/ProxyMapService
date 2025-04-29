@@ -1,6 +1,4 @@
-﻿using Proxy.Headers;
-using ProxyMapService.Proxy.Sessions;
-using System.Reflection.PortableExecutable;
+﻿using ProxyMapService.Proxy.Sessions;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers

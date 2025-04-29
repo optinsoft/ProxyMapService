@@ -4,7 +4,6 @@ using ProxyMapService.Proxy.Socks;
 using static System.Net.WebRequestMethods;
 using System;
 using System.Text;
-using Proxy.Headers;
 
 namespace ProxyMapService.Proxy.Handlers
 {
