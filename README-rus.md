@@ -120,7 +120,7 @@ ProxyMappings[].Authentication.Required | Проверять наличие HTTP
 ProxyMappings[].Authentication.Verify | Проверять HTTP заголовок Proxy-Authorization. Он должен содержать Basic b64, где b64 - это закодированная с помощью Base64 строка пользователь:пароль; пользователь и пароль задаются в параметрах (см. следующие два параметра) | bool | false |
 ProxyMappings[].Authentication.Username | Имя пользователя | string | "user" |
 ProxyMappings[].Authentication.Password | Пароль | string | "pass" |
-ProxyMappings[].Authentication.SetHeader | Добавлять (при наличии - заменять) HTTP заголовок Proxy-Authorization | bool | false |
+ProxyMappings[].Authentication.SetAuthentication | Добавлять (при наличии - заменять) HTTP заголовок Proxy-Authorization | bool | false |
 
 Правила для маршрутизации трафика задаются в разделе HostRules:
 
@@ -167,7 +167,7 @@ HostRules[].Action | Действие, которое нужно выполни�
             "Authentication": {
                 "Required": false,
                 "Verify": false,
-                "SetHeader": false,
+                "SetAuthentication": false,
                 "Username": "test",
                 "Password": "test"
             },
@@ -193,7 +193,8 @@ HostRules[].Action | Действие, которое нужно выполни�
     ],
     "HostStats": {
         "Enabled": true,
-        "TrafficStats": true
+        "TrafficStats": true,
+        "LogTrafficData": false
     }
 }
 ```

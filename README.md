@@ -121,7 +121,7 @@ ProxyMappings[].Authentication.Required | Require the `Proxy-Authorization` head
 ProxyMappings[].Authentication.Verify | Verify the `Proxy-Authorization` header (must be `Basic base64(user:pass)`) | bool | false |
 ProxyMappings[].Authentication.Username | Username | string | "user" |
 ProxyMappings[].Authentication.Password | Password | string | "pass" |
-ProxyMappings[].Authentication.SetHeader | Add/replace the `Proxy-Authorization` header | bool | false |
+ProxyMappings[].Authentication.SetAuthentication | Add/replace the `Proxy-Authorization` header | bool | false |
 
 ### Host Rules
 
@@ -170,7 +170,7 @@ Rules are processed in order. If multiple rules match a host, the last one appli
             "Authentication": {
                 "Required": false,
                 "Verify": false,
-                "SetHeader": false,
+                "SetAuthentication": false,
                 "Username": "test",
                 "Password": "test"
             },
@@ -196,7 +196,8 @@ Rules are processed in order. If multiple rules match a host, the last one appli
     ],
     "HostStats": {
         "Enabled": true,
-        "TrafficStats": true
+        "TrafficStats": true,
+        "LogTrafficData": false
     }
 }
 ```

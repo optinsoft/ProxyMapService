@@ -35,8 +35,6 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.RemoteStream = context.RemoteClient.GetStream();
 
-            string? userAgentHeader = !string.IsNullOrEmpty(context.UserAgent) ? $"User-Agent: {context.UserAgent}" : null;
-
             List<string> connectHttpCommand = [
                 $"CONNECT {context.HostName}:{context.HostPort} HTTP/1.1",
                 $"Host: {context.HostName}:{context.HostPort}"
@@ -54,7 +52,7 @@ namespace ProxyMapService.Proxy.Handlers
                 ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Socks5.Username}:{context.Socks5.Password ?? String.Empty}"))
                 : null;
 
-            string ? proxyAuthorization = !context.Mapping.Authentication.SetHeader
+            string ? proxyAuthorization = !context.Mapping.Authentication.SetAuthentication
                 ? socks5ProxyAuthorization
                 : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
 

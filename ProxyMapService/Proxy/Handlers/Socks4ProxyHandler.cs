@@ -54,7 +54,7 @@ namespace ProxyMapService.Proxy.Handlers
                 ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Socks5.Username}:{context.Socks5.Password ?? String.Empty}"))
                 : null;
 
-            string? proxyAuthorization = !context.Mapping.Authentication.SetHeader
+            string? proxyAuthorization = !context.Mapping.Authentication.SetAuthentication
                 ? socks5ProxyAuthorization
                 : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
 

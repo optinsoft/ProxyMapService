@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.RemoteStream = context.RemoteClient.GetStream();
 
-            string? proxyAuthorization = !context.Mapping.Authentication.SetHeader
+            string? proxyAuthorization = !context.Mapping.Authentication.SetAuthentication
                 ? null
                 : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
 
