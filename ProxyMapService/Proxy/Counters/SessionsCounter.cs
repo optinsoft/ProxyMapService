@@ -1,5 +1,6 @@
 ﻿using Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
+using System.Reflection.Metadata.Ecma335;
 
 namespace ProxyMapService.Proxy.Counters
 {
@@ -21,6 +22,7 @@ namespace ProxyMapService.Proxy.Counters
         public int HostRejected { get; private set; }
         public int HostProxified { get; private set; }
         public int HostBypassed { get; private set; }
+        public int Socks5Failures { get; private set; }
 
         public void OnSessionStarted(SessionContext context)
         {
@@ -157,6 +159,15 @@ namespace ProxyMapService.Proxy.Counters
             HostBypassedHandler?.Invoke(context, EventArgs.Empty);
         }
 
+        public void OnSocks5Failure(SessionContext context)
+        {
+            lock (_lock)
+            {
+                Socks5Failures += 1;
+            }
+            Socks5FailureHandler?.Invoke(context, EventArgs.Empty);
+        }
+
         public event EventHandler? SessionStartedHandler;
         public event EventHandler? AuthenticationNotRequiredHandler;
         public event EventHandler? AuthenticationRequiredHandler;
@@ -172,5 +183,6 @@ namespace ProxyMapService.Proxy.Counters
         public event EventHandler? HostRejectedHandler;
         public event EventHandler? HostProxifiedHandler;
         public event EventHandler? HostBypassedHandler;
+        public event EventHandler? Socks5FailureHandler;
     }
 }

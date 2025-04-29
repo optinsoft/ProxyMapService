@@ -1,0 +1,94 @@
+﻿using Proxy.Headers;
+using Proxy.Network;
+using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Socks;
+using System.Net;
+using System.Text;
+using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
+
+namespace ProxyMapService.Proxy.Handlers
+{
+    public class Socks5ProxyHandler : IHandler
+    {
+        private static readonly Socks5ProxyHandler Self = new();
+
+        public async Task<HandleStep> Run(SessionContext context)
+        {
+            context.Proxified = true;
+
+            context.SessionsCounter?.OnHostProxified(context);
+
+            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.Mapping.ProxyServer.Host, context.Mapping.ProxyServer.Port);
+
+            try
+            {
+                await context.RemoteClient.ConnectAsync(remoteEndPoint, context.Token);
+            }
+            catch (Exception)
+            {
+                context.SessionsCounter?.OnProxyFailed(context);
+                await SendSocks5Reply(context, Socks5Status.NetworkUnreachable);
+                throw;
+            }
+
+            context.SessionsCounter?.OnProxyConnected(context);
+
+            context.RemoteStream = context.RemoteClient.GetStream();
+
+            string connectHttpCommand = String.Join(
+                "\r\n",
+                $"CONNECT {context.HostName}:{context.HostPort} HTTP/1.1",
+                $"Host: {context.HostName}:{context.HostPort}",
+                //"User-Agent: curl/8.11.1",
+                "Connection: Keep-Alive");
+            context.Http = new global::Proxy.Headers.HttpRequestHeader(Encoding.ASCII.GetBytes(connectHttpCommand));
+
+            string? socks5ProxyAuthorization = context.Socks5?.Username != null && context.Socks5?.Username.Length > 0
+                ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Socks5.Username}:{context.Socks5.Password ?? String.Empty}"))
+                : null;
+
+            string ? proxyAuthorization = !context.Mapping.Authentication.SetHeader
+                ? socks5ProxyAuthorization
+                : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
+
+            var headerBytes = context.Http.GetBytes(true, proxyAuthorization, null);
+            if (headerBytes != null && headerBytes.Length > 0)
+            {
+                await SendHttpHeaderBytes(context, headerBytes);
+            }
+
+            var responseHeaderBytes = await context.RemoteHeaderStream.ReadHeaderBytes(context.RemoteStream, context.Token);
+            if (responseHeaderBytes != null)
+            {
+                var responseHttp = new HttpResponseHeader(responseHeaderBytes);
+                if (responseHttp.StatusCode == "200")
+                {
+                    await SendSocks5Reply(context, Socks5Status.Succeeded);
+                    return HandleStep.Tunnel;
+                }
+            }
+
+            await SendSocks5Reply(context, Socks5Status.NetworkUnreachable);
+            return HandleStep.Terminate;
+        }
+
+        public static Socks5ProxyHandler Instance()
+        {
+            return Self;
+        }
+
+        private static async Task SendSocks5Reply(SessionContext context, Socks5Status status)
+        {
+            if (context.ClientStream == null) return;
+            byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];
+            await context.ClientStream.WriteAsync(bytes, context.Token);
+        }
+
+        private static async Task SendHttpHeaderBytes(SessionContext context, byte[] headerBytes)
+        {
+            if (context.RemoteStream == null) return;
+            await context.RemoteStream.WriteAsync(headerBytes, context.Token);
+            context.SentCounter?.OnBytesSent(context, headerBytes.Length, headerBytes, 0);
+        }
+    }
+}

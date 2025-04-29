@@ -5,9 +5,9 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class AuthenticationHandler : IHandler
+    public class HttpAuthenticationHandler : IHandler
     {
-        private static readonly AuthenticationHandler Self = new();
+        private static readonly HttpAuthenticationHandler Self = new();
 
         public async Task<HandleStep> Run(SessionContext context)
         {
@@ -16,7 +16,7 @@ namespace ProxyMapService.Proxy.Handlers
                 if (!IsAuthenticationRequired(context))
                 {
                     context.SessionsCounter?.OnAuthenticationNotRequired(context);
-                    return HandleStep.AuthenticationNotRequired;
+                    return HandleStep.HttpAuthenticationNotRequired;
                 }
                 context.SessionsCounter?.OnAuthenticationRequired(context);
                 await SendProxyAuthenticationRequired(context);
@@ -26,13 +26,13 @@ namespace ProxyMapService.Proxy.Handlers
             if (!IsVerifyAuthentication(context))
             {
                 context.SessionsCounter?.OnAuthenticated(context);
-                return HandleStep.Authenticated;
+                return HandleStep.HttpAuthenticated;
             }
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
                 context.SessionsCounter?.OnAuthenticated(context);
-                return HandleStep.Authenticated;
+                return HandleStep.HttpAuthenticated;
             }
 
             context.SessionsCounter?.OnAuthenticationInvalid(context);
@@ -40,7 +40,7 @@ namespace ProxyMapService.Proxy.Handlers
             return HandleStep.Terminate;
         }
 
-        public static AuthenticationHandler Instance()
+        public static HttpAuthenticationHandler Instance()
         {
             return Self;
         }
@@ -52,7 +52,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static bool IsProxyAuthorizationHeaderPresent(SessionContext context)
         {
-            return context.Header?.ProxyAuthorization != null;
+            return context.Http?.ProxyAuthorization != null;
         }
 
         private static bool IsVerifyAuthentication(SessionContext context)
@@ -62,7 +62,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static bool IsProxyAuthorizationCredentialsCorrect(SessionContext context)
         {
-            var proxyAuthorization = context.Header?.ProxyAuthorization;
+            var proxyAuthorization = context.Http?.ProxyAuthorization;
 
             if (proxyAuthorization == null) return false;
 

@@ -10,6 +10,13 @@ namespace Proxy.Network
             Port = port;
         }
 
+        public Address(byte[] ipBytes, int port)
+        {
+            IPAddress ipAddress = new(ipBytes);
+            Hostname = ipAddress.ToString();
+            Port = port;
+        }
+
         public string Hostname { get; }
         public int Port { get; }
 

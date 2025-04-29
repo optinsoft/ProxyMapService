@@ -62,7 +62,7 @@ namespace ProxyMapService.Proxy.Counters
             }
         }
 
-        public void OnBytesRead(SessionContext context, int bytesRead)
+        public void OnBytesRead(SessionContext context, int bytesRead, byte[]? bytesData, int startIndex)
         {
             lock(_lock)
             {
@@ -78,7 +78,9 @@ namespace ProxyMapService.Proxy.Counters
             }
             BytesReadHandler?.Invoke(context, new()
             {
-                BytesRead = bytesRead
+                BytesRead = bytesRead,
+                BytesData = bytesData,
+                StartIndex = startIndex
             });
         }
 

@@ -10,13 +10,19 @@ namespace ProxyMapService.Proxy.Sessions
     {
         private static readonly Dictionary<HandleStep, IHandler> Handlers = new()
         {
-            //{ HandleStep.Initialize, ForwardHandler.Instance() },
             { HandleStep.Initialize, InitializeHandler.Instance() },
-            { HandleStep.Initialized, AuthenticationHandler.Instance() },
-            { HandleStep.AuthenticationNotRequired, HostActionHandler.Instance() },
-            { HandleStep.Authenticated, HostActionHandler.Instance() },
-            { HandleStep.Proxy, ProxyHandler.Instance() },
-            { HandleStep.Bypass, BypassHandler.Instance() },
+            { HandleStep.HttpInitialized, HttpAuthenticationHandler.Instance() },
+            { HandleStep.HttpAuthenticationNotRequired, HttpHostActionHandler.Instance() },
+            { HandleStep.HttpAuthenticated, HttpHostActionHandler.Instance() },
+            { HandleStep.HttpProxy, HttpProxyHandler.Instance() },
+            { HandleStep.HttpBypass, HttpBypassHandler.Instance() },
+            { HandleStep.Socks5Initialized, Socks5AuthenticationHandler.Instance() },
+            { HandleStep.Socks5AuthenticationNotRequired, Socks5ConnectRequestHandler.Instance() },
+            { HandleStep.Socks5UsernamePasswordAuthentication, Socks5UsernamePasswordHandler.Instance() },
+            { HandleStep.Socks5Authenticated, Socks5ConnectRequestHandler.Instance() },
+            { HandleStep.Socks5ConnectRequested, Socks5HostActionHandler.Instance() },
+            { HandleStep.Socks5Proxy, Socks5ProxyHandler.Instance() },
+            { HandleStep.Socks5Bypass, Socks5BypassHandler.Instance() },
             { HandleStep.Tunnel, TunnelHandler.Instance() }
         };
 

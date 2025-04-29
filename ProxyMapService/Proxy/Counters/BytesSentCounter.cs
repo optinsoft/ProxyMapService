@@ -64,7 +64,7 @@ namespace ProxyMapService.Proxy.Counters
             }
         }
 
-        public void OnBytesSent(SessionContext context, int bytesSent)
+        public void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex)
         {
             lock(_lock)
             {
@@ -80,7 +80,9 @@ namespace ProxyMapService.Proxy.Counters
             }
             BytesSentHandler?.Invoke(context, new()
             {
-                BytesSent = bytesSent
+                BytesSent = bytesSent,
+                BytesData = bytesData,
+                StartIndex = startIndex
             });
         }
 

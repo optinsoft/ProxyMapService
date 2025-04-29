@@ -13,7 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Proxy\Headers\" />
     <Folder Include="Proxy\Network\" />
   </ItemGroup>
 

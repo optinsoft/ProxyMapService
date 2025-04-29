@@ -1,6 +1,9 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Sessions;
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -12,25 +15,21 @@ namespace ProxyMapService.Proxy.Handlers
         public async Task<HandleStep> Run(SessionContext context)
         {
             var clientStream = context.ClientStream;
-            if (clientStream != null && !context.Token.IsCancellationRequested)
+            var remoteStream = context.RemoteStream;
+
+            if (clientStream != null && remoteStream != null && !context.Token.IsCancellationRequested)
             {
-                using var remoteStream = context.RemoteClient.GetStream();
-
-                var headerBytes = context.TunnelHeaderBytes;
-
-                if (headerBytes != null && headerBytes.Length > 0)
-                {
-                    await remoteStream.WriteAsync(headerBytes, context.Token);
-                    context.SentCounter?.OnBytesSent(context, headerBytes.Length);
-                }
-
                 var forwardTask = Tunnel(clientStream, remoteStream, context, null, context.SentCounter);
                 var reverseTask = Tunnel(remoteStream, clientStream, context, context.ReadCounter, null);
-
                 await Task.WhenAny(forwardTask, reverseTask);
             }
 
             return HandleStep.Terminate;
+        }
+
+        public static TunnelHandler Instance()
+        {
+            return Self;
         }
 
         private static async Task Tunnel(Stream source, Stream destination, SessionContext context, BytesReadCounter? readCounter, BytesSentCounter? sentCounter)
@@ -45,19 +44,18 @@ namespace ProxyMapService.Proxy.Handlers
                 do
                 {
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
-                    readCounter?.OnBytesRead(context, bytesRead);
-                    await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
-                    sentCounter?.OnBytesSent(context, bytesRead);
+                    readCounter?.OnBytesRead(context, bytesRead, buffer, 0);
+                    if (bytesRead > 0)
+                    {
+                        await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
+                        sentCounter?.OnBytesSent(context, bytesRead, buffer, 0);
+                    }
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
             }
             catch (ObjectDisposedException)
             {
+                //context.Logger.LogError("ObjectDisposedException: {ErrorMessage}", ex.Message);
             }
-        }
-
-        public static TunnelHandler Instance()
-        {
-            return Self;
         }
     }
 }

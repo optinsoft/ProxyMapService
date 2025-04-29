@@ -4,28 +4,28 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class HostActionHandler : IHandler
+    public class HttpHostActionHandler : BaseHostActionHandler, IHandler
     {
-        private static readonly HostActionHandler Self = new();
+        private static readonly HttpHostActionHandler Self = new();
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.Mapping.Listen.RejectHttpProxy && context.Header?.HTTPVerb != "CONNECT")
+            if (context.Mapping.Listen.RejectHttpProxy && context.Http?.HTTPVerb != "CONNECT")
             {
                 context.SessionsCounter?.OnHttpRejected(context);
                 await SendMethodNotAllowed(context);
                 return HandleStep.Terminate;
             }
 
-            if (context.Header?.Host == null || context.Header.Host.Hostname.Length == 0)
+            if (context.Http?.Host == null || context.Http.Host.Hostname.Length == 0)
             {
                 context.SessionsCounter?.OnNoHost(context);
                 await SendBadRequest(context);
                 return HandleStep.Terminate;
             }
 
-            context.HostName = context.Header.Host.Hostname;
-            context.HostPort = context.Header.Host.Port;
+            context.HostName = context.Http.Host.Hostname;
+            context.HostPort = context.Http.Host.Port;
 
             context.HostAction = GetHostAction(context.HostName, context.HostRules);
             if (context.HostAction == ActionEnum.Deny)
@@ -35,26 +35,10 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            return context.HostAction == ActionEnum.Bypass ? HandleStep.Bypass : HandleStep.Proxy;
+            return context.HostAction == ActionEnum.Bypass ? HandleStep.HttpBypass : HandleStep.HttpProxy;
         }
 
-        private static ActionEnum GetHostAction(string Host, List<HostRule>? hostRules)
-        {
-            ActionEnum hostAction = ActionEnum.Allow;
-            if (hostRules != null)
-            {
-                foreach (var rule in hostRules)
-                {
-                    if (rule.Pattern.Match(Host).Success)
-                    {
-                        hostAction = rule.Action;
-                    }
-                }
-            }
-            return hostAction;
-        }
-
-        public static HostActionHandler Instance()
+        public static HttpHostActionHandler Instance()
         {
             return Self;
         }

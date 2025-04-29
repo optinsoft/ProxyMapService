@@ -4,9 +4,9 @@ using Proxy.Network;
 
 namespace Proxy.Headers
 {
-    public class HttpHeader
+    public class HttpRequestHeader
     {
-        public HttpHeader(byte[] array)
+        public HttpRequestHeader(byte[] array)
         {
             Parse(this, array);
         }
@@ -29,7 +29,7 @@ namespace Proxy.Headers
             return GetHTTPTargetPath(HTTPTarget);
         }
 
-        private static void Parse(HttpHeader self, byte[] array)
+        private static void Parse(HttpRequestHeader self, byte[] array)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
 
