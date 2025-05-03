@@ -1,81 +1,89 @@
-﻿using Proxy.Network;
+﻿using ProxyMapService.Proxy.Headers;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
 using System.Text;
-using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
-using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks4ProxyHandler : IHandler
+    public class Socks4ProxyHandler : BaseProxyHandler, IHandler
     {
         private static readonly Socks4ProxyHandler Self = new();
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            context.Proxified = true;
+            var socks4 = context.Socks4;
 
-            context.SessionsCounter?.OnHostProxified(context);
-
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.Mapping.ProxyServer.Host, context.Mapping.ProxyServer.Port);
-
-            try
+            if (socks4 == null)
             {
-                await context.RemoteClient.ConnectAsync(remoteEndPoint, context.Token);
+                var httpProxyAuthorization =
+                    !String.IsNullOrEmpty(context.Http?.ProxyAuthorization)
+                    ? Encoding.ASCII.GetString(Convert.FromBase64String(context.Http.ProxyAuthorization)).Split(':')
+                    : null;
+                string? clientUserid =
+                    httpProxyAuthorization != null
+                    ? httpProxyAuthorization[0]
+                    : (!String.IsNullOrEmpty(context.Socks5?.Username) ? context.Socks5?.Username : context.Socks4?.UserId);
+                var connectBytes = Socks4Header.GetConnectRequestBytes(context.HostName, context.HostPort, clientUserid);
+                socks4 = new Socks4Header(connectBytes);
             }
-            catch (Exception)
+
+            context.RemoteHeaderStream.SocksVersion = 0x04;
+
+            string? userId = context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Username : socks4.UserId;
+
+            var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.HostName, context.HostPort, userId);
+            await SendSocks4Request(context, socks4ConnectBytes);
+
+            if (context.Socks4 != null)
             {
-                context.SessionsCounter?.OnProxyFailed(context);
-                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
-                throw;
-            }
-
-            context.SessionsCounter?.OnProxyConnected(context);
-
-            context.RemoteStream = context.RemoteClient.GetStream();
-
-            string? userAgentHeader = !string.IsNullOrEmpty(context.UserAgent) ? $"User-Agent: {context.UserAgent}" : null;
-
-            List<string> connectHttpCommand = [
-                $"CONNECT {context.HostName}:{context.HostPort} HTTP/1.1",
-                $"Host: {context.HostName}:{context.HostPort}"
-
-            ];
-            if (!string.IsNullOrEmpty(context.UserAgent))
-            {
-                connectHttpCommand.Add($"User-Agent: {context.UserAgent}");
-            }
-            connectHttpCommand.Add("Proxy-Connection: Keep-Alive");
-            var connectBytes = Encoding.ASCII.GetBytes(String.Join("\r\n", [.. connectHttpCommand]));
-            context.Http = new HttpRequestHeader(connectBytes);
-
-            string? socks5ProxyAuthorization = context.Socks5?.Username != null && context.Socks5?.Username.Length > 0
-                ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Socks5.Username}:{context.Socks5.Password ?? String.Empty}"))
-                : null;
-
-            string? proxyAuthorization = !context.Mapping.Authentication.SetAuthentication
-                ? socks5ProxyAuthorization
-                : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
-
-            var headerBytes = context.Http.GetBytes(true, proxyAuthorization, null);
-            if (headerBytes != null && headerBytes.Length > 0)
-            {
-                await SendHttpHeaderBytes(context, headerBytes);
+                return HandleStep.Tunnel;
             }
 
             var responseHeaderBytes = await context.RemoteHeaderStream.ReadHeaderBytes(context.RemoteStream, context.Token);
             if (responseHeaderBytes != null)
             {
-                var responseHttp = new HttpResponseHeader(responseHeaderBytes);
-                if (responseHttp.StatusCode == "200")
+                var responseSocks4 = new Socks4Header(responseHeaderBytes);
+                if (responseSocks4.CommandCode == (byte)Socks4Command.RequestGranted)
                 {
-                    await SendSocks4Reply(context, Socks4Command.RequestGranted);
+                    if (context.Http != null)
+                    {
+                        if (context.Http.HTTPVerb == "CONNECT")
+                        {
+                            await SendHttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
+                        }
+                        else
+                        {
+                            var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.GetHTTPTargetPath()} {context.Http?.HTTPProtocol}";
+                            var requestHeaderBytes = context.Http?.GetBytes(false, null, firstLine);
+                            if (requestHeaderBytes != null && requestHeaderBytes.Length > 0)
+                            {
+                                await SendHttpRequest(context, requestHeaderBytes);
+                            }
+                        }
+                    }
+                    if (context.Socks5 != null)
+                    {
+                        await SendSocks5Reply(context, Socks5Status.Succeeded);
+                    }
                     return HandleStep.Tunnel;
                 }
             }
 
-            await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+            if (context.Http != null)
+            {
+                await SendHttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"));
+            }
+            if (context.Socks4 != null)
+            {
+                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+            }
+            if (context.Socks5 != null)
+            {
+                await SendSocks5Reply(context, Socks5Status.GeneralFailure);
+            }
+
             return HandleStep.Terminate;
         }
 
@@ -84,22 +92,18 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task SendSocks4Reply(SessionContext context, Socks4Command command)
-        {
-            if (context.ClientStream == null) return;
-            byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];
-            if (context.Socks4 != null)
-            {
-                Array.Copy(context.Socks4.Bytes, 2, bytes, 2, 6);
-            }
-            await context.ClientStream.WriteAsync(bytes, context.Token);
-        }
-
-        private static async Task SendHttpHeaderBytes(SessionContext context, byte[] headerBytes)
+        private static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
         {
             if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(headerBytes, context.Token);
-            context.SentCounter?.OnBytesSent(context, headerBytes.Length, headerBytes, 0);
+            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
+        }
+
+        private static async Task SendSocks4Request(SessionContext context, byte[] requestBytes)
+        {
+            if (context.RemoteStream == null) return;
+            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
         }
     }
 }

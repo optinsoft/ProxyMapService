@@ -11,6 +11,12 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (!IsAuthenticationRequired(context))
             {
+                if (IsMethodPresent(context, 0x02))
+                {
+                    context.SessionsCounter?.OnAuthenticationRequired(context);
+                    await SendSelectMethod(context, 0x02);
+                    return HandleStep.Socks5UsernamePasswordAuthentication;
+                }
                 context.SessionsCounter?.OnAuthenticationNotRequired(context);
                 if (!IsMethodPresent(context, 0x0))
                 {

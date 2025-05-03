@@ -1,6 +1,6 @@
 ﻿namespace ProxyMapService.Proxy.Configurations
 {
-    public class Authentication(bool required, bool verify, bool setAuthentication, string username, string password)
+    public class Authentication(bool required = false, bool verify = false, bool setAuthentication = false, string username = "", string password = "")
     {
         public bool Required { get; private set; } = required;
         public bool Verify { get; private set; } = verify;

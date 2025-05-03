@@ -1,79 +1,98 @@
-﻿using Proxy.Network;
+﻿using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Headers;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
 using System.Text;
-using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
-using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5ProxyHandler : IHandler
+    public class Socks5ProxyHandler : BaseProxyHandler, IHandler
     {
         private static readonly Socks5ProxyHandler Self = new();
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            context.Proxified = true;
+            var socks5 = context.Socks5;
 
-            context.SessionsCounter?.OnHostProxified(context);
-
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.Mapping.ProxyServer.Host, context.Mapping.ProxyServer.Port);
-
-            try
+            if (socks5 == null)
             {
-                await context.RemoteClient.ConnectAsync(remoteEndPoint, context.Token);
-            }
-            catch (Exception)
-            {
-                context.SessionsCounter?.OnProxyFailed(context);
-                await SendSocks5Reply(context, Socks5Status.NetworkUnreachable);
-                throw;
-            }
-
-            context.SessionsCounter?.OnProxyConnected(context);
-
-            context.RemoteStream = context.RemoteClient.GetStream();
-
-            List<string> connectHttpCommand = [
-                $"CONNECT {context.HostName}:{context.HostPort} HTTP/1.1",
-                $"Host: {context.HostName}:{context.HostPort}"
-
-            ];
-            if (!string.IsNullOrEmpty(context.UserAgent))
-            {
-                connectHttpCommand.Add($"User-Agent: {context.UserAgent}");
-            }
-            connectHttpCommand.Add("Proxy-Connection: Keep-Alive");
-            var connectBytes = Encoding.ASCII.GetBytes(String.Join("\r\n", [.. connectHttpCommand]));
-            context.Http = new HttpRequestHeader(connectBytes);
-
-            string? socks5ProxyAuthorization = context.Socks5?.Username != null && context.Socks5?.Username.Length > 0
-                ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Socks5.Username}:{context.Socks5.Password ?? String.Empty}"))
-                : null;
-
-            string ? proxyAuthorization = !context.Mapping.Authentication.SetAuthentication
-                ? socks5ProxyAuthorization
-                : Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"));
-
-            var headerBytes = context.Http.GetBytes(true, proxyAuthorization, null);
-            if (headerBytes != null && headerBytes.Length > 0)
-            {
-                await SendHttpHeaderBytes(context, headerBytes);
+                var httpProxyAuthorization =
+                    !String.IsNullOrEmpty(context.Http?.ProxyAuthorization)
+                    ? Encoding.ASCII.GetString(Convert.FromBase64String(context.Http.ProxyAuthorization)).Split(':')
+                    : null;
+                string? clientUsername =
+                    httpProxyAuthorization != null
+                    ? httpProxyAuthorization[0]
+                    : (!String.IsNullOrEmpty(context.Socks4?.UserId) ? context.Socks4?.UserId : null);
+                string? clientPassword =
+                     httpProxyAuthorization != null && httpProxyAuthorization.Length > 1
+                    ? httpProxyAuthorization[1]
+                    : null;
+                var methodsBytes = Socks5Header.GetMethodsBytes(clientUsername, clientPassword);
+                socks5 = new Socks5Header(methodsBytes);
             }
 
-            var responseHeaderBytes = await context.RemoteHeaderStream.ReadHeaderBytes(context.RemoteStream, context.Token);
-            if (responseHeaderBytes != null)
+            context.RemoteHeaderStream.SocksVersion = 0x04;
+
+            string? username = context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Username : socks5.Username;
+            string? password = context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Password : socks5.Password;
+
+            Socks5Status status = await Socks5Auth(context, username, password);
+
+            if (status == Socks5Status.Succeeded)
             {
-                var responseHttp = new HttpResponseHeader(responseHeaderBytes);
-                if (responseHttp.StatusCode == "200")
+                var requestBytes = Socks5Header.GetConnectRequestBytes(context.HostName, context.HostPort);
+                await SendSocks5Request(context, requestBytes);
+
+                if (context.Socks5 != null)
                 {
-                    await SendSocks5Reply(context, Socks5Status.Succeeded);
+                    return HandleStep.Tunnel;
+                }
+
+                var socks5Reply = await ReadSocks5Reply(context);
+                status = socks5Reply != null && socks5Reply[0] == 0x05 ? (Socks5Status)socks5Reply[1] : Socks5Status.GeneralFailure;
+
+                if (status == Socks5Status.Succeeded)
+                {
+                    if (context.Http != null)
+                    {
+                        if (context.Http.HTTPVerb == "CONNECT")
+                        {
+                            await SendHttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
+                        }
+                        else
+                        {
+                            var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.GetHTTPTargetPath()} {context.Http?.HTTPProtocol}";
+                            var requestHeaderBytes = context.Http?.GetBytes(false, null, firstLine);
+                            if (requestHeaderBytes != null && requestHeaderBytes.Length > 0)
+                            {
+                                await SendHttpRequest(context, requestHeaderBytes);
+                            }
+                        }
+                    }
+                    if (context.Socks4 != null)
+                    {
+                        await SendSocks4Reply(context, Socks4Command.RequestGranted);
+                    }
                     return HandleStep.Tunnel;
                 }
             }
 
-            await SendSocks5Reply(context, Socks5Status.NetworkUnreachable);
+            if (context.Http != null)
+            {
+                await SendHttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"));
+            }
+            if (context.Socks4 != null)
+            {
+                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+            }
+            if (context.Socks5 != null)
+            {
+                await SendSocks5Reply(context, Socks5Status.GeneralFailure);
+            }
+
             return HandleStep.Terminate;
         }
 
@@ -82,18 +101,123 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task SendSocks5Reply(SessionContext context, Socks5Status status)
-        {
-            if (context.ClientStream == null) return;
-            byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];
-            await context.ClientStream.WriteAsync(bytes, context.Token);
-        }
-
-        private static async Task SendHttpHeaderBytes(SessionContext context, byte[] headerBytes)
+        private static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
         {
             if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(headerBytes, context.Token);
-            context.SentCounter?.OnBytesSent(context, headerBytes.Length, headerBytes, 0);
+            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
+        }
+
+        private static async Task<Socks5Status> Socks5Auth(SessionContext context, string? username, string? password)
+        {
+            var requestBytes = Socks5Header.GetMethodsBytes(username, password);
+            await SendSocks5Request(context, requestBytes);
+            byte[]? authMethod = await ReadSocks5(context, 2);
+            if (authMethod == null || authMethod[0] != 0x05)
+            {
+                return Socks5Status.NetworkUnreachable;
+            }
+            if (authMethod[1] == 0x02)
+            {
+                requestBytes = Socks5Header.GetUsernamePasswordBytes(username, password);
+                await SendSocks5Request(context, requestBytes);
+                byte[]? authResult = await ReadSocks5(context, 2);
+                if (authResult == null || authResult[0] != 0x01)
+                {
+                    return Socks5Status.NetworkUnreachable;
+                }
+                if (authResult[1] != 0x0)
+                {
+                    return Socks5Status.ConnectionNotAllowed;
+                }
+            }
+            else if (authMethod[1] != 0x0)
+            {
+                return Socks5Status.ConnectionNotAllowed;
+            }
+            return Socks5Status.Succeeded;
+        }
+
+        private static async Task SendSocks5Request(SessionContext context, byte[] requestBytes)
+        {
+            if (context.RemoteStream == null) return;
+            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
+        }
+
+        private static async Task<byte[]?> ReadSocks5(SessionContext context, int length)
+        {
+            if (context.RemoteStream == null) return null;
+            byte[] readBuffer = new byte[length];
+            int bufferPos = 0, bytesRead;
+            try
+            {
+                do
+                {
+                    bytesRead = await context.RemoteStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
+                    if (bytesRead <= 0) return null;
+                    bufferPos += 1;
+                } while (bufferPos < length);
+                return readBuffer;
+            }
+            finally
+            {
+                if (bufferPos > 0)
+                {
+                    context.ReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
+                }
+            }
+        }
+
+        private static async Task<byte[]?> ReadSocks5Reply(SessionContext context)
+        {
+            if (context.RemoteStream == null) return null;
+            int readLength = 4;
+            byte[] readBuffer = new byte[readLength];
+            int bufferPos = 0, bytesRead;
+            byte atyp = 0;
+            try
+            {
+                do
+                {
+                    bytesRead = await context.RemoteStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
+                    if (bytesRead <= 0) return null;
+                    if (bufferPos == 3)
+                    {
+                        atyp = readBuffer[bufferPos];
+                        switch (atyp)
+                        {
+                            case 0x01:
+                                readLength = 10;
+                                Array.Resize(ref readBuffer, readLength);
+                                break;
+                            case 0x03:
+                                readLength = 5;
+                                Array.Resize(ref readBuffer, readLength);
+                                break;
+                            case 0x04:
+                                readLength = 22;
+                                Array.Resize(ref readBuffer, readLength);
+                                break;
+                        }
+                    }
+                    else if (bufferPos == 4 && atyp == 0x03)
+                    {
+                        int alen = (int)readBuffer[bufferPos];
+                        readLength = 7 + alen;
+                        Array.Resize(ref readBuffer, readLength);
+                    }
+                    bufferPos += 1;
+                } while (bufferPos < readLength);
+                return readBuffer;
+            }
+            finally
+            {
+                if (bufferPos > 0)
+                {
+                    context.ReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
+                }
+            }
         }
     }
 }

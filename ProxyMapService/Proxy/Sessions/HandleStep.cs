@@ -18,6 +18,7 @@
         Socks5ConnectRequested,
         Socks5Proxy,
         Socks5Bypass,
+        Proxy,
         Tunnel,
         Terminate,
     }

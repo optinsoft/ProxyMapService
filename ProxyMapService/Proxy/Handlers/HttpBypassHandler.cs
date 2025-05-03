@@ -1,4 +1,4 @@
-﻿using Proxy.Network;
+﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using System.Net;
 using System.Text;
@@ -27,13 +27,15 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            await SendConnectionEstablised(context);
-
             context.SessionsCounter?.OnBypassConnected(context);
 
             context.RemoteStream = context.RemoteClient.GetStream();
 
-            if (context.Http?.HTTPVerb != "CONNECT")
+            if (context.Http?.HTTPVerb == "CONNECT")
+            {
+                await SendConnectionEstablised(context);
+            }
+            else
             {
                 var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.GetHTTPTargetPath()} {context.Http?.HTTPProtocol}";
                 var headerBytes = context.Http?.GetBytes(false, null, firstLine);

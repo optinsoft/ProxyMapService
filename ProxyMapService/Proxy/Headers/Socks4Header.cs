@@ -1,4 +1,5 @@
-﻿using Proxy.Network;
+﻿using ProxyMapService.Proxy.Network;
+using System.Collections;
 using System.Net;
 using System.Text;
 
@@ -21,6 +22,23 @@ namespace ProxyMapService.Proxy.Headers
         public byte[] Bytes { get; private set; } = [0, 0, 0, 0, 0, 0, 0, 0];
         public Address? Host { get; private set; }
         public string? UserId { get; private set; }
+
+        public static byte[] GetConnectRequestBytes(string host, int port, string? userId)
+        {
+            IPEndPoint hostEndPoint = Address.GetIPEndPoint(host, port);
+            byte[] portBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
+            byte[] addrBytes = hostEndPoint.Address.GetAddressBytes();
+            byte[] userIdBytes = Encoding.ASCII.GetBytes(userId ?? "");
+            int ulen = userIdBytes.Length;
+            byte[] requestBytes = new byte[9 + ulen];
+            requestBytes[0] = 0x04;
+            requestBytes[1] = 0x01;
+            Array.Copy(portBytes, 0, requestBytes, 2, 2);
+            Array.Copy(addrBytes, 0, requestBytes, 4, 4);
+            Array.Copy(userIdBytes, 0, requestBytes, 8, ulen);
+            requestBytes[8 + ulen] = 0x0;
+            return requestBytes;
+        }
 
         private static void Parse(Socks4Header self, byte[] array)
         {

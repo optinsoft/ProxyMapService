@@ -1,4 +1,4 @@
-﻿using Proxy.Network;
+﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Models;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Sessions;

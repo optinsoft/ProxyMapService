@@ -1,4 +1,4 @@
-﻿using Proxy.Network;
+﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using System.Net;
 using System.Net.Sockets;

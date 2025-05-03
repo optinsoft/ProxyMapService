@@ -23,7 +23,6 @@ namespace ProxyMapService.Proxy.Sessions
 
         public NetworkStream? ClientStream { get; set; }
         public NetworkStream? RemoteStream { get; set; }
-        public byte[]? HeaderBytes { get; set; }
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }

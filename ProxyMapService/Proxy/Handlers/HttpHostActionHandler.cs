@@ -44,7 +44,7 @@ namespace ProxyMapService.Proxy.Handlers
                 context.HostPort = rule.HostPort.Value;
             }
 
-            return context.HostAction == ActionEnum.Bypass ? HandleStep.HttpBypass : HandleStep.HttpProxy;
+            return context.HostAction == ActionEnum.Bypass ? HandleStep.HttpBypass : HandleStep.Proxy;
         }
 
         public static HttpHostActionHandler Instance()

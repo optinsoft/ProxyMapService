@@ -1,4 +1,4 @@
-﻿using Proxy.Network;
+﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
@@ -28,11 +28,11 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            await SendSocks4Reply(context, Socks4Command.RequestGranted);
-
             context.SessionsCounter?.OnBypassConnected(context);
 
             context.RemoteStream = context.RemoteClient.GetStream();
+
+            await SendSocks4Reply(context, Socks4Command.RequestGranted);
 
             return HandleStep.Tunnel;
         }

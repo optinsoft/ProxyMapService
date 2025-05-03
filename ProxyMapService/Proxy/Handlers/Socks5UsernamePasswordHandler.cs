@@ -87,7 +87,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             int plen = (int)readBuffer[0];
 
-            for (int i = 0; i < ulen; ++i)
+            for (int i = 0; i < plen; ++i)
             {
                 bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
                 if (bytesRead <= 0) return null;

@@ -12,23 +12,23 @@ namespace ProxyMapService.Proxy.Handlers
             try
             {
                 context.ClientStream = context.Client.GetStream();
-                context.HeaderBytes = await context.ClientHeaderStream.ReadHeaderBytes(context.ClientStream, context.Token);
-                if (context.HeaderBytes != null)
+                var requestHeaderBytes = await context.ClientHeaderStream.ReadHeaderBytes(context.ClientStream, context.Token);
+                if (requestHeaderBytes != null)
                 {
                     switch (context.ClientHeaderStream.SocksVersion)
                     {
                         case 0x00:
-                            context.Http = new HttpRequestHeader(context.HeaderBytes);
+                            context.Http = new HttpRequestHeader(requestHeaderBytes);
                             return HandleStep.HttpInitialized;
                         case 0x04:
-                            context.Socks4 = new Socks4Header(context.HeaderBytes);
-                            if (context.Socks4.IsConnectRequest(context.HeaderBytes))
+                            context.Socks4 = new Socks4Header(requestHeaderBytes);
+                            if (context.Socks4.IsConnectRequest(requestHeaderBytes))
                             {
                                 return HandleStep.Socks4Initialized;
                             }
                             break;
                         case 0x05:
-                            context.Socks5 = new Socks5Header(context.HeaderBytes);
+                            context.Socks5 = new Socks5Header(requestHeaderBytes);
                             return HandleStep.Socks5Initialized;
                     }
                 }

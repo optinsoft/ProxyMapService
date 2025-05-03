@@ -26,6 +26,7 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Socks5ConnectRequested, Socks5HostActionHandler.Instance() },
             { HandleStep.Socks5Proxy, Socks5ProxyHandler.Instance() },
             { HandleStep.Socks5Bypass, Socks5BypassHandler.Instance() },
+            { HandleStep.Proxy, ProxyHandler.Instance() },
             { HandleStep.Tunnel, TunnelHandler.Instance() }
         };
 

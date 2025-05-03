@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Proxy.Network
+namespace ProxyMapService.Proxy.Network
 {
     public class Address
     {

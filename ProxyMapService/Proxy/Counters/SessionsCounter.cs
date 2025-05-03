@@ -1,4 +1,4 @@
-﻿using Proxy.Network;
+﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using System.Reflection.Metadata.Ecma335;
 

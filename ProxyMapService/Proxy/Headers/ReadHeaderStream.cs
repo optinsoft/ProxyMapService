@@ -19,11 +19,17 @@ namespace ProxyMapService.Proxy.Headers
         private byte _socksVersion = 0x0;
         private int _delimiterCounter = 0;
         
-        public byte SocksVersion { get { return _socksVersion; } }
-        public int DelimiterCounter { get { return _delimiterCounter; } }
+        public byte SocksVersion { 
+            get { return _socksVersion; }
+            set { _socksVersion = value; }
+        }
+        public int DelimiterCounter { 
+            get { return _delimiterCounter; } 
+        }
 
-        public async Task<byte[]?> ReadHeaderBytes(Stream client, CancellationToken token)
+        public async Task<byte[]?> ReadHeaderBytes(Stream? client, CancellationToken token)
         {
+            if (client == null) return null;
             try
             {
                 if (await ReadByte(client, token) == null)
@@ -65,7 +71,7 @@ namespace ProxyMapService.Proxy.Headers
 
             _memoryStream.Write(_readBuffer, _bufferPos, bytesRead);
 
-            if (_totalRead == 0)
+            if (_totalRead == 0 && _socksVersion == 0x0)
             {
                 switch (_readBuffer[_bufferPos])
                 {

@@ -40,7 +40,7 @@ namespace ProxyMapService.Proxy.Handlers
                 context.HostPort = rule.HostPort.Value;
             }
 
-            return context.HostAction == ActionEnum.Bypass ? HandleStep.Socks5Bypass : HandleStep.Socks5Proxy;
+            return context.HostAction == ActionEnum.Bypass ? HandleStep.Socks5Bypass : HandleStep.Proxy;
         }
 
         public static Socks5HostActionHandler Instance()

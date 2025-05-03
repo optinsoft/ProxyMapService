@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Primitives;
-using Proxy.Network;
+using ProxyMapService.Proxy.Network;
 
 namespace ProxyMapService.Proxy.Headers
 {
