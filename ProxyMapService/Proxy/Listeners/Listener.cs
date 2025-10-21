@@ -45,7 +45,7 @@ namespace ProxyMapService.Proxy.Listeners
 
             await AcceptClients(_listener, _cancelSource.Token);
 
-            _logger.LogInformation("Listening on {localEndPoint} hass finished", _localEndPoint);
+            _logger.LogInformation("Listening on {localEndPoint} has finished", _localEndPoint);
         }
 
         protected virtual async Task AcceptClients(TcpListener listener, CancellationToken token)
