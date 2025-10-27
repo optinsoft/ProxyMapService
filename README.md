@@ -79,18 +79,34 @@ To enable host statistics, set `"Enabled": true` in the `"HostStats"` section. T
 }
 ```
 
-## Installation
+## Install IIS Components
 
-1. Install the .NET 8.0 Hosting Bundle (download here: https://dotnet.microsoft.com/en-us/download/dotnet/8.0).
-2. Build and Publish the application to `bin\Release\net8.0\publish`.
-3. Create a directory for the app (e.g., `ProxyMapService`) in `C:\inetpub\wwwroot`.
-4. Copy the files from `bin\Release\net8.0\publish` into this directory.
-5. Create `appsettings.Production.json` and configure it (see the `Configuration` section below).
-6. In IIS, create an application pool (e.g., `PortMapPool`) with the following settings:
+The **.NET 8.0 Hosting Bundle** must be installed.
+You can download it here: https://dotnet.microsoft.com/en-us/download/dotnet/8.0
+
+You also need to enable the **Application Initialization** module.
+This module allows IIS to automatically warm up the site and start the ASP.NET Core application immediately after the application pool starts, without waiting for the first HTTP request.
+This is required to ensure that background services start automatically after the server or IIS is restarted.
+
+** How to enable Application Initialization **:
+
+1. Open **Server Manager**.
+2. Select **Add Roles and Features**.
+3. Navigate to: `Web Server (IIS) → Web Server → Application Development`.
+4. Check the box for **Application Initialization**.
+5. Complete the installation and restart IIS if necessary.
+
+## Build and Install ProxyMapService
+
+1. Build and Publish the application to `bin\Release\net8.0\publish`.
+2. Create a directory for the app (e.g., `ProxyMapService`) in `C:\inetpub\wwwroot`.
+3. Copy the files from `bin\Release\net8.0\publish` into this directory.
+4. Create `appsettings.Production.json` and configure it (see the `Configuration` section below).
+5. In IIS, create an application pool (e.g., `PortMapPool`) with the following settings:
     * **Start Mode** = **Always Running**
     * **Idle Timeout (minutes)** = **0**.
-7. Convert the `C:\inetpub\wwwroot\ProxyMapService` directory into an application in IIS, assigning it the `PortMapPool` app pool.
-8. In the application’s `Advanced Settings`, enable:
+6. Convert the `C:\inetpub\wwwroot\ProxyMapService` directory into an application in IIS, assigning it the `PortMapPool` app pool.
+7. In the application’s `Advanced Settings`, enable:
     * **Preload Enabled** = **True**.
 
 ## Configuration

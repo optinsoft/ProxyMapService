@@ -80,9 +80,22 @@ Proxy Map Service слушает входящие TCP-соединения на 
 }
 ```
 
-## Установка
+## Установка компонентов IIS
 
-Требуется чтобы был установлен .NET 8.0 Hosting Bundle. Взять можно тут: https://dotnet.microsoft.com/en-us/download/dotnet/8.0.
+Требуется чтобы был установлен **.NET 8.0 Hosting Bundle**. Взять можно тут: https://dotnet.microsoft.com/en-us/download/dotnet/8.0.
+
+Также нужно включить модуль **Application Initialization**. Он позволяет IIS автоматически прогревать сайт и запускать ASP.NET Core приложение сразу после старта пула приложений, без ожидания первого HTTP-запроса.
+Это необходимо, чтобы фоновые службы стартовали сразу после перезапуска сервера или IIS.
+
+**Как включить Application Initialization**:
+
+1. Открыть **Server Manager**.
+2. Выбрать пункт **Add Roles and Features**.
+3. Дойди до раздела `Web Server (IIS) → Web Server → Application Development`.
+4. Отметить чекбокс **Application Initialization**.
+5. Завершить установку и при необходимости перезапусти IIS.
+
+## Сборка и установка ProxyMapService
 
 1. Собрать и опубликовать (Publish) приложение в bin\Release\net8.0\publish.
 2. Создать каталог для приложения с именем, например, ProxyMapService в C:\inetpub\wwwroot.

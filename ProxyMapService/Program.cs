@@ -2,12 +2,22 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
-using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Services;
 using System.Text;
-using static ProxyMapService.LocalhostMiddlware;
+using ProxyMapService.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var logggingEventLog = builder.Configuration.GetSection("Logging:EventLog");
+if (logggingEventLog.Exists())
+{
+#pragma warning disable CA1416 // Checking platform compatibility
+    builder.Logging.AddEventLog(eventLogSettings =>
+    {
+        eventLogSettings.SourceName = "ProxyMapService";
+    });
+#pragma warning restore CA1416 // Checking platform compatibility
+}
 
 var jwtAuthConfig = builder.Configuration.GetSection("Authentication:Jwt");
 var jwtAuthEnabled = jwtAuthConfig.GetValue<bool>("Enabled");

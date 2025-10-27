@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Counters;
+﻿using Microsoft.Extensions.Logging;
+using ProxyMapService.Counters;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Models;
 using ProxyMapService.Proxy;
@@ -8,7 +9,7 @@ using System.Text;
 
 namespace ProxyMapService.Services
 {
-    public class ProxyService : BackgroundService, IProxyService
+    public class ProxyService : IProxyService
     {
         private readonly string _serviceInfo = $"Service created at {DateTime.Now}";
         private readonly List<Task> _tasks = [];
@@ -41,7 +42,7 @@ namespace ProxyMapService.Services
                     _sentCounter.BytesSentHandler += LogBytesSent;
                 }
             }
-            AddProxyMappingTasks();
+            //AddProxyMappingTasks();
         }
 
         private void LogBytesRead(object? sender, BytesReadEventArgs e)
@@ -72,12 +73,16 @@ namespace ProxyMapService.Services
                 string.Concat(Encoding.ASCII.GetString(data, startIndex, length).Select(c => c < 32 ? '.' : c));
         }
 
+        /*
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            _logger.LogInformation("[ProxyService] Delay...");
             await Task.Delay(-1, stoppingToken);
+            _logger.LogInformation("[ProxyService] Delay completed.");
         }
+        */
 
-        private void AddProxyMappingTasks()
+        public void AddProxyMappingTasks(CancellationToken stoppingToken)
         {
             var hostRules = _configuration.GetSection("HostRules").Get<List<HostRule>>();
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
@@ -87,7 +92,7 @@ namespace ProxyMapService.Services
                 foreach (var mapping in proxyMappings)
                 {
                     _tasks.Add(new ProxyMapper().Start(mapping, hostRules, userAgent,
-                        _sessionsCounter, _readCounter, _sentCounter, _logger));
+                        _sessionsCounter, _readCounter, _sentCounter, _logger, stoppingToken));
                 }
             }
         }

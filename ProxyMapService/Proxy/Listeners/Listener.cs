@@ -34,26 +34,25 @@ namespace ProxyMapService.Proxy.Listeners
             }
         }
 
-        public async Task Start()
+        public async Task Start(CancellationToken stoppingToken)
         {
             _listener = new TcpListener(_localEndPoint);
-            _cancelSource = new CancellationTokenSource();
 
             _listener.Start();
 
             _logger.LogInformation("Listening on {localEndPoint} ...", _localEndPoint);
 
-            await AcceptClients(_listener, _cancelSource.Token);
+            await AcceptClients(_listener, stoppingToken);
 
             _logger.LogInformation("Listening on {localEndPoint} has finished", _localEndPoint);
         }
 
-        protected virtual async Task AcceptClients(TcpListener listener, CancellationToken token)
+        protected virtual async Task AcceptClients(TcpListener listener, CancellationToken stoppingToken)
         {
-            while (!token.IsCancellationRequested)
+            while (!stoppingToken.IsCancellationRequested)
             {
-                var client = await listener.AcceptTcpClientAsync(token);
-                _clientHandler(client, token);
+                var client = await listener.AcceptTcpClientAsync(stoppingToken);
+                _clientHandler(client, stoppingToken);
             }
         }
     }
