@@ -8,6 +8,8 @@ namespace ProxyMapService.Services
         private readonly ILogger _logger = logger;
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            _logger.LogInformation("[ProxyBackgroundService] delay 1 sec...");
+            await Task.Delay(1000, stoppingToken);
             _logger.LogInformation("[ProxyBackgroundService] adding proxy mapping tasks...");
             _proxyService.AddProxyMappingTasks(stoppingToken);
             _logger.LogInformation("[ProxyBackgroundService] waiting for complete...");
