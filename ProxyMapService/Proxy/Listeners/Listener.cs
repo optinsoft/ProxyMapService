@@ -1,5 +1,7 @@
-﻿using System.Net;
+﻿using ProxyMapService.Proxy.Configurations;
+using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace ProxyMapService.Proxy.Listeners
 {
@@ -42,7 +44,52 @@ namespace ProxyMapService.Proxy.Listeners
 
             _logger.LogInformation("Listening on {localEndPoint} ...", _localEndPoint);
 
-            await AcceptClients(_listener, stoppingToken);
+            try
+            {
+
+                var listenerStopped = false;
+                try
+                {
+                    using (stoppingToken.Register(() =>
+                    {
+                        listenerStopped = true;
+                        _listener.Stop();
+                    }))
+                    {
+                        try
+                        {
+                            await AcceptClients(_listener, stoppingToken);
+
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            if (!stoppingToken.IsCancellationRequested)
+                            {
+                                throw;
+                            }
+                        }
+                        catch (SocketException)
+                        {
+                            if (!stoppingToken.IsCancellationRequested)
+                            {
+                                throw;
+                            }
+
+                        }
+                    }
+                }
+                finally
+                {
+                    if (!listenerStopped)
+                    {
+                        _listener.Stop();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected Error");
+            }
 
             _logger.LogInformation("Listening on {localEndPoint} has finished", _localEndPoint);
         }
@@ -51,8 +98,13 @@ namespace ProxyMapService.Proxy.Listeners
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var client = await listener.AcceptTcpClientAsync(stoppingToken);
-                _clientHandler(client, stoppingToken);
+                var client = await Task.Run(
+                    () => listener.AcceptTcpClientAsync(),
+                    stoppingToken);
+                if (!stoppingToken.IsCancellationRequested)
+                {
+                    _clientHandler(client, stoppingToken);
+                }
             }
         }
     }

@@ -5,6 +5,7 @@ namespace ProxyMapService.Responses
     public class StatsResponse
     {
 #pragma warning disable IDE1006 // Naming Styles
+        public bool? started { get; set; }
         public string? serviceInfo { get; set; }
         public string? currentTime { get; set; }
         public int? sessionsCount { get; set; }

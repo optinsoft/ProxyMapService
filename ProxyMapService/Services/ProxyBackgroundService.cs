@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Interfaces;
+using System.Threading;
 
 namespace ProxyMapService.Services
 {
@@ -6,15 +7,31 @@ namespace ProxyMapService.Services
     {
         private readonly IProxyService _proxyService = proxyService;
         private readonly ILogger _logger = logger;
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("[ProxyBackgroundService] delay 1 sec...");
-            await Task.Delay(1000, stoppingToken);
-            _logger.LogInformation("[ProxyBackgroundService] adding proxy mapping tasks...");
-            _proxyService.AddProxyMappingTasks(stoppingToken);
-            _logger.LogInformation("[ProxyBackgroundService] waiting for complete...");
-            await Task.Delay(-1, stoppingToken);
-            _logger.LogInformation("[ProxyBackgroundService] completed.");
+            _logger.LogInformation("[BackgroundService] Service is ready to start its work.");
+
+            try
+            {
+                _proxyService.StoppingToken = stoppingToken;
+
+                _proxyService.StartProxyMappingTasks();
+                
+                _logger.LogInformation("[BackgroundService] Waiting for complete...");
+                await Task.Delay(Timeout.Infinite, stoppingToken);
+
+                _logger.LogInformation("[BackgroundService] Completed.");
+
+            }
+            catch (TaskCanceledException)
+            {
+                _logger.LogInformation("[BackgroundService] Stopped by Host Shutdown.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[BackgroundService] An unexpected error occurred.");
+            }
         }
     }
 }

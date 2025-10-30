@@ -5,7 +5,10 @@ namespace ProxyMapService.Interfaces
 {
     public interface IProxyService
     {
-        void AddProxyMappingTasks(CancellationToken stoppingToken);
+        CancellationToken StoppingToken { get; set; }
+        bool Started { get; }
+        void StartProxyMappingTasks();
+        void StopProxyMappingTasks();
         string GetServiceInfo();
         string GetCurrentTime();
         int GetSessionsCount();

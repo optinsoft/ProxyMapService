@@ -17,6 +17,7 @@ namespace ProxyMapService.Controllers
         {
             return Ok(new StatsResponse
             {
+                started = service.Started,
                 serviceInfo = service.GetServiceInfo(),
                 currentTime = service.GetCurrentTime(),
                 sessionsCount = service.GetSessionsCount(),
