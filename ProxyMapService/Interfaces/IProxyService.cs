@@ -7,9 +7,12 @@ namespace ProxyMapService.Interfaces
     {
         CancellationToken StoppingToken { get; set; }
         bool Started { get; }
+        void ResetStats();
         void StartProxyMappingTasks();
         void StopProxyMappingTasks();
         string GetServiceInfo();
+        string? GetStartTime();
+        string? GetStopTime();
         string GetCurrentTime();
         int GetSessionsCount();
         int GetAuthenticationNotRequired();

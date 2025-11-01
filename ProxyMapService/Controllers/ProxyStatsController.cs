@@ -17,8 +17,10 @@ namespace ProxyMapService.Controllers
         {
             return Ok(new StatsResponse
             {
-                started = service.Started,
                 serviceInfo = service.GetServiceInfo(),
+                started = service.Started,
+                startTime = service.GetStartTime(),
+                stopTime = service.GetStopTime(),
                 currentTime = service.GetCurrentTime(),
                 sessionsCount = service.GetSessionsCount(),
                 authenticationNotRequired = service.GetAuthenticationNotRequired(),
@@ -69,6 +71,17 @@ namespace ProxyMapService.Controllers
             return Ok(new HostsResponse
             {
                 hosts = responseHosts
+            });
+        }
+
+        [HttpPost("reset")]
+        public ActionResult<SuccessResponse> ResetStats()
+        {
+            service.ResetStats();
+            return Ok(new SuccessResponse()
+            {
+                success = true,
+                message = "The statistics has been reset."
             });
         }
     }

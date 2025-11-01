@@ -1,12 +1,12 @@
-﻿using Newtonsoft.Json;
-
-namespace ProxyMapService.Responses
+﻿namespace ProxyMapService.Responses
 {
     public class StatsResponse
     {
 #pragma warning disable IDE1006 // Naming Styles
-        public bool? started { get; set; }
         public string? serviceInfo { get; set; }
+        public bool? started { get; set; }
+        public string? startTime { get; set; }
+        public string? stopTime {  get; set; }
         public string? currentTime { get; set; }
         public int? sessionsCount { get; set; }
         public int? authenticationNotRequired { get; set; }

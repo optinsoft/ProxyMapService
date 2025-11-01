@@ -64,6 +64,16 @@ namespace ProxyMapService.Proxy.Counters
             }
         }
 
+        public void Reset()
+        {
+            lock (_lock)
+            {
+                _total = 0;
+                _proxified = 0;
+                _bypassed = 0;
+            }
+        }
+
         public void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex)
         {
             lock(_lock)

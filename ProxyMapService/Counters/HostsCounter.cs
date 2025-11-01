@@ -10,6 +10,14 @@ namespace ProxyMapService.Counters
         private readonly Dictionary<string, HostStats> _hostStats = new();
         private readonly object _lock = new();
 
+        public void Reset()
+        {
+            lock (_lock)
+            {
+                _hostStats.Clear();
+            }
+        }
+
         public Dictionary<string, HostStats> GetHostStats()
         {
             Dictionary<string, HostStats> stats;

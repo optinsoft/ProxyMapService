@@ -26,6 +26,8 @@ namespace ProxyMapService.Services
         private CancellationToken _stoppingToken = CancellationToken.None;
         private CancellationTokenSource _cts = new();
         private bool _started = false;
+        private DateTime? _startTime = null;
+        private DateTime? _stopTime = null;
 
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -89,6 +91,14 @@ namespace ProxyMapService.Services
                 string.Concat(Encoding.ASCII.GetString(data, startIndex, length).Select(c => c < 32 ? '.' : c));
         }
 
+        public void ResetStats()
+        {
+            _sessionsCounter.Reset();
+            _hostsCounter.Reset();
+            _readCounter.Reset();
+            _sentCounter.Reset();
+        }
+
         public void StartProxyMappingTasks()
         {
             if (_started)
@@ -112,12 +122,14 @@ namespace ProxyMapService.Services
                         _sessionsCounter, _readCounter, _sentCounter, _logger, cancellationToken));
                 }
                 _started = true;
+                _startTime = DateTime.Now;
                 Task allTasks = Task.WhenAll(_tasks);
 #pragma warning disable 4014
                 allTasks.ContinueWith(
                     t =>
                     {
                         _started = false;
+                        _stopTime = DateTime.Now;
                         _tasks.Clear();
                         _logger.LogInformation("Proxy mapping tasks have been terminated.");
                     }, 
@@ -140,6 +152,18 @@ namespace ProxyMapService.Services
         public string GetServiceInfo()
         {
             return _serviceInfo;
+        }
+
+        public string? GetStartTime()
+        {
+            if (_startTime == null) return null;
+            return $"{_startTime}";
+        }
+
+        public string? GetStopTime()
+        {
+            if (_stopTime == null) return null;
+            return $"{_stopTime}";
         }
 
         public string GetCurrentTime()

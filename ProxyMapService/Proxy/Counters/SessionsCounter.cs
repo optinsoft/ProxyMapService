@@ -24,6 +24,29 @@ namespace ProxyMapService.Proxy.Counters
         public int HostBypassed { get; private set; }
         public int Socks5Failures { get; private set; }
 
+        public void Reset()
+        {
+            lock (_lock)
+            {
+                Count = 0;
+                AuthenticationNotRequired = 0;
+                AuthenticationRequired = 0;
+                Authenticated = 0;
+                AuthenticationInvalid = 0;
+                HttpRejected = 0;
+                ProxyConnected = 0;
+                ProxyFailed = 0;
+                BypassConnected = 0;
+                BypassFailed = 0;
+                HeaderFailed = 0;
+                NoHost = 0;
+                HostRejected = 0;
+                HostProxified = 0;
+                HostBypassed = 0;
+                Socks5Failures = 0;
+            }
+        }
+
         public void OnSessionStarted(SessionContext context)
         {
             lock (_lock)
