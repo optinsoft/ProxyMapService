@@ -6,6 +6,7 @@ using ProxyMapService.Models;
 using ProxyMapService.Proxy;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Utils;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -16,24 +17,25 @@ namespace ProxyMapService.Services
     public class ProxyService : IProxyService
     {
         private readonly string _serviceInfo = $"Service created at {DateTime.Now}";
-        private readonly List<Task> _tasks = [];
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
         private readonly SessionsCounter _sessionsCounter = new();
         private readonly HostsCounter _hostsCounter = new();
         private readonly BytesReadCounter _readCounter = new();
         private readonly BytesSentCounter _sentCounter = new();
+        private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;
         private CancellationTokenSource _cts = new();
         private bool _started = false;
         private DateTime? _startTime = null;
         private DateTime? _stopTime = null;
-
+        private string _serviceId = RandomStringGenerator.GenerateRandomString(6);
+        
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
             set => _stoppingToken = value;
         }
-
+        
         public bool Started
         {
             get => _started;
@@ -61,6 +63,10 @@ namespace ProxyMapService.Services
                     _sentCounter.BytesSentHandler += LogBytesSent;
                 }
             }
+            _logger.LogInformation(
+                "[ProxyService.{}] Service is created at {}.",
+                _serviceId,
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
         }
 
         private void LogBytesRead(object? sender, BytesReadEventArgs e)
@@ -114,28 +120,39 @@ namespace ProxyMapService.Services
                 CancellationToken cancellationToken = _stoppingToken == CancellationToken.None
                     ? _cts.Token
                     : CancellationTokenSource.CreateLinkedTokenSource(_stoppingToken, _cts.Token).Token;
-                _logger.LogInformation("Starting proxy mapping tasks...");
-                _tasks.Clear();
+                string serviceId = _serviceId;
+                _logger.LogInformation(
+                    "[ProxyService.{}] Starting proxy mapping tasks at {}...",
+                    serviceId,
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+                List<Task> tasks = [];
                 foreach (var mapping in proxyMappings)
                 {
-                    _tasks.Add(new ProxyMapper().Start(mapping, hostRules, userAgent,
-                        _sessionsCounter, _readCounter, _sentCounter, _logger, cancellationToken));
+                    tasks.Add(new ProxyMapper().Start(mapping, hostRules, userAgent,
+                        _sessionsCounter, _readCounter, _sentCounter, _logger,
+                        _maxListenerStartRetries, cancellationToken));
                 }
                 _started = true;
                 _startTime = DateTime.Now;
-                Task allTasks = Task.WhenAll(_tasks);
+                Task allTasks = Task.WhenAll(tasks);
 #pragma warning disable 4014
                 allTasks.ContinueWith(
                     t =>
                     {
                         _started = false;
                         _stopTime = DateTime.Now;
-                        _tasks.Clear();
-                        _logger.LogInformation("Proxy mapping tasks have been terminated.");
+                        _logger.LogInformation(
+                            "[ProxyService.{}] Proxy mapping tasks have been terminated at {}. Cancellation {} requested.",
+                            serviceId,
+                            DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                            cancellationToken.IsCancellationRequested ? "has been" : "is not");
                     }, 
                     TaskContinuationOptions.None);
 #pragma warning restore 4014
-                _logger.LogInformation("Proxy mapping tasks have been started.");
+                _logger.LogInformation(
+                    "[ProxyService.{}] Proxy mapping tasks have been started at {}.",
+                    _serviceId,
+                    DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             }
         }
 

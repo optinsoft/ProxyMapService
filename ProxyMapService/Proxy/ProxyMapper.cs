@@ -31,7 +31,7 @@ namespace ProxyMapService.Proxy
 
         public async Task Start(ProxyMapping mapping, List<HostRule>? hostRules, string? userAgent,
             SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
-            ILogger logger, CancellationToken stoppingToken)
+            ILogger logger, int maxListenerStartRetries, CancellationToken stoppingToken)
         {
             var localEndPoint = new IPEndPoint(IPAddress.Loopback, mapping.Listen.Port);
 
@@ -41,7 +41,7 @@ namespace ProxyMapService.Proxy
 
             _listener = new Listener(localEndPoint, clientHandler, logger);
 
-            await _listener.Start(stoppingToken);
+            await _listener.Start(maxListenerStartRetries, stoppingToken);
         }
     }
 }

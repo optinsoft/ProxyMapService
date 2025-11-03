@@ -46,8 +46,16 @@ namespace ProxyMapService.Controllers
         }
 
         [HttpPost("stop")]
-        public ActionResult<SuccessResponse> StopService()
+        public ActionResult<SuccessResponse> StopService([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Allow)] StopRequest? request)
         {
+            if (request?.action == null || request.action != "terminate")
+            {
+                return Ok(new SuccessResponse
+                {
+                    success = false,
+                    message = "Bad action."
+                });
+            }
             try
             {
                 service.StopProxyMappingTasks();

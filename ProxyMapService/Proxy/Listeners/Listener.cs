@@ -36,13 +36,51 @@ namespace ProxyMapService.Proxy.Listeners
             }
         }
 
-        public async Task Start(CancellationToken stoppingToken)
+        public async Task Start(int maxListenerStartRetries, CancellationToken stoppingToken)
         {
             _listener = new TcpListener(_localEndPoint);
 
-            _listener.Start();
+            bool retry = false;
+            int retryNum = 0;
+            do
+            {
+                if (retry)
+                {
+                    retry = false;
+                    await Task.Delay(1000, stoppingToken);
+                    _logger.LogInformation("Starting listener on {} (retry #{}) ...", _localEndPoint, retryNum);
+                }
+                else
+                {
+                    _logger.LogInformation("Starting listener on {} ...", _localEndPoint);
+                }
+                try
+                {
+                    _listener.Start();
+                }
+                catch (SocketException ex)
+                {
+                    if (ex.ErrorCode == 10048 && retryNum++ < maxListenerStartRetries)
+                    {
+                        _logger.LogWarning("Unable to start listener on {}\r\n{}",
+                            _localEndPoint,
+                            "Only one usage of each socket address (protocol/network address/port) is normally permitted");
+                        retry = true;
+                    }
+                    else
+                    {
+                        _logger.LogError(ex, "Unable to start listener on {}", _localEndPoint);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to start listener on {}", _localEndPoint);
+                    return;
+                }
+            } while (retry);
 
-            _logger.LogInformation("Listening on {localEndPoint} ...", _localEndPoint);
+            _logger.LogInformation("Listening on {} ...", _localEndPoint);
 
             try
             {
@@ -91,7 +129,7 @@ namespace ProxyMapService.Proxy.Listeners
                 _logger.LogError(ex, "Unexpected Error");
             }
 
-            _logger.LogInformation("Listening on {localEndPoint} has finished", _localEndPoint);
+            _logger.LogInformation("Listening on {} has finished", _localEndPoint);
         }
 
         protected virtual async Task AcceptClients(TcpListener listener, CancellationToken stoppingToken)
