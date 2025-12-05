@@ -64,7 +64,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(headerBytes, context.Token);
-            context.SentCounter?.OnBytesSent(context, headerBytes.Length, headerBytes, 0);
+            context.RemoteSentCounter?.OnBytesSent(context, headerBytes.Length, headerBytes, 0);
         }
     }
 }

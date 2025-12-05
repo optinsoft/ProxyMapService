@@ -96,14 +96,14 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(requestBytes, context.Token);
-            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
+            context.RemoteSentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
         }
 
         private static async Task SendSocks4Request(SessionContext context, byte[] requestBytes)
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(requestBytes, context.Token);
-            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
+            context.RemoteSentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
         }
     }
 }

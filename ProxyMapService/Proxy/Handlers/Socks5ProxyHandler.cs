@@ -105,7 +105,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(requestBytes, context.Token);
-            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
+            context.RemoteSentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
         }
 
         private static async Task<Socks5Status> Socks5Auth(SessionContext context, string? username, string? password)
@@ -142,7 +142,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(requestBytes, context.Token);
-            context.SentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
+            context.RemoteSentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
         }
 
         private static async Task<byte[]?> ReadSocks5(SessionContext context, int length)
@@ -164,7 +164,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (bufferPos > 0)
                 {
-                    context.ReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
+                    context.RemoteReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
                 }
             }
         }
@@ -215,7 +215,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (bufferPos > 0)
                 {
-                    context.ReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
+                    context.RemoteReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
                 }
             }
         }

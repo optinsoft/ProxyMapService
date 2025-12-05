@@ -13,8 +13,8 @@ namespace ProxyMapService.Proxy.Sessions
         public List<HostRule>? HostRules { get; private set; }
         public string? UserAgent { get; private set; }
         public SessionsCounter? SessionsCounter { get; private set; }
-        public BytesReadCounter? ReadCounter { get; private set; }
-        public BytesSentCounter? SentCounter { get; private set; }
+        public BytesReadCounter? RemoteReadCounter { get; private set; }
+        public BytesSentCounter? RemoteSentCounter { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
 
@@ -33,7 +33,7 @@ namespace ProxyMapService.Proxy.Sessions
         public bool Bypassed { get; set; }
 
         public SessionContext(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules, string? userAgent,
-            SessionsCounter? sessionsCounter, BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
+            SessionsCounter? sessionsCounter, BytesReadCounter? remoteReadCounter, BytesSentCounter? remoteSentCounter,
             ILogger logger, CancellationToken token)
         {
             Client = client;
@@ -42,12 +42,12 @@ namespace ProxyMapService.Proxy.Sessions
             HostRules = hostRules;
             UserAgent = userAgent;
             SessionsCounter = sessionsCounter;
-            ReadCounter = readCounter;
-            SentCounter = sentCounter;
+            RemoteReadCounter = remoteReadCounter;
+            RemoteSentCounter = remoteSentCounter;
             Logger = logger;
             Token = token;
             ClientHeaderStream = new ReadHeaderStream(this, null);
-            RemoteHeaderStream = new ReadHeaderStream(this, readCounter);
+            RemoteHeaderStream = new ReadHeaderStream(this, remoteReadCounter);
             HostName = "";
         }
 
