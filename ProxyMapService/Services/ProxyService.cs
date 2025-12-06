@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using ProxyMapService.Counters;
+﻿using ProxyMapService.Counters;
 using ProxyMapService.Exceptions;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Models;
@@ -7,10 +6,6 @@ using ProxyMapService.Proxy;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Utils;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using System.Transactions;
 
 namespace ProxyMapService.Services
 {
@@ -21,8 +16,10 @@ namespace ProxyMapService.Services
         private readonly ILogger _logger;
         private readonly SessionsCounter _sessionsCounter = new();
         private readonly HostsCounter _hostsCounter = new();
-        private readonly BytesReadCounter _remoteReadCounter = new();
-        private readonly BytesSentCounter _remoteSentCounter = new();
+        private readonly BytesReadCounter _remoteReadCounter = new("remote");
+        private readonly BytesSentCounter _remoteSentCounter = new("remote");
+        private readonly BytesReadCounter _clientReadCounter = new("client");
+        private readonly BytesSentCounter _clientSentCounter = new("client");
         private readonly BytesLogger? _bytesLogger = null;
         private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;
@@ -63,6 +60,8 @@ namespace ProxyMapService.Services
                     _bytesLogger = new BytesLogger(_logger);
                     _remoteReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
                     _remoteSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                    _clientReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
+                    _clientSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
                 }
             }
             _logger.LogInformation(
@@ -103,7 +102,8 @@ namespace ProxyMapService.Services
                 foreach (var mapping in proxyMappings)
                 {
                     tasks.Add(new ProxyMapper().Start(mapping, hostRules, userAgent,
-                        _sessionsCounter, _remoteReadCounter, _remoteSentCounter, _logger,
+                        _sessionsCounter, _remoteReadCounter, _remoteSentCounter, 
+                        _clientReadCounter, _clientSentCounter, _logger, 
                         _maxListenerStartRetries, cancellationToken));
                 }
                 _started = true;

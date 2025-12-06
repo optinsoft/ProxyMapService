@@ -4,7 +4,7 @@ using System.Reflection.Metadata.Ecma335;
 
 namespace ProxyMapService.Proxy.Counters
 {
-    public class SessionsCounter
+    public class SessionsCounter : ISessionsCounter
     {
         private readonly object _lock = new();
         public int Count { get; private set; }

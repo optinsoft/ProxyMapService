@@ -1,6 +1,7 @@
 ﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
+using ProxyMapService.Proxy.Counters;
 using System.Net;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -30,7 +31,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnBypassConnected(context);
 
-            context.RemoteStream = context.RemoteClient.GetStream();
+            context.CreateRemoteClientStream();
 
             await SendSocks4Reply(context, Socks4Command.RequestGranted);
 

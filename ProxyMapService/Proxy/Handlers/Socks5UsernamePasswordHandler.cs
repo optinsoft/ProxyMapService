@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Counters;
 using System.IO;
 using System.Text;
 
@@ -57,44 +58,60 @@ namespace ProxyMapService.Proxy.Handlers
             return context.Socks5?.Username == context.Mapping.Authentication.Username && context.Socks5?.Password == context.Mapping.Authentication.Password;
         }
 
-        private static async Task<byte[]?> ReadUsernamePassword(Stream client, CancellationToken token)
+        private static async Task<byte[]?> ReadUsernamePassword(CountingStream client, CancellationToken token)
         {
             byte[] readBuffer = new byte[1];
             using MemoryStream memoryStream = new();
+            byte[] usernamePasswordBytes = [];
 
-            int bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-            if (bytesRead <= 0) return null;
-            memoryStream.Write(readBuffer, 0, bytesRead);
-            
-            if (readBuffer[0] != 0x01) return null;
-
-            bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-            if (bytesRead <= 0) return null;
-            memoryStream.Write(readBuffer, 0, bytesRead);
-
-            int ulen = (int)readBuffer[0];
-            
-            for (int i = 0; i < ulen; ++i)
+            client.PauseReadCount();
+            try
             {
+
+                int bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                if (bytesRead <= 0) return null;
+                memoryStream.Write(readBuffer, 0, bytesRead);
+
+                if (readBuffer[0] != 0x01) return null;
+
                 bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
                 if (bytesRead <= 0) return null;
                 memoryStream.Write(readBuffer, 0, bytesRead);
-            }
 
-            bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-            if (bytesRead <= 0) return null;
-            memoryStream.Write(readBuffer, 0, bytesRead);
+                int ulen = (int)readBuffer[0];
 
-            int plen = (int)readBuffer[0];
+                for (int i = 0; i < ulen; ++i)
+                {
+                    bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                    if (bytesRead <= 0) return null;
+                    memoryStream.Write(readBuffer, 0, bytesRead);
+                }
 
-            for (int i = 0; i < plen; ++i)
-            {
                 bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
                 if (bytesRead <= 0) return null;
                 memoryStream.Write(readBuffer, 0, bytesRead);
+
+                int plen = (int)readBuffer[0];
+
+                for (int i = 0; i < plen; ++i)
+                {
+                    bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                    if (bytesRead <= 0) return null;
+                    memoryStream.Write(readBuffer, 0, bytesRead);
+                }
+
+            }
+            finally
+            {
+                if (memoryStream.Length > 0)
+                {
+                    usernamePasswordBytes = memoryStream.ToArray();
+                    client.OnBytesRead(usernamePasswordBytes.Length, usernamePasswordBytes, 0);
+                }
+                client.ResumeReadCount();
             }
 
-            return memoryStream.ToArray();
+            return usernamePasswordBytes;
         }
 
         private static async Task SendAuthenticated(SessionContext context)

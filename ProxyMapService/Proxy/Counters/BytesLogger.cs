@@ -11,10 +11,11 @@ namespace ProxyMapService.Proxy.Counters
             var bytesRead = e.BytesRead;
             var bytesData = e.BytesData;
             var startIndex = e.StartIndex;
+            var direction = e.Direction;
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesRead + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesRead - i * 16, 16))
             ));
-            _logger.LogInformation("<<< read {count} byte(s):\r\n{data}", bytesRead, logData);
+            _logger.LogInformation("<<< read {count} byte(s) from {direction}:\r\n{data}", bytesRead, direction, logData);
         }
 
         public void LogBytesSent(object? sender, BytesSentEventArgs e)
@@ -22,10 +23,11 @@ namespace ProxyMapService.Proxy.Counters
             var bytesSent = e.BytesSent;
             var bytesData = e.BytesData;
             var startIndex = e.StartIndex;
+            var direction = e.Direction;
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesSent + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesSent - i * 16, 16))
             ));
-            _logger.LogInformation(">>> sent {count} byte(s):\r\n{data}", bytesSent, logData);
+            _logger.LogInformation(">>> sent {count} byte(s) to {direction}:\r\n{data}", bytesSent, direction, logData);
         }
 
         private static string FormatLogData(byte[] data, int startIndex, int length)

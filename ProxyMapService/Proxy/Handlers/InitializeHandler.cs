@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Counters;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -11,7 +12,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             try
             {
-                context.ClientStream = context.Client.GetStream();
+                context.CreateClientStream();
                 var requestHeaderBytes = await context.ClientHeaderStream.ReadHeaderBytes(context.ClientStream, context.Token);
                 if (requestHeaderBytes != null)
                 {

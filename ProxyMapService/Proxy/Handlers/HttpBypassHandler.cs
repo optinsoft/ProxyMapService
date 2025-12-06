@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Counters;
 using System.Net;
 using System.Text;
 
@@ -29,7 +30,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnBypassConnected(context);
 
-            context.RemoteStream = context.RemoteClient.GetStream();
+            context.CreateRemoteClientStream();
 
             if (context.Http?.HTTPVerb == "CONNECT")
             {
@@ -64,7 +65,6 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(headerBytes, context.Token);
-            context.RemoteSentCounter?.OnBytesSent(context, headerBytes.Length, headerBytes, 0);
         }
     }
 }

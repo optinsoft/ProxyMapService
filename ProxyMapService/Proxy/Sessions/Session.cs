@@ -31,12 +31,12 @@ namespace ProxyMapService.Proxy.Sessions
         };
 
         public static async Task Run(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules, string? userAgent,
-            SessionsCounter? sessionsCounter, BytesReadCounter? remoteReadCounter, BytesSentCounter? remoteSentCounter, 
-            ILogger logger, CancellationToken token)
+            ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter, 
+            IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter, ILogger logger, CancellationToken token)
         {
             using var context = new SessionContext(client, mapping, hostRules, 
                 userAgent, sessionsCounter, remoteReadCounter, remoteSentCounter,
-                logger, token);
+                clientReadCounter, clientSentCounter, logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do

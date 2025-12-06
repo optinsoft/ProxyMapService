@@ -2,12 +2,15 @@
 
 namespace ProxyMapService.Proxy.Counters
 {
-    public class BytesReadCounter
+    public class BytesReadCounter(string direction) : IBytesReadCounter
     {
+        private readonly string _direction = direction;
         private readonly object _lock = new();
         private long _total;
         private long _proxified;
         private long _bypassed;
+
+        public string Direction { get { return _direction; } }
 
         public long TotalBytesRead { 
             get 
@@ -74,7 +77,7 @@ namespace ProxyMapService.Proxy.Counters
 
         public void OnBytesRead(SessionContext context, int bytesRead, byte[]? bytesData, int startIndex)
         {
-            lock(_lock)
+            lock (_lock)
             {
                 _total += (long)bytesRead;
                 if (context.Proxified)
@@ -90,7 +93,8 @@ namespace ProxyMapService.Proxy.Counters
             {
                 BytesRead = bytesRead,
                 BytesData = bytesData,
-                StartIndex = startIndex
+                StartIndex = startIndex,
+                Direction = Direction
             });
         }
 

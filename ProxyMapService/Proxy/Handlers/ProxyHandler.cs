@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Counters;
 using System.Net;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -28,7 +29,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnProxyConnected(context);
 
-            context.RemoteStream = context.RemoteClient.GetStream();
+            context.CreateRemoteClientStream();
 
             switch (context.Mapping.ProxyServer.ProxyType)
             {

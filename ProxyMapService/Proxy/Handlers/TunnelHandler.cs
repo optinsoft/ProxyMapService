@@ -20,8 +20,8 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (clientStream != null && remoteStream != null && !context.Token.IsCancellationRequested)
             {
-                var forwardTask = Tunnel(clientStream, remoteStream, context, null, context.RemoteSentCounter, "client", "remote");
-                var reverseTask = Tunnel(remoteStream, clientStream, context, context.RemoteReadCounter, null, "remote", "client");
+                var forwardTask = Tunnel(clientStream, remoteStream, context, context.ClientReadCounter, context.RemoteSentCounter);
+                var reverseTask = Tunnel(remoteStream, clientStream, context, context.RemoteReadCounter, context.ClientSentCounter);
                 await Task.WhenAny(forwardTask, reverseTask);
             }
 
@@ -34,8 +34,7 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         private static async Task Tunnel(Stream source, Stream destination, SessionContext context, 
-            BytesReadCounter? readCounter, BytesSentCounter? sentCounter,
-            string readDirection, string sendDirection)
+            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter)
         {
             var tunnelId = ++_tunnelId;
 
@@ -48,14 +47,18 @@ namespace ProxyMapService.Proxy.Handlers
                 int bytesRead;
                 do
                 {
-                    context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", tunnelId, readDirection);
+                    if (readCounter != null)
+                    {
+                        context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", tunnelId, readCounter.Direction);
+                    }
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
-                    readCounter?.OnBytesRead(context, bytesRead, buffer, 0);
                     if (bytesRead > 0)
                     {
-                        context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, sendDirection);
+                        if (sentCounter != null)
+                        {
+                            context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, sentCounter.Direction);
+                        }
                         await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
-                        sentCounter?.OnBytesSent(context, bytesRead, buffer, 0);
                     }
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
             }

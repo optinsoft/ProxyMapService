@@ -4,13 +4,13 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
 {
-    public class ReadHeaderStream(SessionContext context, BytesReadCounter? readCounter) : IDisposable
+    public class ReadHeaderStream(SessionContext context, IBytesReadCounter? readCounter) : IDisposable
     {
         private static readonly byte[] Delimiter = [0x0d, 0x0a, 0x0d, 0x0a];
         private const int BufferSize = 8192;
 
         private readonly SessionContext _context = context;
-        private readonly BytesReadCounter? _readCounter = readCounter;
+        private readonly IBytesReadCounter? _readCounter = readCounter;
 
         private readonly MemoryStream _memoryStream = new();
         private readonly byte[] _readBuffer = new byte[BufferSize];
@@ -23,13 +23,15 @@ namespace ProxyMapService.Proxy.Headers
             get { return _socksVersion; }
             set { _socksVersion = value; }
         }
+
         public int DelimiterCounter { 
             get { return _delimiterCounter; } 
         }
 
-        public async Task<byte[]?> ReadHeaderBytes(Stream? client, CancellationToken token)
+        public async Task<byte[]?> ReadHeaderBytes(CountingStream? client, CancellationToken token)
         {
             if (client == null) return null;
+            client.PauseReadCount();
             try
             {
                 if (await ReadByte(client, token) == null)
@@ -52,17 +54,18 @@ namespace ProxyMapService.Proxy.Headers
             {
                 if (_bufferPos > 0)
                 {
-                    _readCounter?.OnBytesRead(_context, _bufferPos, _readBuffer, 0);
+                    client.OnBytesRead(_bufferPos, _readBuffer, 0);
                     _bufferPos = 0;
                 }
+                client.ResumeReadCount();
             }
         }
 
-        private async Task<byte?> ReadByte(Stream client, CancellationToken token)
+        private async Task<byte?> ReadByte(CountingStream client, CancellationToken token)
         {
             if (_bufferPos >= BufferSize)
             {
-                _readCounter?.OnBytesRead(_context, _bufferPos, _readBuffer, 0);
+                client.OnBytesRead(_bufferPos, _readBuffer, 0);
                 _bufferPos = 0;
             }
 
@@ -97,7 +100,7 @@ namespace ProxyMapService.Proxy.Headers
             return byteValue;
         }
 
-        private async Task<byte[]?> ReadHttpHeaderBytes(Stream client, CancellationToken token)
+        private async Task<byte[]?> ReadHttpHeaderBytes(CountingStream client, CancellationToken token)
         {
             while (_socksVersion == 0x0 && _delimiterCounter < Delimiter.Length)
             {
@@ -109,7 +112,7 @@ namespace ProxyMapService.Proxy.Headers
             return _socksVersion == 0x0 && _delimiterCounter == Delimiter.Length ? _memoryStream.ToArray() : null;
         }
 
-        private async Task<byte[]?> ReadSocks4HeaderBytes(Stream client, CancellationToken token)
+        private async Task<byte[]?> ReadSocks4HeaderBytes(CountingStream client, CancellationToken token)
         {
             if (_socksVersion != 0x04) return null;
             byte? CD = await ReadByte(client, token);
@@ -141,7 +144,7 @@ namespace ProxyMapService.Proxy.Headers
             return _memoryStream.ToArray();
         }
 
-        private async Task<byte[]?> ReadSocks5HeaderBytes(Stream client, CancellationToken token)
+        private async Task<byte[]?> ReadSocks5HeaderBytes(CountingStream client, CancellationToken token)
         {
             if (_socksVersion != 0x05) return null;
 

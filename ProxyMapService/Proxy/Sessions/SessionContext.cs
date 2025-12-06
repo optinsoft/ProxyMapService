@@ -12,17 +12,19 @@ namespace ProxyMapService.Proxy.Sessions
         public ProxyMapping Mapping { get; private set; }
         public List<HostRule>? HostRules { get; private set; }
         public string? UserAgent { get; private set; }
-        public SessionsCounter? SessionsCounter { get; private set; }
-        public BytesReadCounter? RemoteReadCounter { get; private set; }
-        public BytesSentCounter? RemoteSentCounter { get; private set; }
+        public ISessionsCounter? SessionsCounter { get; private set; }
+        public IBytesReadCounter? RemoteReadCounter { get; private set; }
+        public IBytesSentCounter? RemoteSentCounter { get; private set; }
+        public IBytesReadCounter? ClientReadCounter { get; private set; }
+        public IBytesSentCounter? ClientSentCounter { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
 
         public ReadHeaderStream ClientHeaderStream { get; private set; }
         public ReadHeaderStream RemoteHeaderStream { get; private set; }
 
-        public NetworkStream? ClientStream { get; set; }
-        public NetworkStream? RemoteStream { get; set; }
+        public CountingStream? ClientStream { get; set; }
+        public CountingStream? RemoteStream { get; set; }
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }
@@ -33,7 +35,8 @@ namespace ProxyMapService.Proxy.Sessions
         public bool Bypassed { get; set; }
 
         public SessionContext(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules, string? userAgent,
-            SessionsCounter? sessionsCounter, BytesReadCounter? remoteReadCounter, BytesSentCounter? remoteSentCounter,
+            ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
+            IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
             ILogger logger, CancellationToken token)
         {
             Client = client;
@@ -44,11 +47,23 @@ namespace ProxyMapService.Proxy.Sessions
             SessionsCounter = sessionsCounter;
             RemoteReadCounter = remoteReadCounter;
             RemoteSentCounter = remoteSentCounter;
+            ClientReadCounter = clientReadCounter;
+            ClientSentCounter = clientSentCounter;
             Logger = logger;
             Token = token;
-            ClientHeaderStream = new ReadHeaderStream(this, null);
+            ClientHeaderStream = new ReadHeaderStream(this, clientReadCounter);
             RemoteHeaderStream = new ReadHeaderStream(this, remoteReadCounter);
             HostName = "";
+        }
+
+        public void CreateClientStream()
+        {
+            this.ClientStream = new CountingStream(Client.GetStream(), this, ClientReadCounter, ClientSentCounter);
+        }
+
+        public void CreateRemoteClientStream()
+        {
+            this.RemoteStream = new CountingStream(RemoteClient.GetStream(), this, RemoteReadCounter, RemoteSentCounter);
         }
 
         public void Dispose()

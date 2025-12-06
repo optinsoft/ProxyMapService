@@ -1,6 +1,7 @@
 ﻿using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
+using ProxyMapService.Proxy.Counters;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -32,58 +33,74 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        public static async Task<byte[]?> ReadRequest(Stream client, CancellationToken token)
+        public static async Task<byte[]?> ReadRequest(CountingStream client, CancellationToken token)
         {
             byte[] readBuffer = new byte[1];
             using MemoryStream memoryStream = new();
+            byte[] requestBytes = []; 
 
-            int bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-            if (bytesRead <= 0) return null;
-            memoryStream.Write(readBuffer, 0, bytesRead);
-
-            if (readBuffer[0] != 0x05) return null;
-
-            bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-            if (bytesRead <= 0) return null;
-            memoryStream.Write(readBuffer, 0, bytesRead);
-
-            bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-            if (bytesRead <= 0) return null;
-            memoryStream.Write(readBuffer, 0, bytesRead);
-
-            bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-            if (bytesRead <= 0) return null;
-            memoryStream.Write(readBuffer, 0, bytesRead);
-
-            byte atyp = readBuffer[0];
-            int alen;
-
-            switch (atyp)
+            client.PauseReadCount();
+            try
             {
-                case 0x01:
-                    alen = 4;
-                    break;
-                case 0x03:
-                    bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-                    if (bytesRead <= 0) return null;
-                    memoryStream.Write(readBuffer, 0, bytesRead);
-                    alen = (int)readBuffer[0];
-                    break;
-                case 0x04:
-                    alen = 16;
-                    break;
-                default:
-                    return null;
-            }
 
-            for (int i = 0; i < alen + 2; ++i)
-            {
+                int bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                if (bytesRead <= 0) return null;
+                memoryStream.Write(readBuffer, 0, bytesRead);
+
+                if (readBuffer[0] != 0x05) return null;
+
                 bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
                 if (bytesRead <= 0) return null;
                 memoryStream.Write(readBuffer, 0, bytesRead);
+
+                bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                if (bytesRead <= 0) return null;
+                memoryStream.Write(readBuffer, 0, bytesRead);
+
+                bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                if (bytesRead <= 0) return null;
+                memoryStream.Write(readBuffer, 0, bytesRead);
+
+                byte atyp = readBuffer[0];
+                int alen;
+
+                switch (atyp)
+                {
+                    case 0x01:
+                        alen = 4;
+                        break;
+                    case 0x03:
+                        bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                        if (bytesRead <= 0) return null;
+                        memoryStream.Write(readBuffer, 0, bytesRead);
+                        alen = (int)readBuffer[0];
+                        break;
+                    case 0x04:
+                        alen = 16;
+                        break;
+                    default:
+                        return null;
+                }
+
+                for (int i = 0; i < alen + 2; ++i)
+                {
+                    bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
+                    if (bytesRead <= 0) return null;
+                    memoryStream.Write(readBuffer, 0, bytesRead);
+                }
+
+            } 
+            finally
+            {
+                if ( memoryStream.Length > 0)
+                {
+                    requestBytes = memoryStream.ToArray();
+                    client.OnBytesRead(requestBytes.Length, requestBytes, 0);
+                }
+                client.ResumeReadCount();
             }
 
-            return memoryStream.ToArray();
+            return requestBytes;
         }
 
         private static async Task SendReply(SessionContext context, byte reply)

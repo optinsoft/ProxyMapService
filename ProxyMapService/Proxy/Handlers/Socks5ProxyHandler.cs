@@ -105,7 +105,6 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(requestBytes, context.Token);
-            context.RemoteSentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
         }
 
         private static async Task<Socks5Status> Socks5Auth(SessionContext context, string? username, string? password)
@@ -142,7 +141,6 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.RemoteStream == null) return;
             await context.RemoteStream.WriteAsync(requestBytes, context.Token);
-            context.RemoteSentCounter?.OnBytesSent(context, requestBytes.Length, requestBytes, 0);
         }
 
         private static async Task<byte[]?> ReadSocks5(SessionContext context, int length)
@@ -150,6 +148,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (context.RemoteStream == null) return null;
             byte[] readBuffer = new byte[length];
             int bufferPos = 0, bytesRead;
+            context.RemoteStream.PauseReadCount();
             try
             {
                 do
@@ -158,15 +157,16 @@ namespace ProxyMapService.Proxy.Handlers
                     if (bytesRead <= 0) return null;
                     bufferPos += 1;
                 } while (bufferPos < length);
-                return readBuffer;
             }
             finally
             {
                 if (bufferPos > 0)
                 {
-                    context.RemoteReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
+                    context.RemoteStream.OnBytesRead(bufferPos, readBuffer, 0);
                 }
+                context.RemoteStream.ResumeReadCount();
             }
+            return readBuffer;
         }
 
         private static async Task<byte[]?> ReadSocks5Reply(SessionContext context)
@@ -176,48 +176,38 @@ namespace ProxyMapService.Proxy.Handlers
             byte[] readBuffer = new byte[readLength];
             int bufferPos = 0, bytesRead;
             byte atyp = 0;
-            try
+            do
             {
-                do
+                bytesRead = await context.RemoteStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
+                if (bytesRead <= 0) return null;
+                if (bufferPos == 3)
                 {
-                    bytesRead = await context.RemoteStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
-                    if (bytesRead <= 0) return null;
-                    if (bufferPos == 3)
+                    atyp = readBuffer[bufferPos];
+                    switch (atyp)
                     {
-                        atyp = readBuffer[bufferPos];
-                        switch (atyp)
-                        {
-                            case 0x01:
-                                readLength = 10;
-                                Array.Resize(ref readBuffer, readLength);
-                                break;
-                            case 0x03:
-                                readLength = 5;
-                                Array.Resize(ref readBuffer, readLength);
-                                break;
-                            case 0x04:
-                                readLength = 22;
-                                Array.Resize(ref readBuffer, readLength);
-                                break;
-                        }
+                        case 0x01:
+                            readLength = 10;
+                            Array.Resize(ref readBuffer, readLength);
+                            break;
+                        case 0x03:
+                            readLength = 5;
+                            Array.Resize(ref readBuffer, readLength);
+                            break;
+                        case 0x04:
+                            readLength = 22;
+                            Array.Resize(ref readBuffer, readLength);
+                            break;
                     }
-                    else if (bufferPos == 4 && atyp == 0x03)
-                    {
-                        int alen = (int)readBuffer[bufferPos];
-                        readLength = 7 + alen;
-                        Array.Resize(ref readBuffer, readLength);
-                    }
-                    bufferPos += 1;
-                } while (bufferPos < readLength);
-                return readBuffer;
-            }
-            finally
-            {
-                if (bufferPos > 0)
-                {
-                    context.RemoteReadCounter?.OnBytesRead(context, bufferPos, readBuffer, 0);
                 }
-            }
+                else if (bufferPos == 4 && atyp == 0x03)
+                {
+                    int alen = (int)readBuffer[bufferPos];
+                    readLength = 7 + alen;
+                    Array.Resize(ref readBuffer, readLength);
+                }
+                bufferPos += 1;
+            } while (bufferPos < readLength);
+            return readBuffer;
         }
     }
 }
