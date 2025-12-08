@@ -119,9 +119,9 @@ Proxy Map Service слушает входящие TCP-соединения на 
 Путь | Описание | Тип | Значение по-умолчанию |
 -----| ---------|-----|-----------------------|
 Authentication.Jwt.Enabled | Требуется аутентификация для доступа к API | bool | false |
-Authentication.Jwt.Issuer | Издатель JWT-токена | string | "" |
-Authentication.Jwt.Audience | Для кого предназначен JWT-токен (URL) | string | "" |
-Authentication.Jwt.Key | Ключ для верификации JWT-токена | string | "" |
+Authentication.Jwt.Issuer | Издатель JWT-токена | string | "" (пустая строка) |
+Authentication.Jwt.Audience | Для кого предназначен JWT-токен (URL) | string | "" (пустая строка) |
+Authentication.Jwt.Key | Ключ для верификации JWT-токена | string | "" (пустая строка) |
 
 Открытые соединения, правила авторизации и соответствие прокси серверу задаются в разделе ProxyMappings.
 
@@ -131,9 +131,14 @@ ProxyMappings[].Listen.Port | TCP порт | int | 5000 |
 ProxyMappings[].Listen.RejectHttpProxy | Отклонять все HTTP (не CONNECT) соединения | bool | false |
 ProxyMappings[].Authentication.Required | Проверять наличие HTTP заголовка Proxy-Authorization; если отсутствует, то возвращать ошибку 407 Proxy Authentication Required | bool | false |
 ProxyMappings[].Authentication.Verify | Проверять HTTP заголовок Proxy-Authorization. Он должен содержать Basic b64, где b64 - это закодированная с помощью Base64 строка пользователь:пароль; пользователь и пароль задаются в параметрах (см. следующие два параметра) | bool | false |
-ProxyMappings[].Authentication.Username | Имя пользователя | string | "user" |
-ProxyMappings[].Authentication.Password | Пароль | string | "pass" |
+ProxyMappings[].Authentication.Username | Имя пользователя | string | "" (пустая строка) |
+ProxyMappings[].Authentication.Password | Пароль | string | "" (пустая строка) |
 ProxyMappings[].Authentication.SetAuthentication | Добавлять (при наличии - заменять) HTTP заголовок Proxy-Authorization | bool | false |
+ProxyMappings[].ProxyServers[].Host | Хост прокси-сервера | string | Отсутствует (обязательное поле) |
+ProxyMappings[].ProxyServers[].Port | Порт прокси-сервера | int | Отсутствует (обязательное поле) |
+ProxyMappings[].ProxyServers[].ProxyType | Тип прокси-сервера. Возможные значения: Http, Socks4, Socks5 | string | Http |
+ProxyMappings[].PorxyServers[].Username | Имя пользователя для аутентификации прокси | string | "" (пустая строка) |
+ProxyMappings[].ProxyServers[].Password | Пароль для аутентификации прокси | string | "" (пустая строка) |
 
 Правила для маршрутизации трафика задаются в разделе HostRules:
 
@@ -184,10 +189,13 @@ HostRules[].Action | Действие, которое нужно выполни�
                 "Username": "test",
                 "Password": "test"
             },
-            "ProxyServer": {
-                "Host": "localhost",
-                "Port": 8888
-            }
+            "ProxyServers": [
+                {
+                    "Host": "localhost",
+                    "Port": 8888,
+                    "ProxyType": "Http"
+                }
+            ]
         }
     ],
     "HostRules": [

@@ -121,9 +121,9 @@ You can use this JWT authorization service: https://github.com/optinsoft/YregAut
 Path | Description | Type | Default Value |
 -----|-------------|------|---------------|
 Authentication.Jwt.Enabled | Require authentication for API access | bool | false |
-Authentication.Jwt.Issuer | JWT token issuer | string | "" |
-Authentication.Jwt.Audience | JWT token audience (URL) | string | "" |
-Authentication.Jwt.Key | JWT token verification key | string | "" |
+Authentication.Jwt.Issuer | JWT token issuer | string | "" (empty string) |
+Authentication.Jwt.Audience | JWT token audience (URL) | string | "" (empty string) |
+Authentication.Jwt.Key | JWT token verification key | string | "" (empty string) |
 
 ### Proxy Mappings
 
@@ -135,9 +135,14 @@ ProxyMappings[].Listen.Port | TCP port | int | 5000 |
 ProxyMappings[].Listen.RejectHttpProxy | Reject all HTTP (non-CONNECT) connections | bool | false |
 ProxyMappings[].Authentication.Required | Require the `Proxy-Authorization` header; return `407` error if missing | bool | false |
 ProxyMappings[].Authentication.Verify | Verify the `Proxy-Authorization` header (must be `Basic base64(user:pass)`) | bool | false |
-ProxyMappings[].Authentication.Username | Username | string | "user" |
-ProxyMappings[].Authentication.Password | Password | string | "pass" |
+ProxyMappings[].Authentication.Username | Username | string | "" (empty string) |
+ProxyMappings[].Authentication.Password | Password | string | "" (empty string) |
 ProxyMappings[].Authentication.SetAuthentication | Add/replace the `Proxy-Authorization` header | bool | false |
+ProxyMappings[].ProxyServers[].Host | Proxy server host | string | Missing (required field) |
+ProxyMappings[].ProxyServers[].Port | Proxy server port | int | Missing (required field) |
+ProxyMappings[].ProxyServers[].ProxyType | Proxy server type. Possible values: Http, Socks4, Socks5 | string | Http |
+ProxyMappings[].PorxyServers[].Username | Proxy authentication username | string | "" (empty string) |
+ProxyMappings[].ProxyServers[].Password | Proxy authentication password | string | "" (empty string) |
 
 ### Host Rules
 
@@ -190,10 +195,13 @@ Rules are processed in order. If multiple rules match a host, the last one appli
                 "Username": "test",
                 "Password": "test"
             },
-            "ProxyServer": {
-                "Host": "localhost",
-                "Port": 8888
-            }
+            "ProxyServers": [
+                {
+                    "Host": "localhost",
+                    "Port": 8888,
+                    "ProxyType": "Http"
+                }
+            ]
         }
     ],
     "HostRules": [

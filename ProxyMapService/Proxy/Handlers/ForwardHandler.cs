@@ -13,7 +13,9 @@ namespace ProxyMapService.Proxy.Handlers
         {
             using var remoteClient = new TcpClient();
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.Mapping.ProxyServer.Host, context.Mapping.ProxyServer.Port);
+            context.ProxyServer = context.Changer.GetProxyServer();
+
+            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
 
             await remoteClient.ConnectAsync(remoteEndPoint, context.Token);
 

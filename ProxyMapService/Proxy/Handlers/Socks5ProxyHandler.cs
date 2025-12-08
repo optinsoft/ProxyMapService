@@ -34,10 +34,16 @@ namespace ProxyMapService.Proxy.Handlers
                 socks5 = new Socks5Header(methodsBytes);
             }
 
-            context.RemoteHeaderStream.SocksVersion = 0x04;
+            context.RemoteHeaderStream.SocksVersion = 0x05;
 
-            string? username = context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Username : socks5.Username;
-            string? password = context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Password : socks5.Password;
+            string? username = 
+                !String.IsNullOrEmpty(context.ProxyServer?.Username) 
+                ? context.ProxyServer?.Username 
+                : (context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Username : socks5.Username);
+            string? password = 
+                !String.IsNullOrEmpty(context.ProxyServer?.Password)
+                ? context.ProxyServer.Password
+                : (context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Password : socks5.Password);
 
             Socks5Status status = await Socks5Auth(context, username, password);
 

@@ -36,8 +36,10 @@ namespace ProxyMapService.Proxy
         {
             var localEndPoint = new IPEndPoint(IPAddress.Loopback, mapping.Listen.Port);
 
+            var proxyChanger = new ProxyChanger(mapping.ProxyServers);
+
             async void clientHandler(TcpClient client, CancellationToken token) => 
-                await Session.Run(client, mapping, hostRules, userAgent, 
+                await Session.Run(client, mapping, proxyChanger, hostRules, userAgent, 
                     sessionsCounter, remoteReadCounter, remoteSentCounter,
                     clientReadCounter, clientSentCounter,
                     logger, token);

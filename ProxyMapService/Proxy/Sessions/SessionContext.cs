@@ -10,6 +10,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient Client { get; private set; }
         public TcpClient RemoteClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
+        public ProxyChanger Changer { get; private set; }
         public List<HostRule>? HostRules { get; private set; }
         public string? UserAgent { get; private set; }
         public ISessionsCounter? SessionsCounter { get; private set; }
@@ -31,10 +32,11 @@ namespace ProxyMapService.Proxy.Sessions
         public string HostName { get; set; }
         public int HostPort { get; set; }
         public ActionEnum? HostAction { get; set; }
+        public ProxyServer? ProxyServer { get; set; }
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
 
-        public SessionContext(TcpClient client, ProxyMapping mapping, List<HostRule>? hostRules, string? userAgent,
+        public SessionContext(TcpClient client, ProxyMapping mapping, ProxyChanger changer, List<HostRule>? hostRules, string? userAgent,
             ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
             IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
             ILogger logger, CancellationToken token)
@@ -42,6 +44,7 @@ namespace ProxyMapService.Proxy.Sessions
             Client = client;
             RemoteClient = new TcpClient();
             Mapping = mapping;
+            Changer = changer;
             HostRules = hostRules;
             UserAgent = userAgent;
             SessionsCounter = sessionsCounter;
@@ -58,12 +61,12 @@ namespace ProxyMapService.Proxy.Sessions
 
         public void CreateClientStream()
         {
-            this.ClientStream = new CountingStream(Client.GetStream(), this, ClientReadCounter, ClientSentCounter);
+            ClientStream = new CountingStream(Client.GetStream(), this, ClientReadCounter, ClientSentCounter);
         }
 
         public void CreateRemoteClientStream()
         {
-            this.RemoteStream = new CountingStream(RemoteClient.GetStream(), this, RemoteReadCounter, RemoteSentCounter);
+            RemoteStream = new CountingStream(RemoteClient.GetStream(), this, RemoteReadCounter, RemoteSentCounter);
         }
 
         public void Dispose()

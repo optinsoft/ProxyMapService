@@ -31,7 +31,10 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.RemoteHeaderStream.SocksVersion = 0x04;
 
-            string? userId = context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Username : socks4.UserId;
+            string? userId = 
+                !String.IsNullOrEmpty(context.ProxyServer?.Username) 
+                ? context.ProxyServer?.Username
+                : context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Username : socks4.UserId;
 
             var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.HostName, context.HostPort, userId);
             await SendSocks4Request(context, socks4ConnectBytes);

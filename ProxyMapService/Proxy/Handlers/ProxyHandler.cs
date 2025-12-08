@@ -15,7 +15,9 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostProxified(context);
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.Mapping.ProxyServer.Host, context.Mapping.ProxyServer.Port);
+            context.ProxyServer = context.Changer.GetProxyServer();
+
+            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
 
             try
             {
@@ -31,7 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.CreateRemoteClientStream();
 
-            switch (context.Mapping.ProxyServer.ProxyType)
+            switch (context.ProxyServer.ProxyType)
             {
                 case ProxyType.Http:
                     return HandleStep.HttpProxy;
