@@ -1,8 +1,10 @@
-﻿namespace ProxyMapService.Proxy.Authenticator
+﻿using ProxyMapService.Proxy.Sessions;
+
+namespace ProxyMapService.Proxy.Authenticator
 {
     public interface IProxyAuthenticator
     {
         bool Required { get; }
-        bool Authenticate(string? username, string? password);
+        bool Authenticate(SessionContext context, string? username, string? password);
     }
 }

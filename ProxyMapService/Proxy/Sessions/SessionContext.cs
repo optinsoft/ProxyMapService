@@ -38,6 +38,8 @@ namespace ProxyMapService.Proxy.Sessions
         public ProxyServer? ProxyServer { get; set; }
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
+        public string? Username { get; set; }
+        public Dictionary<string, string>? UsernameParameters { get; set; }
 
         public SessionContext(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, List<HostRule>? hostRules, string? userAgent,

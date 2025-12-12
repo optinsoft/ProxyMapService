@@ -50,7 +50,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static bool IsProxyAuthorizationCredentialsCorrect(SessionContext context)
         {
-            return context.ProxyAuthenticator.Authenticate(context.Socks4?.UserId, null);
+            return context.ProxyAuthenticator.Authenticate(context, context.Socks4?.UserId, null);
         }
 
         private static async Task SendSocks4Reply(SessionContext context, Socks4Command command)

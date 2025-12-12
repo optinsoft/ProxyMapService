@@ -28,7 +28,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
 
             context.SessionsCounter?.OnAuthenticationInvalid(context);
-            await SendProxyAuthenticationInvalid(context);
+            await SendProxyUnauthorized(context);
             return HandleStep.Terminate;
         }
 
@@ -56,7 +56,7 @@ namespace ProxyMapService.Proxy.Handlers
             var username = parts.Length > 0 ? parts[0] : null;
             var password = parts.Length > 1 ? parts[1] : null;
 
-            return context.ProxyAuthenticator.Authenticate(username, password);
+            return context.ProxyAuthenticator.Authenticate(context, username, password);
         }
 
         private static async Task SendProxyAuthenticationRequired(SessionContext context)
@@ -66,10 +66,10 @@ namespace ProxyMapService.Proxy.Handlers
             await context.ClientStream.WriteAsync(bytes, context.Token);
         }
 
-        private static async Task SendProxyAuthenticationInvalid(SessionContext context)
+        private static async Task SendProxyUnauthorized(SessionContext context)
         {
             if (context.ClientStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 407 Proxy Authentication Invalid\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
+            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 401 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
             await context.ClientStream.WriteAsync(bytes, context.Token);
         }
     }

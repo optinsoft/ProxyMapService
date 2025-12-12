@@ -43,7 +43,7 @@ namespace ProxyMapService.Proxy.Handlers
         
         private static bool IsProxyAuthorizationCredentialsCorrect(SessionContext context)
         {
-            return context.ProxyAuthenticator.Authenticate(context.Socks5?.Username, context.Socks5?.Password);
+            return context.ProxyAuthenticator.Authenticate(context, context.Socks5?.Username, context.Socks5?.Password);
         }
 
         private static async Task<byte[]?> ReadUsernamePassword(CountingStream client, CancellationToken token)

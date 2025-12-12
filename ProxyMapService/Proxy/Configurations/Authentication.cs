@@ -1,12 +1,13 @@
 ﻿namespace ProxyMapService.Proxy.Configurations
 {
     public class Authentication(bool required = false, bool verify = false, bool setAuthentication = false, 
-        bool removeAuthentication = false, string username = "", string password = "")
+        bool removeAuthentication = false, bool parseUsernameParameters = false, string username = "", string password = "")
     {
         public bool Required { get; private set; } = required;
         public bool Verify { get; private set; } = verify;
         public bool SetAuthentication { get; private set; } = setAuthentication;
         public bool RemoveAuthentication { get; private set; } = removeAuthentication;
+        public bool ParseUsernameParameters { get; private set; } = parseUsernameParameters;
         public string Username { get; private set; } = username;
         public string Password { get; private set; } = password;
     }
