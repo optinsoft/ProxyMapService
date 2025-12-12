@@ -39,11 +39,15 @@ namespace ProxyMapService.Proxy.Handlers
             string? username = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Username) 
                 ? context.ProxyServer?.Username 
-                : (context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Username : socks5.Username);
+                : (context.Mapping.Authentication.SetAuthentication 
+                ? context.Mapping.Authentication.Username 
+                : (context.Mapping.Authentication.RemoveAuthentication ? null : socks5.Username));
             string? password = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Password)
                 ? context.ProxyServer.Password
-                : (context.Mapping.Authentication.SetAuthentication ? context.Mapping.Authentication.Password : socks5.Password);
+                : (context.Mapping.Authentication.SetAuthentication 
+                ? context.Mapping.Authentication.Password 
+                : (context.Mapping.Authentication.RemoveAuthentication ? null : socks5.Password));
 
             Socks5Status status = await Socks5Auth(context, username, password);
 

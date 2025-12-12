@@ -70,7 +70,10 @@ namespace ProxyMapService.Proxy.Headers
 
                 if (keepProxyHeaders && (customProxyAuthorization != null))
                 {
-                    builder.Append($"Proxy-Authorization: Basic {customProxyAuthorization}\r\n");
+                    if (customProxyAuthorization.Length > 0)
+                    {
+                        builder.Append($"Proxy-Authorization: Basic {customProxyAuthorization}\r\n");
+                    }
                 }
 
                 builder.Append("\r\n");
