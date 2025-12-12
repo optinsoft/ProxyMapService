@@ -1,8 +1,8 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 
-namespace ProxyMapService.Proxy.Sessions
+namespace ProxyMapService.Proxy.Provider
 {
-    public interface IProxyChanger
+    public interface IProxyProvider
     {
         ProxyServer GetProxyServer();
     }

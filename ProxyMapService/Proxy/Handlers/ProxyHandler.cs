@@ -15,7 +15,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostProxified(context);
 
-            context.ProxyServer = context.Changer.GetProxyServer();
+            context.ProxyServer = context.ProxyProvider.GetProxyServer();
 
             IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
 

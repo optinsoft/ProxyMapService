@@ -24,13 +24,6 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            if (!IsVerifyAuthentication(context))
-            {
-                context.SessionsCounter?.OnAuthenticated(context);
-                await SendAuthenticated(context);
-                return HandleStep.Socks5Authenticated;
-            }
-
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
                 context.SessionsCounter?.OnAuthenticated(context);
@@ -48,14 +41,9 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
         
-        private static bool IsVerifyAuthentication(SessionContext context)
-        {
-            return context.Mapping.Authentication.Verify;
-        }
-
         private static bool IsProxyAuthorizationCredentialsCorrect(SessionContext context)
         {
-            return context.Socks5?.Username == context.Mapping.Authentication.Username && context.Socks5?.Password == context.Mapping.Authentication.Password;
+            return context.ProxyAuthenticator.Authenticate(context.Socks5?.Username, context.Socks5?.Password);
         }
 
         private static async Task<byte[]?> ReadUsernamePassword(CountingStream client, CancellationToken token)

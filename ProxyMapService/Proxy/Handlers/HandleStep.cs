@@ -1,4 +1,4 @@
-﻿namespace ProxyMapService.Proxy.Sessions
+﻿namespace ProxyMapService.Proxy.Handlers
 {
     public enum HandleStep
     {
@@ -9,6 +9,8 @@
         HttpProxy,
         HttpBypass,
         Socks4Initialized,
+        Socks4AuthenticationNotRequired,
+        Socks4Authenticated,
         Socks4Proxy,
         Socks4Bypass,
         Socks5Initialized,

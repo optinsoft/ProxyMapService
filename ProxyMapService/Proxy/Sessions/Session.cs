@@ -1,6 +1,8 @@
-﻿using ProxyMapService.Proxy.Configurations;
+﻿using ProxyMapService.Proxy.Authenticator;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
+using ProxyMapService.Proxy.Provider;
 using System.Net;
 using System.Net.Sockets;
 
@@ -16,7 +18,9 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.HttpAuthenticated, HttpHostActionHandler.Instance() },
             { HandleStep.HttpProxy, HttpProxyHandler.Instance() },
             { HandleStep.HttpBypass, HttpBypassHandler.Instance() },
-            { HandleStep.Socks4Initialized, Socks4HostActionHandler.Instance() },
+            { HandleStep.Socks4Initialized, Socks4AuthenticationHandler.Instance() },
+            { HandleStep.Socks4AuthenticationNotRequired, Socks4HostActionHandler.Instance() },
+            { HandleStep.Socks4Authenticated, Socks4HostActionHandler.Instance() },
             { HandleStep.Socks4Bypass, Socks4BypassHandler.Instance() },
             { HandleStep.Socks4Proxy, Socks4ProxyHandler.Instance() },
             { HandleStep.Socks5Initialized, Socks5AuthenticationHandler.Instance() },
@@ -30,13 +34,14 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Tunnel, TunnelHandler.Instance() }
         };
 
-        public static async Task Run(TcpClient client, ProxyMapping mapping, ProxyChanger changer, List<HostRule>? hostRules, string? userAgent,
+        public static async Task Run(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
+            IProxyAuthenticator proxyAuthenticator, List<HostRule>? hostRules, string? userAgent,
             ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter, 
             IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter, ILogger logger, CancellationToken token)
         {
-            using var context = new SessionContext(client, mapping, changer, hostRules, 
-                userAgent, sessionsCounter, remoteReadCounter, remoteSentCounter,
-                clientReadCounter, clientSentCounter, logger, token);
+            using var context = new SessionContext(client, mapping, proxyProvider, 
+                proxyAuthenticator, hostRules, userAgent, sessionsCounter, remoteReadCounter, 
+                remoteSentCounter, clientReadCounter, clientSentCounter, logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do

@@ -1,7 +1,9 @@
 ﻿using System.Net.Sockets;
+using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
+using ProxyMapService.Proxy.Provider;
 
 namespace ProxyMapService.Proxy.Sessions
 {
@@ -10,7 +12,8 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient Client { get; private set; }
         public TcpClient RemoteClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
-        public ProxyChanger Changer { get; private set; }
+        public IProxyProvider ProxyProvider { get; private set; }
+        public IProxyAuthenticator ProxyAuthenticator { get; private set; }
         public List<HostRule>? HostRules { get; private set; }
         public string? UserAgent { get; private set; }
         public ISessionsCounter? SessionsCounter { get; private set; }
@@ -36,7 +39,8 @@ namespace ProxyMapService.Proxy.Sessions
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
 
-        public SessionContext(TcpClient client, ProxyMapping mapping, ProxyChanger changer, List<HostRule>? hostRules, string? userAgent,
+        public SessionContext(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
+            IProxyAuthenticator proxyAuthenticator, List<HostRule>? hostRules, string? userAgent,
             ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
             IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
             ILogger logger, CancellationToken token)
@@ -44,7 +48,8 @@ namespace ProxyMapService.Proxy.Sessions
             Client = client;
             RemoteClient = new TcpClient();
             Mapping = mapping;
-            Changer = changer;
+            ProxyProvider = proxyProvider;
+            ProxyAuthenticator = proxyAuthenticator;
             HostRules = hostRules;
             UserAgent = userAgent;
             SessionsCounter = sessionsCounter;

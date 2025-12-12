@@ -43,7 +43,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static bool IsAuthenticationRequired(SessionContext context)
         {
-            return context.Mapping.Authentication.Required;
+            return context.ProxyAuthenticator.Required;
         }
 
         private static bool IsMethodPresent(SessionContext context, byte method)

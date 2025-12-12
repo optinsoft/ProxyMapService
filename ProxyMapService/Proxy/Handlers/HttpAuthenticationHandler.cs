@@ -21,12 +21,6 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            if (!IsVerifyAuthentication(context))
-            {
-                context.SessionsCounter?.OnAuthenticated(context);
-                return HandleStep.HttpAuthenticated;
-            }
-
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
                 context.SessionsCounter?.OnAuthenticated(context);
@@ -45,7 +39,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static bool IsAuthenticationRequired(SessionContext context)
         {
-            return context.Mapping.Authentication.Required;
+            return context.ProxyAuthenticator.Required;
         }
 
         private static bool IsProxyAuthorizationHeaderPresent(SessionContext context)
@@ -53,18 +47,16 @@ namespace ProxyMapService.Proxy.Handlers
             return context.Http?.ProxyAuthorization != null;
         }
 
-        private static bool IsVerifyAuthentication(SessionContext context)
-        {
-            return context.Mapping.Authentication.Verify;
-        }
-
         private static bool IsProxyAuthorizationCredentialsCorrect(SessionContext context)
         {
             var proxyAuthorization = context.Http?.ProxyAuthorization;
 
-            if (proxyAuthorization == null) return false;
+            string[] parts = proxyAuthorization == null ? [] : Encoding.ASCII.GetString(Convert.FromBase64String(proxyAuthorization)).Split(':');
 
-            return Encoding.ASCII.GetString(Convert.FromBase64String(proxyAuthorization)) == $"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}";
+            var username = parts.Length > 0 ? parts[0] : null;
+            var password = parts.Length > 1 ? parts[1] : null;
+
+            return context.ProxyAuthenticator.Authenticate(username, password);
         }
 
         private static async Task SendProxyAuthenticationRequired(SessionContext context)

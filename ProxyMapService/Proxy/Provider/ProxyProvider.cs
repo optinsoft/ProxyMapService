@@ -1,9 +1,9 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Exceptions;
 
-namespace ProxyMapService.Proxy.Sessions
+namespace ProxyMapService.Proxy.Provider
 {
-    public class ProxyChanger(List<ProxyServer> proxyServers) : IProxyChanger
+    public class ProxyProvider(List<ProxyServer> proxyServers) : IProxyProvider
     {
         private readonly List<ProxyServer> _proxyServers = Shuffle(proxyServers);
         private int _currentProxy = 0;
