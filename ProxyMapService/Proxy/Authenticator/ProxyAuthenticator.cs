@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
+using System.Collections.Specialized;
 
 namespace ProxyMapService.Proxy.Authenticator
 {
@@ -16,7 +17,7 @@ namespace ProxyMapService.Proxy.Authenticator
             if (_authentication.ParseUsernameParameters && username != null)
             {
                 context.UsernameParameters = ParseUsername(username);
-                account = context.UsernameParameters["account"];
+                account = context.UsernameParameters[0].Value;
             }
             if (!_authentication.Verify)
             {
@@ -29,16 +30,16 @@ namespace ProxyMapService.Proxy.Authenticator
             return account == _authentication.Username && password == _authentication.Password;
         }
 
-        private static Dictionary<string, string> ParseUsername(string username) 
+        private static List<KeyValuePair<string, string>> ParseUsername(string username) 
         {
             var parts = username.Split('-');
-            Dictionary<string, string> uparams = [];
-            uparams["account"] = parts[0];
+            List<KeyValuePair<string, string>> uparams = [];
+            uparams.Add(new KeyValuePair<string, string>("account", parts[0]));
             for (int i = 1; i < parts.Length - 1; i += 2)
             {
                 var paramName = parts[i];
                 var paramValue = parts[i + 1];
-                uparams[paramName] = paramValue;
+                uparams.Add(new KeyValuePair<string, string>(paramName, paramValue));
             }
             return uparams;
         }

@@ -1,9 +1,10 @@
-﻿using System.Net.Sockets;
-using ProxyMapService.Proxy.Authenticator;
+﻿using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Provider;
+using System.Collections.Specialized;
+using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Sessions
 {
@@ -39,7 +40,7 @@ namespace ProxyMapService.Proxy.Sessions
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
         public string? Username { get; set; }
-        public Dictionary<string, string>? UsernameParameters { get; set; }
+        public List<KeyValuePair<string, string>>? UsernameParameters { get; set; }
 
         public SessionContext(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, List<HostRule>? hostRules, string? userAgent,
