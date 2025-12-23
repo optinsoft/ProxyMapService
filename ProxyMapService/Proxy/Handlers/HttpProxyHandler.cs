@@ -41,7 +41,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             string? proxyAuthorization = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Username)
-                ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.ProxyServer.Username}:{context.ProxyServer.Password ?? String.Empty}"))
+                ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{GetContextProxyUsernameWithParameters(context)}:{context.ProxyServer.Password ?? String.Empty}"))
                 : (context.Mapping.Authentication.SetAuthentication
                 ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"))
                 : (context.Mapping.Authentication.RemoveAuthentication ? "" : clientAuthorization));

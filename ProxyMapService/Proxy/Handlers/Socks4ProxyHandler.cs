@@ -33,7 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             string? userId = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Username) 
-                ? context.ProxyServer?.Username
+                ? GetContextProxyUsernameWithParameters(context)
                 : (context.Mapping.Authentication.SetAuthentication 
                 ? context.Mapping.Authentication.Username 
                 : (context.Mapping.Authentication.RemoveAuthentication ? null : socks4.UserId));

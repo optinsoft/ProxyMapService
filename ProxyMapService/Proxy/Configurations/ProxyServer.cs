@@ -9,5 +9,6 @@ namespace ProxyMapService.Proxy.Configurations
         public ProxyType ProxyType { get; private set; } = proxyType;
         public string Username { get; private set; } = username;
         public string Password { get; private set; } = password;
+        public UsernameParameterList UsernameParameters { get; init; } = new();
     }
 }

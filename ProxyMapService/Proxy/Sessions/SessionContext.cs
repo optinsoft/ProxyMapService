@@ -40,7 +40,7 @@ namespace ProxyMapService.Proxy.Sessions
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
         public string? Username { get; set; }
-        public List<KeyValuePair<string, string>>? UsernameParameters { get; set; }
+        public UsernameParameterList? UsernameParameters { get; set; }
 
         public SessionContext(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, List<HostRule>? hostRules, string? userAgent,

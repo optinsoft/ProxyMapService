@@ -1,4 +1,6 @@
-﻿using ProxyMapService.Proxy.Headers;
+﻿using Fare;
+using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
@@ -11,6 +13,38 @@ namespace ProxyMapService.Proxy.Handlers
 {
     public class BaseProxyHandler
     {
+        protected static string? GetContextProxyUsernameWithParameters(SessionContext context)
+        {
+            var username = context.ProxyServer?.Username;
+            if (context.ProxyServer != null) {
+                foreach (var p in context.ProxyServer.UsernameParameters.Items)
+                {
+                    string? value = p.Value;
+                    string? contextParamValue = null;
+                    if (value.StartsWith('$'))
+                    {
+                        var contextParamName = value.Substring(1);
+                        contextParamValue = context.UsernameParameters?.GetValue(contextParamName);
+                        value = contextParamValue ?? p.Default;
+                    }
+                    if (contextParamValue == null)
+                    {
+                        if (value != null && value.StartsWith('^'))
+                        {
+                            var pattern = value.Substring(1);
+                            var xeger = new Xeger(pattern);
+                            value = xeger.Generate();
+                        }
+                    }
+                    if (!String.IsNullOrEmpty(value))
+                    {
+                        username += $"-{p.Name}-{value}";
+                    }
+                }
+            }
+            return username;
+        }
+
         protected static async Task SendHttpReply(SessionContext context, byte[] bytes)
         {
             if (context.ClientStream == null) return;

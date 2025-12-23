@@ -4,7 +4,7 @@ namespace ProxyMapService.Utils
 {
     public class RandomStringGenerator
     {
-        private static Random random = new Random(); // Initialize Random once
+        private static readonly Random random = new(); // Initialize Random once
 
         public static string GenerateRandomString(int length, bool includeNumbers = true, bool includeLowercase = true, bool includeUppercase = true)
         {
@@ -13,7 +13,7 @@ namespace ProxyMapService.Utils
                 throw new ArgumentOutOfRangeException(nameof(length), "Length must be greater than zero.");
             }
 
-            StringBuilder characterSet = new StringBuilder();
+            StringBuilder characterSet = new();
             if (includeLowercase)
             {
                 characterSet.Append("abcdefghijklmnopqrstuvwxyz");
@@ -32,7 +32,7 @@ namespace ProxyMapService.Utils
                 throw new InvalidOperationException("At least one character type (lowercase, uppercase, or numbers) must be included.");
             }
 
-            StringBuilder result = new StringBuilder(length);
+            StringBuilder result = new(length);
             string availableChars = characterSet.ToString();
 
             for (int i = 0; i < length; i++)

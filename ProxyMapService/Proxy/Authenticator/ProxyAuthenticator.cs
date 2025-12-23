@@ -17,7 +17,7 @@ namespace ProxyMapService.Proxy.Authenticator
             if (_authentication.ParseUsernameParameters && username != null)
             {
                 context.UsernameParameters = ParseUsername(username);
-                account = context.UsernameParameters[0].Value;
+                account = context.UsernameParameters.Items[0].Value;
             }
             if (!_authentication.Verify)
             {
@@ -30,16 +30,16 @@ namespace ProxyMapService.Proxy.Authenticator
             return account == _authentication.Username && password == _authentication.Password;
         }
 
-        private static List<KeyValuePair<string, string>> ParseUsername(string username) 
+        private static UsernameParameterList ParseUsername(string username) 
         {
             var parts = username.Split('-');
-            List<KeyValuePair<string, string>> uparams = [];
-            uparams.Add(new KeyValuePair<string, string>("account", parts[0]));
+            UsernameParameterList uparams = new();
+            uparams.SetValue("account", parts[0]);
             for (int i = 1; i < parts.Length - 1; i += 2)
             {
                 var paramName = parts[i];
                 var paramValue = parts[i + 1];
-                uparams.Add(new KeyValuePair<string, string>(paramName, paramValue));
+                uparams.SetValue(paramName, paramValue);
             }
             return uparams;
         }
