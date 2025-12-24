@@ -6,20 +6,18 @@ namespace ProxyMapService.Proxy.Authenticator
 {
     public class ProxyAuthenticator(Authentication authentication) : IProxyAuthenticator
     {
-        private readonly Authentication _authentication = authentication;
-
-        public bool Required { get => _authentication.Required; }
+        public bool Required { get => authentication.Required; }
 
         public bool Authenticate(SessionContext context, string? username, string? password)
         {
             context.Username = username;
             var account = username;
-            if (_authentication.ParseUsernameParameters && username != null)
+            if (authentication.ParseUsernameParameters && username != null)
             {
                 context.UsernameParameters = ParseUsername(username);
                 account = context.UsernameParameters.Items[0].Value;
             }
-            if (!_authentication.Verify)
+            if (!authentication.Verify)
             {
                 return true;
             }
@@ -27,7 +25,7 @@ namespace ProxyMapService.Proxy.Authenticator
             { 
                 return false; 
             }
-            return account == _authentication.Username && password == _authentication.Password;
+            return account == authentication.Username && password == authentication.Password;
         }
 
         private static UsernameParameterList ParseUsername(string username) 

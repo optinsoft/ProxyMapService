@@ -106,10 +106,10 @@ namespace ProxyMapService.Services
             List<Task> tasks = [];
             foreach (var mapping in proxyMappings)
             {
-                tasks.Add(new ProxyMapper().Start(mapping, hostRules, userAgent,
+                tasks.Add(new ProxyMapper(mapping, hostRules, userAgent,
                     _sessionsCounter, _remoteReadCounter, _remoteSentCounter, 
                     _clientReadCounter, _clientSentCounter, _logger, 
-                    _maxListenerStartRetries, cancellationToken));
+                    _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;
             _startTime = DateTime.Now;

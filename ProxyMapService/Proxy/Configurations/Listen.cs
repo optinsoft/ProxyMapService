@@ -1,8 +1,32 @@
 ﻿namespace ProxyMapService.Proxy.Configurations
 {
-    public class Listen(int port, bool rejectHttpProxy = false)
+    public class Listen(int port)
     {
-        public int Port { get; private set; } = port;
-        public bool RejectHttpProxy { get; private set; } = rejectHttpProxy;
+        private PortRange _portRange = new(port, port);
+
+        public int Port {
+            get
+            {
+                return _portRange.Start;
+            }
+            set
+            {
+                _portRange.Start = value;
+                _portRange.End = value;
+            }
+        }
+
+        public PortRange PortRange {
+            get
+            {
+                return _portRange;
+            }
+            set
+            {
+                _portRange = value;
+            }
+        }
+
+        public bool RejectHttpProxy { get; set; }
     }
 }
