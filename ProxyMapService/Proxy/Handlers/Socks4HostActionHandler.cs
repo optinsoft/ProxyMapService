@@ -20,21 +20,13 @@ namespace ProxyMapService.Proxy.Handlers
             context.HostName = context.Socks4.Host.Hostname;
             context.HostPort = context.Socks4.Host.Port;
 
-            HostRule? rule;
-            context.HostAction = GetHostAction(context.HostName, context.HostRules, out rule);
+            GetContextHostAction(context);
+
             if (context.HostAction == ActionEnum.Deny)
             {
                 context.SessionsCounter?.OnHostRejected(context);
                 await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
-            }
-            if (rule?.HostName != null)
-            {
-                context.HostName = rule.HostName;
-            }
-            if (rule?.HostPort != null)
-            {
-                context.HostPort = rule.HostPort.Value;
             }
 
             return context.HostAction == ActionEnum.Bypass ? HandleStep.Socks4Bypass : HandleStep.Proxy;

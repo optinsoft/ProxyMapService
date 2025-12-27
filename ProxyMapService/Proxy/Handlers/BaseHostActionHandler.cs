@@ -1,25 +1,45 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Sessions;
+using System.Data;
 
 namespace ProxyMapService.Proxy.Handlers
 {
     public class BaseHostActionHandler
     {
-        protected static ActionEnum GetHostAction(string host, List<HostRule>? hostRuleList, out HostRule? hostRule)
+        protected static void GetContextHostAction(SessionContext context)
         {
-            hostRule = null;
+            HostRule? hostRule = null;
             ActionEnum hostAction = ActionEnum.Allow;
-            if (hostRuleList != null)
+            if (context.HostRules != null)
             {
-                foreach (var rule in hostRuleList)
+                foreach (var rule in context.HostRules)
                 {
-                    if (rule.Pattern.Match(host).Success)
+                    if (rule.Pattern.Match(context.HostName).Success)
                     {
                         hostAction = rule.Action;
                         hostRule = rule;
                     }
                 }
             }
-            return hostAction;
+            context.HostAction = hostAction;
+            if (hostAction != ActionEnum.Deny)
+            {
+                if (hostRule?.HostName != null)
+                {
+                    context.HostName = hostRule.HostName;
+                }
+                if (hostRule?.HostPort != null)
+                {
+                    context.HostPort = hostRule.HostPort.Value;
+                }
+            }
+            if (hostAction == ActionEnum.Allow) 
+            {                
+                if (hostRule?.ProxyServer != null)
+                {
+                    context.ProxyServer = hostRule.ProxyServer;
+                }
+            }
         }
     }
 }

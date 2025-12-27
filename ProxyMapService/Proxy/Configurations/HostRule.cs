@@ -8,6 +8,7 @@ namespace ProxyMapService.Proxy.Configurations
         public ActionEnum Action { get; init; } = action;
         public string? HostName { get; set; }
         public int? HostPort { get; set; }
+        public ProxyServer? ProxyServer { get; set; }
     }
 
     public enum ActionEnum

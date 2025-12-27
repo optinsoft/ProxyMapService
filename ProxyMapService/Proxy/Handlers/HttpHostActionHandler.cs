@@ -27,21 +27,13 @@ namespace ProxyMapService.Proxy.Handlers
             context.HostName = context.Http.Host.Hostname;
             context.HostPort = context.Http.Host.Port;
 
-            HostRule? rule;
-            context.HostAction = GetHostAction(context.HostName, context.HostRules, out rule);
+            GetContextHostAction(context);
+
             if (context.HostAction == ActionEnum.Deny)
             {
                 context.SessionsCounter?.OnHostRejected(context);
                 await SendForbidden(context);
                 return HandleStep.Terminate;
-            }
-            if (rule?.HostName != null)
-            {
-                context.HostName = rule.HostName;
-            }
-            if (rule?.HostPort != null)
-            {
-                context.HostPort = rule.HostPort.Value;
             }
 
             return context.HostAction == ActionEnum.Bypass ? HandleStep.HttpBypass : HandleStep.Proxy;
