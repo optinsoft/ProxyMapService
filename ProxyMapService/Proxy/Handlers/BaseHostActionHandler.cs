@@ -24,13 +24,13 @@ namespace ProxyMapService.Proxy.Handlers
             context.HostAction = hostAction;
             if (hostAction != ActionEnum.Deny)
             {
-                if (hostRule?.HostName != null)
+                if (hostRule?.OverrideHostName != null)
                 {
-                    context.HostName = hostRule.HostName;
+                    context.HostName = hostRule.OverrideHostName;
                 }
-                if (hostRule?.HostPort != null)
+                if (hostRule?.OverrideHostPort != null)
                 {
-                    context.HostPort = hostRule.HostPort.Value;
+                    context.HostPort = hostRule.OverrideHostPort.Value;
                 }
             }
             if (hostAction == ActionEnum.Allow) 

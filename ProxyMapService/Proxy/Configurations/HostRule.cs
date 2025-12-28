@@ -6,8 +6,8 @@ namespace ProxyMapService.Proxy.Configurations
     {
         public Regex Pattern { get; init; } = new Regex(pattern, RegexOptions.Compiled);
         public ActionEnum Action { get; init; } = action;
-        public string? HostName { get; set; }
-        public int? HostPort { get; set; }
+        public string? OverrideHostName { get; set; }
+        public int? OverrideHostPort { get; set; }
         public ProxyServer? ProxyServer { get; set; }
     }
 
