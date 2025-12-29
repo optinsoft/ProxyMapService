@@ -142,6 +142,8 @@ ProxyMappings[].ProxyServers | Array of proxy servers | List<ProxyServer> | [] |
 
 ### ProxyServer
 
+Path | Description | Type | Default Value |
+-----|-------------|------|---------------|
 Host | Proxy server host | string | Missing (required field) |
 Port | Proxy server port | int | Missing (required field) |
 ProxyType | Proxy server type. Possible values: Http, Socks4, Socks5 | string | Http |
@@ -158,7 +160,7 @@ HostRules[].Pattern | Regex pattern for host name | String | "mozilla\\.(com\|or
 HostRules[].Action | Action: Allow (use proxy), Deny (block), or Bypass (direct connection) | String | Deny |
 HostRules[].OverrideHostName | Override host name. Optional (null if not overriding the host name) | String| "www.google.com" |
 HostRules[].OverrideHostPort | Override host port. Optional (null if not overriding the host port) | int | 81 |
-HostRules[].ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use proxy server from ProxyMappings[].ProxyServers array) | ProxyServer | 
+HostRules[].ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use proxy server from ProxyMappings[].ProxyServers array) | ProxyServer |  {"Host":"localhost", "Port":8888, "ProxyType":"Http"} |
 
 Rules are processed in order. If multiple rules match a host, the last one applies. For example, to block all connections except `www.google.com`:
 
