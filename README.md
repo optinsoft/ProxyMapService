@@ -125,7 +125,7 @@ Authentication.Jwt.Issuer | JWT token issuer | string | "" (empty string) |
 Authentication.Jwt.Audience | JWT token audience (URL) | string | "" (empty string) |
 Authentication.Jwt.Key | JWT token verification key | string | "" (empty string) |
 
-### Proxy Mappings
+### ProxyMappings
 
 Open connections, authentication rules, and proxy server mappings are defined in the `ProxyMappings` section.
 
@@ -138,20 +138,27 @@ ProxyMappings[].Authentication.Verify | Verify the `Proxy-Authorization` header 
 ProxyMappings[].Authentication.Username | Username | string | "" (empty string) |
 ProxyMappings[].Authentication.Password | Password | string | "" (empty string) |
 ProxyMappings[].Authentication.SetAuthentication | Add/replace the `Proxy-Authorization` header | bool | false |
-ProxyMappings[].ProxyServers[].Host | Proxy server host | string | Missing (required field) |
-ProxyMappings[].ProxyServers[].Port | Proxy server port | int | Missing (required field) |
-ProxyMappings[].ProxyServers[].ProxyType | Proxy server type. Possible values: Http, Socks4, Socks5 | string | Http |
-ProxyMappings[].PorxyServers[].Username | Proxy authentication username | string | "" (empty string) |
-ProxyMappings[].ProxyServers[].Password | Proxy authentication password | string | "" (empty string) |
+ProxyMappings[].ProxyServers | Array of proxy servers | List<ProxyServer> | [] |
 
-### Host Rules
+### ProxyServer
+
+Host | Proxy server host | string | Missing (required field) |
+Port | Proxy server port | int | Missing (required field) |
+ProxyType | Proxy server type. Possible values: Http, Socks4, Socks5 | string | Http |
+Username | Proxy authentication username | string | "" (empty string) |
+Password | Proxy authentication password | string | "" (empty string) |
+
+### HostRules
 
 Traffic routing rules are defined in the `HostRules` section.
 
 Path | Description | Type | Example |
 -----|-------------|------|---------|
-HostRules[].Pattern | Regex pattern for hostname | String | "mozilla\\.(com\|org\|net)$" |
+HostRules[].Pattern | Regex pattern for host name | String | "mozilla\\.(com\|org\|net)$" |
 HostRules[].Action | Action: Allow (use proxy), Deny (block), or Bypass (direct connection) | String | Deny |
+HostRules[].OverrideHostName | Override host name. Optional (null if not overriding the host name) | String| "www.google.com" |
+HostRules[].OverrideHostPort | Override host port. Optional (null if not overriding the host port) | int | 81 |
+HostRules[].ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use proxy server from ProxyMappings[].ProxyServers array) | ProxyServer | 
 
 Rules are processed in order. If multiple rules match a host, the last one applies. For example, to block all connections except `www.google.com`:
 
