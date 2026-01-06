@@ -14,7 +14,12 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 foreach (var rule in context.HostRules)
                 {
-                    if (rule.Pattern.Match(context.HostName).Success)
+                    if (rule.PatternRegEx != null && rule.PatternRegEx.Match(context.HostName).Success)
+                    {
+                        hostAction = rule.Action;
+                        hostRule = rule;
+                    }
+                    else if (rule.HostName != null && rule.HostName.Equals(context.HostName, StringComparison.OrdinalIgnoreCase))
                     {
                         hostAction = rule.Action;
                         hostRule = rule;

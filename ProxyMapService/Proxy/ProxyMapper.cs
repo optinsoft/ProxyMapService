@@ -11,7 +11,7 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy
 {
-    public class ProxyMapper(ProxyMapping mapping, List<HostRule>? hostRules,
+    public class ProxyMapper(ProxyMapping mapping, List<HostRule>? hostRules, 
         string? userAgent, ISessionsCounter? sessionsCounter,
         IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
         IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
