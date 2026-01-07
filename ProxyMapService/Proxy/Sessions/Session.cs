@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Sessions
         };
 
         public static async Task Run(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
-            IProxyAuthenticator proxyAuthenticator, List<HostRule>? hostRules, string? userAgent,
+            IProxyAuthenticator proxyAuthenticator, List<HostRule> hostRules, string? userAgent,
             ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter, 
             IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter, ILogger logger, CancellationToken token)
         {

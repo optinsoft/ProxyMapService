@@ -11,15 +11,43 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy
 {
-    public class ProxyMapper(ProxyMapping mapping, List<HostRule>? hostRules, 
+    public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
         string? userAgent, ISessionsCounter? sessionsCounter,
         IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
         IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
         ILogger logger, int maxListenerStartRetries, CancellationToken stoppingToken)
     {
+        private readonly List<ProxyServer> _proxyServers = [];
+        private readonly List<IConfigurationRoot> _proxyServerFileConfigurations = [];
+
+        private void LoadProxyServers()
+        {
+            _proxyServers.Clear();
+            _proxyServers.AddRange(mapping.ProxyServers);
+            _proxyServerFileConfigurations.Clear();
+            foreach (var proxyServersFile in mapping.ProxyServersFiles) 
+            {
+                var fileConfig = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile(proxyServersFile.Path, optional: false)
+                    .Build();
+                _proxyServerFileConfigurations.Add(fileConfig);
+            }
+            foreach (var fileConfig in _proxyServerFileConfigurations)
+            {
+                var addProxyServers = fileConfig.GetSection("ProxyServers").Get<List<ProxyServer>>();
+                if (addProxyServers != null)
+                {
+                    _proxyServers.AddRange(addProxyServers);
+                }
+            }
+        }
+
         public async Task Start()
         {
-            ProxyProvider proxyProvider = new(mapping.ProxyServers);
+            LoadProxyServers();
+
+            ProxyProvider proxyProvider = new(_proxyServers);
             ProxyAuthenticator proxyAuthenticator = new(mapping.Authentication);
 
             List<Task> tasks = [];
