@@ -14,33 +14,14 @@ namespace ProxyMapService.Proxy.Handlers
 {
     public class BaseProxyHandler
     {
-        private static string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList, bool generate)
+        private static string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList, bool resolve)
         {
             if (username == null) return null;
             if (parameterList != null)
             {
                 foreach (var p in parameterList.Items)
                 {
-                    string? value = p.Value;
-                    if (generate)
-                    {
-                        string? contextParamValue = null;
-                        if (value.StartsWith('$'))
-                        {
-                            var contextParamName = value.Substring(1);
-                            contextParamValue = context.UsernameParameters?.GetValue(contextParamName);
-                            value = contextParamValue ?? p.Default;
-                        }
-                        if (contextParamValue == null)
-                        {
-                            if (value != null && value.StartsWith('^'))
-                            {
-                                var pattern = value.Substring(1);
-                                var xeger = new Xeger(pattern);
-                                value = xeger.Generate();
-                            }
-                        }
-                    }
+                    string? value = resolve ? context.UsernameParameterResolver.ResolveParameterValue(p, context) : p.Value;
                     if (!String.IsNullOrEmpty(value))
                     {
                         if (p.Name != "account")

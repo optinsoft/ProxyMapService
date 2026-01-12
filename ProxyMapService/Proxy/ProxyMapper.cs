@@ -4,6 +4,7 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Listeners;
 using ProxyMapService.Proxy.Providers;
+using ProxyMapService.Proxy.Resolvers;
 using ProxyMapService.Proxy.Sessions;
 using System.Data;
 using System.Net;
@@ -64,9 +65,12 @@ namespace ProxyMapService.Proxy
         {
             var localEndPoint = new IPEndPoint(IPAddress.Loopback, listenPort);
 
+            UsernameParameterResolver usernameParameterResolver = new();
+
             async void clientHandler(TcpClient client, CancellationToken token) =>
                 await Session.Run(client, mapping, proxyProvider,
-                    proxyAuthenticator, hostRules, userAgent,
+                    proxyAuthenticator, usernameParameterResolver,
+                    hostRules, userAgent,
                     sessionsCounter, remoteReadCounter, remoteSentCounter,
                     clientReadCounter, clientSentCounter,
                     logger, token);

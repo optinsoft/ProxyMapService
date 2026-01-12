@@ -18,23 +18,7 @@ namespace ProxyMapService.Proxy.Authenticator
                 context.Username = context.UsernameParameters.Items[0].Value;
                 foreach (var p in authentication.UsernameParameters.Items)
                 {
-                    string? value = p.Value;
-                    string? contextParamValue = null;
-                    if (value.StartsWith('$'))
-                    {
-                        var contextParamName = value.Substring(1);
-                        contextParamValue = context.UsernameParameters.GetValue(contextParamName);
-                        value = contextParamValue ?? p.Default;
-                    }
-                    if (contextParamValue == null)
-                    {
-                        if (value != null && value.StartsWith('^'))
-                        {
-                            var pattern = value.Substring(1);
-                            var xeger = new Xeger(pattern);
-                            value = xeger.Generate();
-                        }
-                    }
+                    string? value = context.UsernameParameterResolver.ResolveParameterValue(p, context);
                     if (!String.IsNullOrEmpty(value))
                     {
                         context.UsernameParameters.SetValue(p.Name, value);

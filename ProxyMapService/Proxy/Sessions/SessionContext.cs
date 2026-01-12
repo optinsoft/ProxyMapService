@@ -3,6 +3,7 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Providers;
+using ProxyMapService.Proxy.Resolvers;
 using System.Collections.Specialized;
 using System.Net.Sockets;
 
@@ -15,6 +16,7 @@ namespace ProxyMapService.Proxy.Sessions
         public ProxyMapping Mapping { get; private set; }
         public IProxyProvider ProxyProvider { get; private set; }
         public IProxyAuthenticator ProxyAuthenticator { get; private set; }
+        public IUsernameParameterResolver UsernameParameterResolver { get; private set; }
         public List<HostRule> HostRules { get; private set; }
         public string? UserAgent { get; private set; }
         public ISessionsCounter? SessionsCounter { get; private set; }
@@ -43,8 +45,9 @@ namespace ProxyMapService.Proxy.Sessions
         public UsernameParameterList? UsernameParameters { get; set; }
 
         public SessionContext(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
-            IProxyAuthenticator proxyAuthenticator, List<HostRule> hostRules, string? userAgent,
-            ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
+            IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver,
+            List<HostRule> hostRules, string? userAgent, ISessionsCounter? sessionsCounter, 
+            IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
             IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
             ILogger logger, CancellationToken token)
         {
@@ -53,6 +56,7 @@ namespace ProxyMapService.Proxy.Sessions
             Mapping = mapping;
             ProxyProvider = proxyProvider;
             ProxyAuthenticator = proxyAuthenticator;
+            UsernameParameterResolver = usernameParameterResolver;
             HostRules = hostRules;
             UserAgent = userAgent;
             SessionsCounter = sessionsCounter;
