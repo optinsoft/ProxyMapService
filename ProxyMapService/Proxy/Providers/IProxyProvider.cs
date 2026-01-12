@@ -1,6 +1,6 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 
-namespace ProxyMapService.Proxy.Provider
+namespace ProxyMapService.Proxy.Providers
 {
     public interface IProxyProvider
     {

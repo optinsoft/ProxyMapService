@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Configurations;
+﻿using Fare;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
 using System.Collections.Specialized;
 
@@ -11,21 +12,44 @@ namespace ProxyMapService.Proxy.Authenticator
         public bool Authenticate(SessionContext context, string? username, string? password)
         {
             context.Username = username;
-            var account = username;
             if (authentication.ParseUsernameParameters && username != null)
             {
                 context.UsernameParameters = ParseUsername(username);
-                account = context.UsernameParameters.Items[0].Value;
+                context.Username = context.UsernameParameters.Items[0].Value;
+                foreach (var p in authentication.UsernameParameters.Items)
+                {
+                    string? value = p.Value;
+                    string? contextParamValue = null;
+                    if (value.StartsWith('$'))
+                    {
+                        var contextParamName = value.Substring(1);
+                        contextParamValue = context.UsernameParameters.GetValue(contextParamName);
+                        value = contextParamValue ?? p.Default;
+                    }
+                    if (contextParamValue == null)
+                    {
+                        if (value != null && value.StartsWith('^'))
+                        {
+                            var pattern = value.Substring(1);
+                            var xeger = new Xeger(pattern);
+                            value = xeger.Generate();
+                        }
+                    }
+                    if (!String.IsNullOrEmpty(value))
+                    {
+                        context.UsernameParameters.SetValue(p.Name, value);
+                    }
+                }
             }
             if (!authentication.Verify)
             {
                 return true;
             }
-            if (account == null || password == null) 
+            if (context.Username == null || password == null) 
             { 
                 return false; 
             }
-            return account == authentication.Username && password == authentication.Password;
+            return context.Username == authentication.Username && password == authentication.Password;
         }
 
         private static UsernameParameterList ParseUsername(string username) 

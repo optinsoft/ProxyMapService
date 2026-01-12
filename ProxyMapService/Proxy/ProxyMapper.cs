@@ -3,7 +3,7 @@ using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Listeners;
-using ProxyMapService.Proxy.Provider;
+using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Sessions;
 using System.Data;
 using System.Net;

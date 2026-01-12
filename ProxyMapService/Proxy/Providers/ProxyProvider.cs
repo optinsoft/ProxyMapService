@@ -1,7 +1,7 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Exceptions;
 
-namespace ProxyMapService.Proxy.Provider
+namespace ProxyMapService.Proxy.Providers
 {
     public class ProxyProvider(List<ProxyServer> proxyServers) : IProxyProvider
     {

@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Handlers
                 !String.IsNullOrEmpty(context.ProxyServer?.Username) 
                 ? GetContextProxyUsernameWithParameters(context)
                 : (context.Mapping.Authentication.SetAuthentication 
-                ? context.Mapping.Authentication.Username 
+                ? GetContextUsernameWithParameters(context)
                 : (context.Mapping.Authentication.RemoveAuthentication ? null : socks4.UserId));
 
             var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.HostName, context.HostPort, userId);

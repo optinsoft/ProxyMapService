@@ -40,7 +40,7 @@ namespace ProxyMapService.Proxy.Handlers
                 !String.IsNullOrEmpty(context.ProxyServer?.Username) 
                 ? GetContextProxyUsernameWithParameters(context)
                 : (context.Mapping.Authentication.SetAuthentication 
-                ? context.Mapping.Authentication.Username 
+                ? GetContextUsernameWithParameters(context)
                 : (context.Mapping.Authentication.RemoveAuthentication ? null : socks5.Username));
             string? password = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Password)

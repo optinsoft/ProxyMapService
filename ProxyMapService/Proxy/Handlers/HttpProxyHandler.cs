@@ -43,7 +43,7 @@ namespace ProxyMapService.Proxy.Handlers
                 !String.IsNullOrEmpty(context.ProxyServer?.Username)
                 ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{GetContextProxyUsernameWithParameters(context)}:{context.ProxyServer.Password ?? String.Empty}"))
                 : (context.Mapping.Authentication.SetAuthentication
-                ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{context.Mapping.Authentication.Username}:{context.Mapping.Authentication.Password}"))
+                ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{GetContextUsernameWithParameters(context)}:{context.Mapping.Authentication.Password}"))
                 : (context.Mapping.Authentication.RemoveAuthentication ? "" : clientAuthorization));
 
             var httpRequestBytes = http.GetBytes(true, proxyAuthorization, null);

@@ -2,7 +2,7 @@
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
-using ProxyMapService.Proxy.Provider;
+using ProxyMapService.Proxy.Providers;
 using System.Net;
 using System.Net.Sockets;
 

@@ -5,6 +5,7 @@ using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
@@ -13,36 +14,53 @@ namespace ProxyMapService.Proxy.Handlers
 {
     public class BaseProxyHandler
     {
-        protected static string? GetContextProxyUsernameWithParameters(SessionContext context)
+        private static string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList, bool generate)
         {
-            var username = context.ProxyServer?.Username;
-            if (context.ProxyServer != null) {
-                foreach (var p in context.ProxyServer.UsernameParameters.Items)
+            if (username == null) return null;
+            if (parameterList != null)
+            {
+                foreach (var p in parameterList.Items)
                 {
                     string? value = p.Value;
-                    string? contextParamValue = null;
-                    if (value.StartsWith('$'))
+                    if (generate)
                     {
-                        var contextParamName = value.Substring(1);
-                        contextParamValue = context.UsernameParameters?.GetValue(contextParamName);
-                        value = contextParamValue ?? p.Default;
-                    }
-                    if (contextParamValue == null)
-                    {
-                        if (value != null && value.StartsWith('^'))
+                        string? contextParamValue = null;
+                        if (value.StartsWith('$'))
                         {
-                            var pattern = value.Substring(1);
-                            var xeger = new Xeger(pattern);
-                            value = xeger.Generate();
+                            var contextParamName = value.Substring(1);
+                            contextParamValue = context.UsernameParameters?.GetValue(contextParamName);
+                            value = contextParamValue ?? p.Default;
+                        }
+                        if (contextParamValue == null)
+                        {
+                            if (value != null && value.StartsWith('^'))
+                            {
+                                var pattern = value.Substring(1);
+                                var xeger = new Xeger(pattern);
+                                value = xeger.Generate();
+                            }
                         }
                     }
                     if (!String.IsNullOrEmpty(value))
                     {
-                        username += $"-{p.Name}-{value}";
+                        if (p.Name != "account")
+                        {
+                            username += $"-{p.Name}-{value}";
+                        }
                     }
                 }
             }
             return username;
+        }
+
+        protected static string? GetContextUsernameWithParameters(SessionContext context)
+        {
+            return GetUsernameWithParameters(context, context.Username, context.UsernameParameters, false);
+        }
+
+        protected static string? GetContextProxyUsernameWithParameters(SessionContext context)
+        {
+            return GetUsernameWithParameters(context, context.ProxyServer?.Username, context.ProxyServer?.UsernameParameters, true);
         }
 
         protected static async Task SendHttpReply(SessionContext context, byte[] bytes)
