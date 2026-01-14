@@ -3,7 +3,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class HttpAuthenticationHandler : IHandler
+    public class HttpAuthenticationHandler : BaseAuthenticationHandler, IHandler
     {
         private static readonly HttpAuthenticationHandler Self = new();
 
@@ -13,21 +13,21 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (!IsAuthenticationRequired(context))
                 {
-                    context.SessionsCounter?.OnAuthenticationNotRequired(context);
+                    OnAuthenticationNotRequired(context);
                     return HandleStep.HttpAuthenticationNotRequired;
                 }
-                context.SessionsCounter?.OnAuthenticationRequired(context);
+                OnAuthenticationRequired(context);
                 await SendProxyAuthenticationRequired(context);
                 return HandleStep.Terminate;
             }
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
-                context.SessionsCounter?.OnAuthenticated(context);
+                OnAuthenticated(context);
                 return HandleStep.HttpAuthenticated;
             }
 
-            context.SessionsCounter?.OnAuthenticationInvalid(context);
+            OnAuthenticationInvalid(context);
             await SendProxyUnauthorized(context);
             return HandleStep.Terminate;
         }

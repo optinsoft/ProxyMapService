@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks4AuthenticationHandler : IHandler
+    public class Socks4AuthenticationHandler : BaseAuthenticationHandler, IHandler
     {
         private static readonly Socks4AuthenticationHandler Self = new();
 
@@ -14,21 +14,21 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (!IsAuthenticationRequired(context))
                 {
-                    context.SessionsCounter?.OnAuthenticationNotRequired(context);
+                    OnAuthenticationNotRequired(context);
                     return HandleStep.Socks4AuthenticationNotRequired;
                 }
-                context.SessionsCounter?.OnAuthenticationRequired(context);
+                OnAuthenticationRequired(context);
                 await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
             }
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
-                context.SessionsCounter?.OnAuthenticated(context);
+                OnAuthenticated(context);
                 return HandleStep.Socks4Authenticated;
             }
 
-            context.SessionsCounter?.OnAuthenticationInvalid(context);
+            OnAuthenticationInvalid(context);
             await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
             return HandleStep.Terminate;
         }

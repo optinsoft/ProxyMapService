@@ -17,7 +17,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.ProxyServer == null)
             {
-                context.ProxyServer = context.ProxyProvider.GetProxyServer();
+                context.ProxyServer = context.ProxyProvider.GetProxyServer(context);
             }
 
             IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);

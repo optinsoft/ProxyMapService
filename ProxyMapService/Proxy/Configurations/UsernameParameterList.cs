@@ -4,6 +4,9 @@
     {
         public List<UsernameParameter> Items { get; init; } = [];
 
+        public UsernameParameter? SessionId => Items.Find(p => p.SessionId);
+        public UsernameParameter? SessionTime => Items.Find(p => p.SessionTime);
+
         private Dictionary<string, UsernameParameter>? _lookup;
 
         private Dictionary<string, UsernameParameter> Lookup =>
@@ -14,12 +17,16 @@
         public bool Contains(string name)
             => Lookup.ContainsKey(name);
 
+        public UsernameParameter? FindParameter(string name)
+            => Lookup.TryGetValue(name, out var param)
+                ? param : null;
+
         public string? GetValue(string name)
             => Lookup.TryGetValue(name, out var param)
                 ? param.Value
                 : null;
 
-        public void SetValue(string name, string value)
+        public void SetValue(string name, string value, UsernameParameter? paramTemplate = null)
         {
             if (Lookup.TryGetValue(name, out var param))
             {
@@ -27,14 +34,37 @@
             }
             else
             {
-                var newParam = new UsernameParameter
+                param = new UsernameParameter
                 {
                     Name = name,
-                    Value = value
+                    Value = value,
+                    Default = paramTemplate?.Default,
+                    SessionId = paramTemplate?.SessionId ?? false,
+                    SessionTime = paramTemplate?.SessionTime ?? false
                 };
+                Items.Add(param);
+                Lookup[name] = param;
+            }
+        }
 
-                Items.Add(newParam);
-                Lookup[name] = newParam;
+        public void SetResolvedValue(string name, string value, UsernameParameter? paramTemplate = null)
+        {
+            if (Lookup.TryGetValue(name, out var param))
+            {
+                param.SetResolvedValue(value);
+            }
+            else
+            {
+                param = new UsernameParameter
+                {
+                    Name = name,
+                    Default = paramTemplate?.Default,
+                    SessionId = paramTemplate?.SessionId ?? false,
+                    SessionTime = paramTemplate?.SessionTime ?? false
+                };
+                param.SetResolvedValue(value);
+                Items.Add(param);
+                Lookup[name] = param;
             }
         }
 

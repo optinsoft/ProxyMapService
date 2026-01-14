@@ -42,6 +42,8 @@ namespace ProxyMapService.Proxy.Sessions
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
         public UsernameParameterList? UsernameParameters { get; set; }
+        public string? SessionId { get; set; }
+        public int SessionTime { get; set; }
 
         public SessionContext(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver,

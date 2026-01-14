@@ -1,9 +1,11 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Providers
 {
     public interface IProxyProvider
     {
-        ProxyServer GetProxyServer();
+        void CleanupExpiredSessions();
+        ProxyServer GetProxyServer(SessionContext context);
     }
 }

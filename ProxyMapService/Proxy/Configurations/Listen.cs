@@ -28,5 +28,6 @@
         }
 
         public bool RejectHttpProxy { get; set; }
+        public int StickyProxyLifetime {  get; set; }
     }
 }

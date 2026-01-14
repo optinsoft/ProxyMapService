@@ -6,7 +6,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5UsernamePasswordHandler : IHandler
+    public class Socks5UsernamePasswordHandler : BaseAuthenticationHandler, IHandler
     {
         private static readonly Socks5UsernamePasswordHandler Self = new();
 
@@ -26,12 +26,12 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
-                context.SessionsCounter?.OnAuthenticated(context);
+                OnAuthenticated(context);
                 await SendAuthenticated(context);
                 return HandleStep.Socks5Authenticated;
             }
 
-            context.SessionsCounter?.OnAuthenticationInvalid(context);
+            OnAuthenticationInvalid(context);
             await SendNotAuthenticated(context);
             return HandleStep.Terminate;
         }

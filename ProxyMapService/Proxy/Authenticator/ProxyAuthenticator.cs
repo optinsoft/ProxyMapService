@@ -28,7 +28,7 @@ namespace ProxyMapService.Proxy.Authenticator
             return account == authentication.Username && password == authentication.Password;
         }
 
-        private static UsernameParameterList ParseUsername(string username) 
+        private UsernameParameterList ParseUsername(string username) 
         {
             var parts = username.Split('-');
             UsernameParameterList uparams = new();
@@ -37,7 +37,8 @@ namespace ProxyMapService.Proxy.Authenticator
             {
                 var paramName = parts[i];
                 var paramValue = parts[i + 1];
-                uparams.SetValue(paramName, paramValue);
+                var authParam = authentication.UsernameParameters.FindParameter(paramName);
+                uparams.SetValue(paramName, paramValue, authParam);
             }
             return uparams;
         }

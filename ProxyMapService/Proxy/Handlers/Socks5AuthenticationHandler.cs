@@ -3,7 +3,7 @@ using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5AuthenticationHandler : IHandler
+    public class Socks5AuthenticationHandler : BaseAuthenticationHandler, IHandler
     {
         private static readonly Socks5AuthenticationHandler Self = new();
 
@@ -13,11 +13,11 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (IsMethodPresent(context, 0x02))
                 {
-                    context.SessionsCounter?.OnAuthenticationRequired(context);
+                    OnAuthenticationRequired(context);
                     await SendSelectMethod(context, 0x02);
                     return HandleStep.Socks5UsernamePasswordAuthentication;
                 }
-                context.SessionsCounter?.OnAuthenticationNotRequired(context);
+                OnAuthenticationNotRequired(context);
                 if (!IsMethodPresent(context, 0x0))
                 {
                     await SendNoMethod(context);
@@ -26,7 +26,7 @@ namespace ProxyMapService.Proxy.Handlers
                 await SendSelectMethod(context, 0x0);
                 return HandleStep.Socks5AuthenticationNotRequired;
             }
-            context.SessionsCounter?.OnAuthenticationRequired(context);
+            OnAuthenticationRequired(context);
             if (!IsMethodPresent(context, 0x02))
             {
                 await SendNoMethod(context);

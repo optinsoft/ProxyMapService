@@ -5,6 +5,7 @@ namespace ProxyMapService.Proxy.Resolvers
 {
     public interface IUsernameParameterResolver
     {
-        string? ResolveParameterValue(UsernameParameter parameter, SessionContext context);
+        string GenerateSessionId(SessionContext context, string pattern);
+        string? ResolveParameterValue(UsernameParameter? parameter, SessionContext context);
     }
 }
