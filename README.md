@@ -270,7 +270,7 @@ Rules are processed in order. If multiple rules match a host, the last one appli
 }
 ```
 
-**Example** `fiddler-proxy-servers.json`
+**Example** `fiddler-host-rules.json`
 
 ```json
 {

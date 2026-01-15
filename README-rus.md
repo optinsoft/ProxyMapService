@@ -270,7 +270,7 @@ HostRules[].ProxyServer | Использовать этот прокси-сер�
 }
 ```
 
-**Example** `fiddler-proxy-servers.json`
+**Example** `fiddler-host-rules.json`
 
 ```json
 {
