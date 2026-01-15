@@ -131,7 +131,7 @@ Authentication.Jwt.Key | Ключ для верификации JWT-токена
 
 Путь | Описание | Тип | Значение по-умолчанию |
 -----| ---------|-----|-----------------------|
-ProxyMappings[].Listen.Port | TCP порт | int | 5000 |
+ProxyMappings[].Listen.Port | TCP порт | int | 5001 |
 ProxyMappings[].Listen.RejectHttpProxy | Отклонять все HTTP (не CONNECT) соединения | bool | false |
 ProxyMappings[].Authentication.Required | Проверять наличие HTTP заголовка Proxy-Authorization; если отсутствует, то возвращать ошибку 407 Proxy Authentication Required | bool | false |
 ProxyMappings[].Authentication.Verify | Проверять HTTP заголовок Proxy-Authorization. Он должен содержать Basic b64, где b64 - это закодированная с помощью Base64 строка пользователь:пароль; пользователь и пароль задаются в параметрах (см. следующие два параметра) | bool | false |
@@ -160,7 +160,7 @@ HostRules[].Pattern | Регулярное выражение для имени 
 HostRules[].Action | Действие, которое нужно выполнить если имя хоста удовлетворяет выражению Pattern. Может принимать одно из трех значений: Allow (соединяться с хостом через прокси), Deny (отказывать в соединении), Bypass (соединяться с хостом напрямую, без прокси) | String | Deny |
 HostRules[].OverrideHostName | Переопределить имя хоста, к которому осуществляется подключение. Опционально (null если не переопределять имя хоста) | String| "www.google.com" |
 HostRules[].OverrideHostPort | Переопределить порт хоста, к которому осуществлятся подключение. Опционально (null если не переопределять порт хоста) | int | 81 |
-HostRules[].ProxyServer | Использовать этот прокси-сервер когда `Action`=`Allow`. Опционально (null если использовать прокси-сервер из массива ProxyMappings[].ProxyServers) | ProxyServer | {"Host":"localhost", "Port":8888, "ProxyType":"Http"} |
+HostRules[].ProxyServer | Использовать этот прокси-сервер когда `Action`=`Allow`. Опционально (null если использовать прокси-сервер из массива ProxyMappings[].ProxyServers) | ProxyServer | {"Host":"localhost", "Port":3128, "ProxyType":"Http"} |
 
 Правила просматриваются в том же порядке, что указаны в HostRules. Если несколько правил применимы к хосту, то применяется последнее. То есть, например, можно запретить все соединения, кроме соединения с www.google.com:
 
@@ -194,21 +194,29 @@ HostRules[].ProxyServer | Использовать этот прокси-сер�
     "ProxyMappings": [
         {
             "Listen": {
-                "Port": 5000,
-                "RejectHttpProxy": true
+                "Port": 5001,
+                "RejectHttpProxy": true,
+                "StickyProxyLifetime": 0
             },
             "Authentication": {
                 "Required": false,
                 "Verify": false,
                 "SetAuthentication": false,
+                "RemoveAuthentication": false,
+                "ParseUsernameParameters": false,
                 "Username": "test",
                 "Password": "test"
             },
             "ProxyServers": [
                 {
                     "Host": "localhost",
-                    "Port": 8888,
+                    "Port": 3128,
                     "ProxyType": "Http"
+                }
+            ],
+            "ProxyServersFiles": [
+                {
+                    "Path": "socks-proxy-servers.json"
                 }
             ]
         }
@@ -227,11 +235,56 @@ HostRules[].ProxyServer | Использовать этот прокси-сер�
             "Action": "Bypass"
         }
     ],
+    "HostRulesFiles": [
+        {
+            "Path": "fiddler-host-rules.json"
+        }
+    ],
     "HostStats": {
         "Enabled": true,
         "TrafficStats": true,
         "LogTrafficData": false
+    },
+    "HTTP": {
+        "UserAgent": "proxymapper"
     }
+}
+```
+
+**Example** `socks-proxy-servers.json`
+
+```json
+{
+    "ProxyServers": [
+        {
+            "Host": "127.0.0.1",
+            "Port": 1080,
+            "ProxyType": "Socks5",
+        },
+        {
+            "Host": "127.0.0.1",
+            "Port": 1081,
+            "ProxyType": "Socks5",
+        }
+    ]
+}
+```
+
+**Example** `fiddler-proxy-servers.json`
+
+```json
+{
+    "HostRules": [
+        {
+            "HostName": "www.google.com",
+            "Action": "Allow",
+            "ProxyServer": {
+                "Host": "localhost",
+                "Port": 8888,
+                "ProxyType": "Http"
+            }
+        }
+    ]
 }
 ```
 

@@ -131,7 +131,7 @@ Open connections, authentication rules, and proxy server mappings are defined in
 
 Path | Description | Type | Default Value |
 -----|-------------|------|---------------|
-ProxyMappings[].Listen.Port | TCP port | int | 5000 |
+ProxyMappings[].Listen.Port | TCP port | int | 5001 |
 ProxyMappings[].Listen.RejectHttpProxy | Reject all HTTP (non-CONNECT) connections | bool | false |
 ProxyMappings[].Authentication.Required | Require the `Proxy-Authorization` header; return `407` error if missing | bool | false |
 ProxyMappings[].Authentication.Verify | Verify the `Proxy-Authorization` header (must be `Basic base64(user:pass)`) | bool | false |
@@ -160,7 +160,7 @@ HostRules[].Pattern | Regex pattern for host name | String | "mozilla\\.(com\|or
 HostRules[].Action | Action: Allow (use proxy), Deny (block), or Bypass (direct connection) | String | Deny |
 HostRules[].OverrideHostName | Override host name. Optional (null if not overriding the host name) | String| "www.google.com" |
 HostRules[].OverrideHostPort | Override host port. Optional (null if not overriding the host port) | int | 81 |
-HostRules[].ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use proxy server from ProxyMappings[].ProxyServers array) | ProxyServer |  {"Host":"localhost", "Port":8888, "ProxyType":"Http"} |
+HostRules[].ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use proxy server from ProxyMappings[].ProxyServers array) | ProxyServer |  {"Host":"localhost", "Port":3128, "ProxyType":"Http"} |
 
 Rules are processed in order. If multiple rules match a host, the last one applies. For example, to block all connections except `www.google.com`:
 
@@ -194,21 +194,29 @@ Rules are processed in order. If multiple rules match a host, the last one appli
     "ProxyMappings": [
         {
             "Listen": {
-                "Port": 5000,
-                "RejectHttpProxy": true
+                "Port": 5001,
+                "RejectHttpProxy": true,
+                "StickyProxyLifetime": 0
             },
             "Authentication": {
                 "Required": false,
                 "Verify": false,
                 "SetAuthentication": false,
+                "RemoveAuthentication": false,
+                "ParseUsernameParameters": false,
                 "Username": "test",
                 "Password": "test"
             },
             "ProxyServers": [
                 {
                     "Host": "localhost",
-                    "Port": 8888,
+                    "Port": 3128,
                     "ProxyType": "Http"
+                }
+            ],
+            "ProxyServersFiles": [
+                {
+                    "Path": "socks-proxy-servers.json"
                 }
             ]
         }
@@ -227,11 +235,56 @@ Rules are processed in order. If multiple rules match a host, the last one appli
             "Action": "Bypass"
         }
     ],
+    "HostRulesFiles": [
+        {
+            "Path": "fiddler-host-rules.json"
+        }
+    ],
     "HostStats": {
         "Enabled": true,
         "TrafficStats": true,
         "LogTrafficData": false
+    },
+    "HTTP": {
+        "UserAgent": "proxymapper"
     }
+}
+```
+
+**Example** `socks-proxy-servers.json`
+
+```json
+{
+    "ProxyServers": [
+        {
+            "Host": "127.0.0.1",
+            "Port": 1080,
+            "ProxyType": "Socks5",
+        },
+        {
+            "Host": "127.0.0.1",
+            "Port": 1081,
+            "ProxyType": "Socks5",
+        }
+    ]
+}
+```
+
+**Example** `fiddler-proxy-servers.json`
+
+```json
+{
+    "HostRules": [
+        {
+            "HostName": "www.google.com",
+            "Action": "Allow",
+            "ProxyServer": {
+                "Host": "localhost",
+                "Port": 8888,
+                "ProxyType": "Http"
+            }
+        }
+    ]
 }
 ```
 
