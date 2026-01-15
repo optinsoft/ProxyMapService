@@ -326,7 +326,7 @@ ProxyServer | Использовать этот прокси-сервер ког
 }
 ```
 
-**Example** `socks-proxy-servers.json`
+**Пример** `socks-proxy-servers.json`
 
 ```json
 {
@@ -345,7 +345,7 @@ ProxyServer | Использовать этот прокси-сервер ког
 }
 ```
 
-**Example** `fiddler-host-rules.json`
+**Пример** `fiddler-host-rules.json`
 
 ```json
 {
