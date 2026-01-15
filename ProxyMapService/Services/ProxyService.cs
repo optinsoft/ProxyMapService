@@ -83,13 +83,12 @@ namespace ProxyMapService.Services
         private void LoadHostRules()
         {
             _hostRules.Clear();
-            var hostRules = _configuration.GetSection("HostRules").Get<List<HostRule>>();
-            if (hostRules != null) _hostRules.AddRange(hostRules);
-            var hostRulesFiles = _configuration.GetSection("HostRulesFiles").Get<List<HostRulesFile>>();
+            var hostRules = _configuration.GetSection("HostRules").Get<HostRules>();
+            if (hostRules != null) _hostRules.AddRange(hostRules.Items);
             _hostRuleFileConfigurations.Clear();
-            if (hostRulesFiles != null)
+            if (hostRules != null)
             {
-                foreach (var hostRulesFile in hostRulesFiles)
+                foreach (var hostRulesFile in hostRules.Files)
                 {
                     var fileConfig = new ConfigurationBuilder()
                         .SetBasePath(Directory.GetCurrentDirectory())
@@ -100,10 +99,9 @@ namespace ProxyMapService.Services
             }
             foreach (var fileConfig in _hostRuleFileConfigurations)
             {
-                var addHostRules = fileConfig.GetSection("HostRules").Get<List<HostRule>>();
+                var addHostRules = fileConfig.GetSection("Items").Get<List<HostRule>>();
                 if (addHostRules != null)
                 {
-                    _hostRules ??= [];
                     _hostRules.AddRange(addHostRules);
                 }
             }

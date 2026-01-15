@@ -24,9 +24,9 @@ namespace ProxyMapService.Proxy
         private void LoadProxyServers()
         {
             _proxyServers.Clear();
-            _proxyServers.AddRange(mapping.ProxyServers);
+            _proxyServers.AddRange(mapping.ProxyServers.Items);
             _proxyServerFileConfigurations.Clear();
-            foreach (var proxyServersFile in mapping.ProxyServersFiles) 
+            foreach (var proxyServersFile in mapping.ProxyServers.Files) 
             {
                 var fileConfig = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
@@ -36,7 +36,7 @@ namespace ProxyMapService.Proxy
             }
             foreach (var fileConfig in _proxyServerFileConfigurations)
             {
-                var addProxyServers = fileConfig.GetSection("ProxyServers").Get<List<ProxyServer>>();
+                var addProxyServers = fileConfig.GetSection("Items").Get<List<ProxyServer>>();
                 if (addProxyServers != null)
                 {
                     _proxyServers.AddRange(addProxyServers);

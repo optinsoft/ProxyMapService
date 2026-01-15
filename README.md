@@ -131,11 +131,11 @@ Open connections, authentication rules, and proxy server mappings are defined in
 
 ### ProxyMapping
 
-Name | Description | Type | Default Value |
------|-------------|------|---------------|
-Listen | TCP listener settings (see `Listen` description below) | `Listen` | absent (required) |
-Authentication | Client authentication parameters  | `Authentication` (see description below) | absent |
-ProxyServers | Array of proxy servers (see `ProxyServer` description below) | `List<ProxyServer>` | [] |
+Name | Description | Type |
+-----|-------------|------|
+Listen | TCP listener settings | `Listen` (see description below) |
+Authentication | Client authentication parameters | `Authentication` (see description below) |
+ProxyServers | Lists of proxy servers | `ProxyServers` (see description below) |
 
 ### Listen
 
@@ -189,6 +189,13 @@ Another example: `Value`=`$sessionTime` refers to the `sessionTime` parameter, w
 
 If `Value` or `Default` starts with the `^` character, it is a regular expression (RegEx) used to generate the value. Example: `^[A-Za-z]{8}`.
 
+### ProxyServers
+
+Name | Description | Type |
+-----|-------------|------|
+Items | List of proxy servers | `List<ProxyServer>` (see `ProxyServer` description below) |
+Files | List of files with proxy servers | `List<ProxyServersFile>` (see `ProxyServerFile` description below) |
+
 ### ProxyServer
 
 Name | Description | Type | Default Value |
@@ -200,9 +207,39 @@ Username | Proxy authentication username | string | "" (empty string) |
 Password | Proxy authentication password | string | "" (empty string) |
 UsernameParameters | Parameters added to the username during proxy server authentication. <details><summary>Note</summary>If `UsernameParameters` is present in `ProxyServer`, it will be used instead of `Authentication.UsernameParameters`, regardless of `Authentication.SetAuthentication`.</details> | `List<UsernameParameter>` | absent |
 
+### ProxyServerFile
+
+Name | Description | Type |
+-----|-------------|------|
+Path | Path to the file with proxy servers | string |
+
+**Example** of the file with proxy servers `socks-proxy-servers.json`:
+
+```json
+{
+    "Items": [
+        {
+            "Host": "127.0.0.1",
+            "Port": 1080,
+            "ProxyType": "Socks5",
+        },
+        {
+            "Host": "127.0.0.1",
+            "Port": 1081,
+            "ProxyType": "Socks5",
+        }
+    ]
+}
+```
+
 ### HostRules
 
-Traffic routing rules are defined in the `HostRules` section. Array of `HostRule`.
+Traffic routing rules are defined in the `HostRules` section.
+
+Name | Description | Type |
+-----|-------------|------|
+Items | List of routing rules | `List<HostRule>` (see `HostRule` description below) |
+Files | List of files with routing rules | `List<HostRulesFile>` (see `HostRulesFile` description below) |
 
 ### HostRule
 
@@ -219,20 +256,46 @@ Rules are processed in order. If multiple rules match a host, the last one appli
 
 ```json
 {
-    "HostRules": [
-        {
-            "Pattern": ".*",
-            "Action": "Deny"
-        },
+    "HostRules": {
+        "Items": [
+            {
+                "Pattern": ".*",
+                "Action": "Deny"
+            },
+            {
+                "HostName": "www.google.com",
+                "Action": "Allow"
+            }
+        ]
+    }
+}
+```
+
+### HostRulesFile
+
+Name | Description | Type |
+-----|-------------|------|
+Path | Path to the file with traffic routing rules | string |
+
+**Example** of the file with traffic routing rules `fiddler-host-rules.json`:
+
+```json
+{
+    "Items": [
         {
             "HostName": "www.google.com",
-            "Action": "Allow"
+            "Action": "Allow",
+            "ProxyServer": {
+                "Host": "localhost",
+                "Port": 8888,
+                "ProxyType": "Http"
+            }
         }
     ]
 }
 ```
 
-**Example** `appsettings.Production.json`
+### Sample appsettings.Production.json:
 
 ```json
 {
@@ -283,39 +346,43 @@ Rules are processed in order. If multiple rules match a host, the last one appli
                     }
                 ]
             },
-            "ProxyServers": [
-                {
-                    "Host": "localhost",
-                    "Port": 3128,
-                    "ProxyType": "Http"
-                }
-            ],
-            "ProxyServersFiles": [
-                {
-                    "Path": "socks-proxy-servers.json"
-                }
-            ]
+            "ProxyServers": { 
+                "Items": [
+                    {
+                        "Host": "localhost",
+                        "Port": 3128,
+                        "ProxyType": "Http"
+                    }
+                ],
+                "Files": [
+                    {
+                        "Path": "socks-proxy-servers.json"
+                    }
+                ]
+            }
         }
     ],
-    "HostRules": [
-        {
-            "Pattern": "mozilla\\.(com|org|net)$",
-            "Action": "Deny"
-        },
-        {
-            "Pattern": "firefox\\.com$",
-            "Action": "Deny"
-        },
-        {
-            "Pattern": "^s\\.yimg\\.com$",
-            "Action": "Bypass"
-        }
-    ],
-    "HostRulesFiles": [
-        {
-            "Path": "fiddler-host-rules.json"
-        }
-    ],
+    "HostRules": {
+        "Items": [
+            {
+                "Pattern": "mozilla\\.(com|org|net)$",
+                "Action": "Deny"
+            },
+            {
+                "Pattern": "firefox\\.com$",
+                "Action": "Deny"
+            },
+            {
+                "Pattern": "^s\\.yimg\\.com$",
+                "Action": "Bypass"
+            }
+        ],
+        "Files": [
+            {
+                "Path": "fiddler-host-rules.json"
+            }
+        ]
+    },
     "HostStats": {
         "Enabled": true,
         "TrafficStats": true,
@@ -324,43 +391,6 @@ Rules are processed in order. If multiple rules match a host, the last one appli
     "HTTP": {
         "UserAgent": "proxymapper"
     }
-}
-```
-
-**Example** `socks-proxy-servers.json`
-
-```json
-{
-    "ProxyServers": [
-        {
-            "Host": "127.0.0.1",
-            "Port": 1080,
-            "ProxyType": "Socks5",
-        },
-        {
-            "Host": "127.0.0.1",
-            "Port": 1081,
-            "ProxyType": "Socks5",
-        }
-    ]
-}
-```
-
-**Example** `fiddler-host-rules.json`
-
-```json
-{
-    "HostRules": [
-        {
-            "HostName": "www.google.com",
-            "Action": "Allow",
-            "ProxyServer": {
-                "Host": "localhost",
-                "Port": 8888,
-                "ProxyType": "Http"
-            }
-        }
-    ]
 }
 ```
 
