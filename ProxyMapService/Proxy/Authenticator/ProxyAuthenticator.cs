@@ -15,7 +15,7 @@ namespace ProxyMapService.Proxy.Authenticator
             if (authentication.ParseUsernameParameters && username != null)
             {
                 context.UsernameParameters = ParseUsername(username);
-                account = context.UsernameParameters.Items[0].Value;
+                account = context.UsernameParameters[0].Value;
             }
             if (!authentication.Verify)
             {

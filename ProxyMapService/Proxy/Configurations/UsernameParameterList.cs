@@ -1,16 +1,14 @@
 ﻿namespace ProxyMapService.Proxy.Configurations
 {
-    public class UsernameParameterList
+    public class UsernameParameterList : List<UsernameParameter>
     {
-        public List<UsernameParameter> Items { get; init; } = [];
-
-        public UsernameParameter? SessionId => Items.Find(p => p.SessionId);
-        public UsernameParameter? SessionTime => Items.Find(p => p.SessionTime);
+        public UsernameParameter? SessionId => this.Find(p => p.SessionId);
+        public UsernameParameter? SessionTime => this.Find(p => p.SessionTime);
 
         private Dictionary<string, UsernameParameter>? _lookup;
 
         private Dictionary<string, UsernameParameter> Lookup =>
-            _lookup ??= Items.ToDictionary(
+            _lookup ??= this.ToDictionary(
                 p => p.Name,
                 StringComparer.OrdinalIgnoreCase);
 
@@ -42,7 +40,7 @@
                     SessionId = paramTemplate?.SessionId ?? false,
                     SessionTime = paramTemplate?.SessionTime ?? false
                 };
-                Items.Add(param);
+                this.Add(param);
                 Lookup[name] = param;
             }
         }
@@ -63,7 +61,7 @@
                     SessionTime = paramTemplate?.SessionTime ?? false
                 };
                 param.SetResolvedValue(value);
-                Items.Add(param);
+                this.Add(param);
                 Lookup[name] = param;
             }
         }
@@ -73,7 +71,7 @@
             if (!Lookup.TryGetValue(name, out var param))
                 return false;
 
-            Items.Remove(param);
+            this.Remove(param);
             Lookup.Remove(name);
             return true;
         }

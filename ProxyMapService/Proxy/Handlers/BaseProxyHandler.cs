@@ -19,7 +19,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (username == null) return null;
             if (parameterList != null)
             {
-                foreach (var p in parameterList.Items)
+                foreach (var p in parameterList)
                 {
                     string? value = context.UsernameParameterResolver.ResolveParameterValue(p, context);
                     if (!String.IsNullOrEmpty(value))

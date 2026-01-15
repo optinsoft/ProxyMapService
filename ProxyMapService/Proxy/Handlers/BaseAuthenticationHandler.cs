@@ -18,7 +18,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             // Resolve SessionTime first (before SessionId)
             ResolveSessionTime(context);
-            foreach (var p in context.Mapping.Authentication.UsernameParameters.Items)
+            foreach (var p in context.Mapping.Authentication.UsernameParameters)
             {
                 if (!p.SessionTime) // Skip already resolved SessionTime
                 {

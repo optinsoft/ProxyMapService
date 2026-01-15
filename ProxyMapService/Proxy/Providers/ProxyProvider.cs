@@ -20,7 +20,7 @@ namespace ProxyMapService.Proxy.Providers
             CleanupExpiredSessions();
 
             var version = Interlocked.Increment(ref _versionCounter);
-            var session = new ProxySession(sessionId, sessionTime, proxyServer);
+            var session = new ProxySession(sessionId, sessionTime, proxyServer, version);
 
             _sessions[sessionId] = session; // thread-safe
 

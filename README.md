@@ -6,7 +6,7 @@ The Proxy Map Service listens for incoming TCP connections on one or more ports 
 The rules system allows blocking connections to certain hosts or establishing connections without using an external proxy server (this is called **bypass**).
 In bypass mode, the Proxy Map Service itself acts as the proxy server.
 
-This may be useful for:
+Proxy Map Service may be useful for:
 
 1. Blocking unwanted connections (e.g., tracking).
 2. Reducing (saving) traffic passing through an external (paid) proxy server.
@@ -129,38 +129,91 @@ Authentication.Jwt.Key | JWT token verification key | string | "" (empty string)
 
 Open connections, authentication rules, and proxy server mappings are defined in the `ProxyMappings` section.
 
-Path | Description | Type | Default Value |
+### ProxyMapping
+
+Name | Description | Type | Default Value |
 -----|-------------|------|---------------|
-ProxyMappings[].Listen.Port | TCP port | int | 5001 |
-ProxyMappings[].Listen.RejectHttpProxy | Reject all HTTP (non-CONNECT) connections | bool | false |
-ProxyMappings[].Authentication.Required | Require the `Proxy-Authorization` header; return `407` error if missing | bool | false |
-ProxyMappings[].Authentication.Verify | Verify the `Proxy-Authorization` header (must be `Basic base64(user:pass)`) | bool | false |
-ProxyMappings[].Authentication.Username | Username | string | "" (empty string) |
-ProxyMappings[].Authentication.Password | Password | string | "" (empty string) |
-ProxyMappings[].Authentication.SetAuthentication | Add/replace the `Proxy-Authorization` header | bool | false |
-ProxyMappings[].ProxyServers | Array of proxy servers | List<ProxyServer> | [] |
+Listen | TCP listener settings (see `Listen` description below) | `Listen` | absent (required) |
+Authentication | Client authentication parameters  | `Authentication` (see description below) | absent |
+ProxyServers | Array of proxy servers (see `ProxyServer` description below) | `List<ProxyServer>` | [] |
+
+### Listen
+
+Defines the parameters for accepting TCP connections (port or port range, usage of proxy servers associated with the port, etc.).
+
+Name | Description | Type | Default Value |
+-----|-------------|------|---------------|
+Port | TCP port. Example: `5001` | int | absent (`Port` or `PortRange` must be specified) |
+PortRange | Port range (see `PortRange` description below) Examle: `{ "Start": 5001, "End": 5010 }` | `PortRange` | absent (`Port` or `PortRange` must be specified) |
+RejectHttpProxy | Reject all HTTP (non-CONNECT) connections | bool | false |
+StickyProxyLifetime | Direct traffic through a specific port to the same proxy server for `StickyProxyLifetime` minutes | int | 0 (select a new proxy for each connection) |
+
+### PortRange
+
+TCP port range.
+
+
+Name | Description | Type | Example |
+-----|-------------|------|---------|
+Start | Port range start | int | 5001 |
+End | Port range end | int | 5010 |
+
+### Authentication
+
+Client authentication parameters.
+
+Name | Description | Type | Default Value |
+-----|-------------|------|---------------|
+Required | Require the `Proxy-Authorization` header; return `407` error if missing | bool | false |
+Verify | Verify the `Proxy-Authorization` header (must be `Basic base64(user:pass)`) | bool | false |
+Username | Username | string | "" (empty string) |
+Password | Password | string | "" (empty string) |
+SetAuthentication | Add/replace the `Proxy-Authorization` HTTP header | bool | false |
+RemoveAuthentication | Delete the HTTP header `Proxy-Authorization` (it is ignored if `SetAuthentication` is set). | bool | false |
+ParseUsernameParameters | Split the full username with parameters (e.g., `username-param1-value1-param2-value2`) into parts (delimiter: `-`) | bool | false |
+UsernameParameters | Username parameters added during proxy server authentication (see `UsernameParameter` description below).  <details><summary>Note</summary>They are ignored if `SetAuthentication` = `false`, however, if `ParseUsernameParameters` = `false`, then the full username with parameters will be used for proxy server authentication.</details> | `List<UsernameParameter>` | absent |
+
+### UsernameParameter
+
+Name | Description | Type | Default Value | Example |
+-----|-------------|------|---------------|---------|
+Name | Parameter name | string | absent (required) | `session` |
+Value | Parameter value. Can be input values or calculated values (see description below) | string | absent (required) | `$session` |
+Default | Default value. Can be calculated values (see description below) | string? | null | `^[A-Za-z]{8}` |
+SessionId | Specifies that this parameter is a session identifier | bool | false | true |
+SessionTime | Specifies that this parameter is the session lifetime (in minutes). Overrides the value of `Listen.StickyProxyLifetime` | bool | false | true |
+
+If `Value` starts with the `$` character, it refers to a parameter from the client's username (requires `Authentication.ParseUsernameParameters` to be set to `true`).  
+For example, `Value`=`$session` refers to the `session` parameter and would be assigned the value `AAAA` if the client's username during authentication was `user-session-AAAA`.  
+Another example: `Value`=`$sessionTime` refers to the `sessionTime` parameter, which does not exist in `user-session-AAAA`. In this case, a default value might be substituted, as specified in `Default`.
+
+If `Value` or `Default` starts with the `^` character, it is a regular expression (RegEx) used to generate the value. Example: `^[A-Za-z]{8}`.
 
 ### ProxyServer
 
-Path | Description | Type | Default Value |
+Name | Description | Type | Default Value |
 -----|-------------|------|---------------|
-Host | Proxy server host | string | Missing (required field) |
-Port | Proxy server port | int | Missing (required field) |
+Host | Proxy server host | string | absent (required) |
+Port | Proxy server port | int | absent (required) |
 ProxyType | Proxy server type. Possible values: Http, Socks4, Socks5 | string | Http |
 Username | Proxy authentication username | string | "" (empty string) |
 Password | Proxy authentication password | string | "" (empty string) |
+UsernameParameters | Parameters added to the username during proxy server authentication. <details><summary>Note</summary>If `UsernameParameters` is present in `ProxyServer`, it will be used instead of `Authentication.UsernameParameters`, regardless of `Authentication.SetAuthentication`.</details> | `List<UsernameParameter>` | absent |
 
 ### HostRules
 
-Traffic routing rules are defined in the `HostRules` section.
+Traffic routing rules are defined in the `HostRules` section. Array of `HostRule`.
 
-Path | Description | Type | Example |
+### HostRule
+
+Name | Description | Type | Example |
 -----|-------------|------|---------|
-HostRules[].Pattern | Regex pattern for host name | String | "mozilla\\.(com\|org\|net)$" |
-HostRules[].Action | Action: Allow (use proxy), Deny (block), or Bypass (direct connection) | String | Deny |
-HostRules[].OverrideHostName | Override host name. Optional (null if not overriding the host name) | String| "www.google.com" |
-HostRules[].OverrideHostPort | Override host port. Optional (null if not overriding the host port) | int | 81 |
-HostRules[].ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use proxy server from ProxyMappings[].ProxyServers array) | ProxyServer |  {"Host":"localhost", "Port":3128, "ProxyType":"Http"} |
+HostName | Host name | String | www.google.com |
+Pattern | Regex pattern for host name | String | mozilla\\.(com\|org\|net)$ |
+Action | Action: Allow (use proxy), Deny (block), or Bypass (direct connection) | String | Deny |
+OverrideHostName | Override host name. Optional (null if not overriding the host name) | String| www.google.com |
+OverrideHostPort | Override host port. Optional (null if not overriding the host port) | int | 81 |
+ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use proxy server from `ProxyServers` array) | `ProxyServer` |  {"Host":"localhost", "Port":3128, "ProxyType":"Http"} |
 
 Rules are processed in order. If multiple rules match a host, the last one applies. For example, to block all connections except `www.google.com`:
 
@@ -172,7 +225,7 @@ Rules are processed in order. If multiple rules match a host, the last one appli
             "Action": "Deny"
         },
         {
-            "Pattern": "www\\.google\\.com$",
+            "HostName": "www.google.com",
             "Action": "Allow"
         }
     ]
@@ -205,7 +258,30 @@ Rules are processed in order. If multiple rules match a host, the last one appli
                 "RemoveAuthentication": false,
                 "ParseUsernameParameters": false,
                 "Username": "test",
-                "Password": "test"
+                "Password": "test",
+                "UsernameParameters": [
+                    {
+                        "Name": "zone",
+                        "Value": "$zone",
+                        "Default": "custom"
+                    },
+                    {
+                        "Name": "region",
+                        "Value": "$region"
+                    },
+                    {
+                        "Name": "session",
+                        "Value": "$session",
+                        "Default": "^[A-Za-z]{8}",
+                        "SessionId": true
+                    },
+                    {
+                        "Name": "sessTime",
+                        "Value": "$sessTime",
+                        "Default": "5",
+                        "SessionTime": true
+                    }
+                ]
             },
             "ProxyServers": [
                 {
