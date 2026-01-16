@@ -61,16 +61,16 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendProxyAuthenticationRequired(SessionContext context)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
 
         private static async Task SendProxyUnauthorized(SessionContext context)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 401 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

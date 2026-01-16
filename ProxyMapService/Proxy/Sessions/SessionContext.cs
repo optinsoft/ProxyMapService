@@ -1,4 +1,6 @@
-﻿using ProxyMapService.Proxy.Authenticator;
+﻿// Ignore Spelling: Proxified
+
+using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
@@ -11,8 +13,8 @@ namespace ProxyMapService.Proxy.Sessions
 {
     public class SessionContext : IDisposable
     {
-        public TcpClient Client { get; private set; }
-        public TcpClient RemoteClient { get; private set; }
+        public TcpClient IncomingClient { get; private set; }
+        public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
         public IProxyProvider ProxyProvider { get; private set; }
         public IProxyAuthenticator ProxyAuthenticator { get; private set; }
@@ -20,18 +22,18 @@ namespace ProxyMapService.Proxy.Sessions
         public List<HostRule> HostRules { get; private set; }
         public string? UserAgent { get; private set; }
         public ISessionsCounter? SessionsCounter { get; private set; }
-        public IBytesReadCounter? RemoteReadCounter { get; private set; }
-        public IBytesSentCounter? RemoteSentCounter { get; private set; }
-        public IBytesReadCounter? ClientReadCounter { get; private set; }
-        public IBytesSentCounter? ClientSentCounter { get; private set; }
+        public IBytesReadCounter? OutgoingReadCounter { get; private set; }
+        public IBytesSentCounter? OutgoingSentCounter { get; private set; }
+        public IBytesReadCounter? IncomingReadCounter { get; private set; }
+        public IBytesSentCounter? IncomingSentCounter { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
 
-        public ReadHeaderStream ClientHeaderStream { get; private set; }
-        public ReadHeaderStream RemoteHeaderStream { get; private set; }
+        public ReadHeaderStream IncomingHeaderStream { get; private set; }
+        public ReadHeaderStream OutgoingHeaderStream { get; private set; }
 
-        public CountingStream? ClientStream { get; set; }
-        public CountingStream? RemoteStream { get; set; }
+        public CountingStream? IncomingStream { get; set; }
+        public CountingStream? OutgoingStream { get; set; }
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }
@@ -45,15 +47,15 @@ namespace ProxyMapService.Proxy.Sessions
         public string? SessionId { get; set; }
         public int SessionTime { get; set; }
 
-        public SessionContext(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
+        public SessionContext(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver,
             List<HostRule> hostRules, string? userAgent, ISessionsCounter? sessionsCounter, 
-            IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
-            IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
+            IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
+            IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
             ILogger logger, CancellationToken token)
         {
-            Client = client;
-            RemoteClient = new TcpClient();
+            IncomingClient = incomingClient;
+            OutgoingClient = new TcpClient();
             Mapping = mapping;
             ProxyProvider = proxyProvider;
             ProxyAuthenticator = proxyAuthenticator;
@@ -61,25 +63,25 @@ namespace ProxyMapService.Proxy.Sessions
             HostRules = hostRules;
             UserAgent = userAgent;
             SessionsCounter = sessionsCounter;
-            RemoteReadCounter = remoteReadCounter;
-            RemoteSentCounter = remoteSentCounter;
-            ClientReadCounter = clientReadCounter;
-            ClientSentCounter = clientSentCounter;
+            OutgoingReadCounter = outgoingReadCounter;
+            OutgoingSentCounter = outgoingSentCounter;
+            IncomingReadCounter = incomingReadCounter;
+            IncomingSentCounter = incomingSentCounter;
             Logger = logger;
             Token = token;
-            ClientHeaderStream = new ReadHeaderStream(this, clientReadCounter);
-            RemoteHeaderStream = new ReadHeaderStream(this, remoteReadCounter);
+            IncomingHeaderStream = new ReadHeaderStream(this, incomingReadCounter);
+            OutgoingHeaderStream = new ReadHeaderStream(this, outgoingReadCounter);
             HostName = "";
         }
 
-        public void CreateClientStream()
+        public void CreateIncomingClientStream()
         {
-            ClientStream = new CountingStream(Client.GetStream(), this, ClientReadCounter, ClientSentCounter);
+            IncomingStream = new CountingStream(IncomingClient.GetStream(), this, IncomingReadCounter, IncomingSentCounter);
         }
 
-        public void CreateRemoteClientStream()
+        public void CreateOutgoingClientStream()
         {
-            RemoteStream = new CountingStream(RemoteClient.GetStream(), this, RemoteReadCounter, RemoteSentCounter);
+            OutgoingStream = new CountingStream(OutgoingClient.GetStream(), this, OutgoingReadCounter, OutgoingSentCounter);
         }
 
         public void Dispose()
@@ -92,23 +94,23 @@ namespace ProxyMapService.Proxy.Sessions
         {
             if (disposing)
             {
-                if (ClientStream != null)
+                if (IncomingStream != null)
                 {
-                    using (ClientStream)
+                    using (IncomingStream)
                     {
                     }
-                    ClientStream = null;
+                    IncomingStream = null;
                 }
-                if (RemoteStream != null)
+                if (OutgoingStream != null)
                 {
-                    using (RemoteStream)
+                    using (OutgoingStream)
                     {
                     }
-                    RemoteStream = null;
+                    OutgoingStream = null;
                 }
-                RemoteClient.Dispose();
-                ClientHeaderStream.Dispose();
-                RemoteHeaderStream.Dispose();
+                OutgoingClient.Dispose();
+                IncomingHeaderStream.Dispose();
+                OutgoingHeaderStream.Dispose();
             }
         }
     }

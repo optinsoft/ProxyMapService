@@ -46,26 +46,26 @@ namespace ProxyMapService.Proxy.Handlers
 
         protected static async Task SendHttpReply(SessionContext context, byte[] bytes)
         {
-            if (context.ClientStream == null) return;
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            if (context.IncomingStream == null) return;
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
 
         protected static async Task SendSocks4Reply(SessionContext context, Socks4Command command)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];
             if (context.Socks4 != null)
             {
                 Array.Copy(context.Socks4.Bytes, 2, bytes, 2, 6);
             }
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
 
         protected static async Task SendSocks5Reply(SessionContext context, Socks5Status status)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

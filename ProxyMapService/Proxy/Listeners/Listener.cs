@@ -5,10 +5,10 @@ using System.Threading;
 
 namespace ProxyMapService.Proxy.Listeners
 {
-    public class Listener(IPEndPoint localEndPoint, Action<TcpClient, CancellationToken> clientHandler, ILogger logger) : IDisposable
+    public class Listener(IPEndPoint incomingEndPoint, Action<TcpClient, CancellationToken> incomingClientHandler, ILogger logger) : IDisposable
     {
-        private readonly IPEndPoint _localEndPoint = localEndPoint;
-        private readonly Action<TcpClient, CancellationToken> _clientHandler = clientHandler;
+        private readonly IPEndPoint _incomingEndPoint = incomingEndPoint;
+        private readonly Action<TcpClient, CancellationToken> _incomingClientHandler = incomingClientHandler;
         private readonly ILogger _logger = logger;
         private TcpListener? _listener;
         private CancellationTokenSource? _cancelSource;
@@ -38,7 +38,7 @@ namespace ProxyMapService.Proxy.Listeners
 
         public async Task Start(int maxListenerStartRetries, CancellationToken stoppingToken)
         {
-            _listener = new TcpListener(_localEndPoint);
+            _listener = new TcpListener(_incomingEndPoint);
 
             bool retry = false;
             int retryNum = 0;
@@ -48,11 +48,11 @@ namespace ProxyMapService.Proxy.Listeners
                 {
                     retry = false;
                     await Task.Delay(1000, stoppingToken);
-                    _logger.LogInformation("Starting listener on {} (retry #{}) ...", _localEndPoint, retryNum);
+                    _logger.LogInformation("Starting listener on {} (retry #{}) ...", _incomingEndPoint, retryNum);
                 }
                 else
                 {
-                    _logger.LogInformation("Starting listener on {} ...", _localEndPoint);
+                    _logger.LogInformation("Starting listener on {} ...", _incomingEndPoint);
                 }
                 try
                 {
@@ -63,24 +63,24 @@ namespace ProxyMapService.Proxy.Listeners
                     if (ex.ErrorCode == 10048 && retryNum++ < maxListenerStartRetries)
                     {
                         _logger.LogWarning("Unable to start listener on {}\r\n{}",
-                            _localEndPoint,
+                            _incomingEndPoint,
                             "Only one usage of each socket address (protocol/network address/port) is normally permitted");
                         retry = true;
                     }
                     else
                     {
-                        _logger.LogError(ex, "Unable to start listener on {}", _localEndPoint);
+                        _logger.LogError(ex, "Unable to start listener on {}", _incomingEndPoint);
                         return;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Unable to start listener on {}", _localEndPoint);
+                    _logger.LogError(ex, "Unable to start listener on {}", _incomingEndPoint);
                     return;
                 }
             } while (retry);
 
-            _logger.LogInformation("Listening on {} ...", _localEndPoint);
+            _logger.LogInformation("Listening on {} ...", _incomingEndPoint);
 
             try
             {
@@ -129,19 +129,19 @@ namespace ProxyMapService.Proxy.Listeners
                 _logger.LogError(ex, "Unexpected Error");
             }
 
-            _logger.LogInformation("Listening on {} has finished", _localEndPoint);
+            _logger.LogInformation("Listening on {} has finished", _incomingEndPoint);
         }
 
         protected virtual async Task AcceptClients(TcpListener listener, CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var client = await Task.Run(
+                var incomingClient = await Task.Run(
                     () => listener.AcceptTcpClientAsync(),
                     stoppingToken);
                 if (!stoppingToken.IsCancellationRequested)
                 {
-                    _clientHandler(client, stoppingToken);
+                    _incomingClientHandler(incomingClient, stoppingToken);
                 }
             }
         }

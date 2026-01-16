@@ -53,7 +53,7 @@ namespace ProxyMapService.Controllers
             var hostStats = service.GetHostStats();
             if (hostStats != null)
             {
-                responseHosts = new();
+                responseHosts = [];
                 foreach (var entry in hostStats)
                 {
                     HostStats hs = entry.Value;

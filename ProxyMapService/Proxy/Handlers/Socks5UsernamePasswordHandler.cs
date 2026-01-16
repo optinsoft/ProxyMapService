@@ -12,11 +12,11 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.ClientStream == null)
+            if (context.IncomingStream == null)
             {
                 throw new NullClientStreamException();
             }
-            byte[]? bytesArray = await ReadUsernamePassword(context.ClientStream, context.Token);
+            byte[]? bytesArray = await ReadUsernamePassword(context.IncomingStream, context.Token);
             if (!(context.Socks5?.ParseUsernamePassword(bytesArray) ?? false))
             {
                 context.SessionsCounter?.OnSocks5Failure(context);
@@ -114,9 +114,9 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendAuthenticationResult(SessionContext context, byte result)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             byte[] bytes = [0x01, result];
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

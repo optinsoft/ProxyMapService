@@ -29,7 +29,7 @@ namespace ProxyMapService.Proxy.Handlers
                 socks4 = new Socks4Header(connectBytes);
             }
 
-            context.RemoteHeaderStream.SocksVersion = 0x04;
+            context.OutgoingHeaderStream.SocksVersion = 0x04;
 
             string? userId = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Username) 
@@ -46,7 +46,7 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Tunnel;
             }
 
-            var responseHeaderBytes = await context.RemoteHeaderStream.ReadHeaderBytes(context.RemoteStream, context.Token);
+            var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
             if (responseHeaderBytes != null)
             {
                 var responseSocks4 = new Socks4Header(responseHeaderBytes);
@@ -99,14 +99,14 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
         {
-            if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            if (context.OutgoingStream == null) return;
+            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
         }
 
         private static async Task SendSocks4Request(SessionContext context, byte[] requestBytes)
         {
-            if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            if (context.OutgoingStream == null) return;
+            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
         }
     }
 }

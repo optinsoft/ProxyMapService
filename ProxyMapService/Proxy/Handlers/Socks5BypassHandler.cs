@@ -17,11 +17,11 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostBypassed(context);
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
+            IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
 
             try
             {
-                await context.RemoteClient.ConnectAsync(remoteEndPoint, context.Token);
+                await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (Exception)
             {
@@ -32,7 +32,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnBypassConnected(context);
 
-            context.CreateRemoteClientStream();
+            context.CreateOutgoingClientStream();
 
             await SendSocks5Reply(context, Socks5Status.Succeeded);
 
@@ -46,9 +46,9 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendSocks5Reply(SessionContext context, Socks5Status status)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

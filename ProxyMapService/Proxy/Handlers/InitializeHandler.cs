@@ -12,11 +12,11 @@ namespace ProxyMapService.Proxy.Handlers
         {
             try
             {
-                context.CreateClientStream();
-                var requestHeaderBytes = await context.ClientHeaderStream.ReadHeaderBytes(context.ClientStream, context.Token);
+                context.CreateIncomingClientStream();
+                var requestHeaderBytes = await context.IncomingHeaderStream.ReadHeaderBytes(context.IncomingStream, context.Token);
                 if (requestHeaderBytes != null)
                 {
-                    switch (context.ClientHeaderStream.SocksVersion)
+                    switch (context.IncomingHeaderStream.SocksVersion)
                     {
                         case 0x00:
                             context.Http = new HttpRequestHeader(requestHeaderBytes);

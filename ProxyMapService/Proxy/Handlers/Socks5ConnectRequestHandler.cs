@@ -11,11 +11,11 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.ClientStream == null)
+            if (context.IncomingStream == null)
             {
                 throw new NullClientStreamException();
             }
-            byte[]? bytesArray = await ReadRequest(context.ClientStream, context.Token);
+            byte[]? bytesArray = await ReadRequest(context.IncomingStream, context.Token);
             Socks5Status status = context.Socks5?.ParseConnectRequest(bytesArray) ?? Socks5Status.GeneralFailure;
             if (status != Socks5Status.Succeeded)
             {
@@ -105,9 +105,9 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendReply(SessionContext context, byte reply)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, reply, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

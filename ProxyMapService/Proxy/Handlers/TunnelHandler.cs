@@ -15,13 +15,13 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            var clientStream = context.ClientStream;
-            var remoteStream = context.RemoteStream;
+            var incomingStream = context.IncomingStream;
+            var outgoingStream = context.OutgoingStream;
 
-            if (clientStream != null && remoteStream != null && !context.Token.IsCancellationRequested)
+            if (incomingStream != null && outgoingStream != null && !context.Token.IsCancellationRequested)
             {
-                var forwardTask = Tunnel(clientStream, remoteStream, context, context.ClientReadCounter, context.RemoteSentCounter);
-                var reverseTask = Tunnel(remoteStream, clientStream, context, context.RemoteReadCounter, context.ClientSentCounter);
+                var forwardTask = Tunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter);
+                var reverseTask = Tunnel(outgoingStream, incomingStream, context, context.OutgoingReadCounter, context.IncomingSentCounter);
                 await Task.WhenAny(forwardTask, reverseTask);
             }
 

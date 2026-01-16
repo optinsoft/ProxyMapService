@@ -34,7 +34,7 @@ namespace ProxyMapService.Proxy.Handlers
                 socks5 = new Socks5Header(methodsBytes);
             }
 
-            context.RemoteHeaderStream.SocksVersion = 0x05;
+            context.OutgoingHeaderStream.SocksVersion = 0x05;
 
             string? username = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Username) 
@@ -113,8 +113,8 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
         {
-            if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            if (context.OutgoingStream == null) return;
+            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
         }
 
         private static async Task<Socks5Status> Socks5Auth(SessionContext context, string? username, string? password)
@@ -149,21 +149,21 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendSocks5Request(SessionContext context, byte[] requestBytes)
         {
-            if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            if (context.OutgoingStream == null) return;
+            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
         }
 
         private static async Task<byte[]?> ReadSocks5(SessionContext context, int length)
         {
-            if (context.RemoteStream == null) return null;
+            if (context.OutgoingStream == null) return null;
             byte[] readBuffer = new byte[length];
             int bufferPos = 0, bytesRead;
-            context.RemoteStream.PauseReadCount();
+            context.OutgoingStream.PauseReadCount();
             try
             {
                 do
                 {
-                    bytesRead = await context.RemoteStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
+                    bytesRead = await context.OutgoingStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
                     if (bytesRead <= 0) return null;
                     bufferPos += 1;
                 } while (bufferPos < length);
@@ -172,23 +172,23 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (bufferPos > 0)
                 {
-                    context.RemoteStream.OnBytesRead(bufferPos, readBuffer, 0);
+                    context.OutgoingStream.OnBytesRead(bufferPos, readBuffer, 0);
                 }
-                context.RemoteStream.ResumeReadCount();
+                context.OutgoingStream.ResumeReadCount();
             }
             return readBuffer;
         }
 
         private static async Task<byte[]?> ReadSocks5Reply(SessionContext context)
         {
-            if (context.RemoteStream == null) return null;
+            if (context.OutgoingStream == null) return null;
             int readLength = 4;
             byte[] readBuffer = new byte[readLength];
             int bufferPos = 0, bytesRead;
             byte atyp = 0;
             do
             {
-                bytesRead = await context.RemoteStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
+                bytesRead = await context.OutgoingStream.ReadAsync(readBuffer.AsMemory(bufferPos, 1), context.Token);
                 if (bytesRead <= 0) return null;
                 if (bufferPos == 3)
                 {

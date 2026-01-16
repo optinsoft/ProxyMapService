@@ -15,16 +15,13 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostProxified(context);
 
-            if (context.ProxyServer == null)
-            {
-                context.ProxyServer = context.ProxyProvider.GetProxyServer(context);
-            }
+            context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
+            IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
 
             try
             {
-                await context.RemoteClient.ConnectAsync(remoteEndPoint, context.Token);
+                await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (Exception)
             {
@@ -34,7 +31,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnProxyConnected(context);
 
-            context.CreateRemoteClientStream();
+            context.CreateOutgoingClientStream();
 
             switch (context.ProxyServer.ProxyType)
             {
@@ -44,6 +41,8 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Socks4Proxy;
                 case ProxyType.Socks5:
                     return HandleStep.Socks5Proxy;
+                default:
+                    break;
             }
 
             return HandleStep.Terminate;

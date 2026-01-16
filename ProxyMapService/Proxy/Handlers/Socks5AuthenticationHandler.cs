@@ -66,9 +66,9 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendSelectMethod(SessionContext context, byte method)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, method];
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

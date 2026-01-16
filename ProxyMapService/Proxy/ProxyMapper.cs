@@ -14,8 +14,8 @@ namespace ProxyMapService.Proxy
 {
     public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
         string? userAgent, ISessionsCounter? sessionsCounter,
-        IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter,
-        IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter,
+        IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
+        IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
         ILogger logger, int maxListenerStartRetries, CancellationToken stoppingToken)
     {
         private readonly List<ProxyServer> _proxyServers = [];
@@ -63,19 +63,19 @@ namespace ProxyMapService.Proxy
 
         private async Task StartListenerAsync(int listenPort, ProxyProvider proxyProvider, ProxyAuthenticator proxyAuthenticator)
         {
-            var localEndPoint = new IPEndPoint(IPAddress.Loopback, listenPort);
+            var incomingEndPoint = new IPEndPoint(IPAddress.Loopback, listenPort);
 
             UsernameParameterResolver usernameParameterResolver = new();
 
-            async void clientHandler(TcpClient client, CancellationToken token) =>
+            async void incomingClientHandler(TcpClient client, CancellationToken token) =>
                 await Session.Run(client, mapping, proxyProvider,
                     proxyAuthenticator, usernameParameterResolver,
                     hostRules, userAgent,
-                    sessionsCounter, remoteReadCounter, remoteSentCounter,
-                    clientReadCounter, clientSentCounter,
+                    sessionsCounter, outgoingReadCounter, outgoingSentCounter,
+                    incomingReadCounter, incomingSentCounter,
                     logger, token);
 
-            using var listener = new Listener(localEndPoint, clientHandler, logger);
+            using var listener = new Listener(incomingEndPoint, incomingClientHandler, logger);
             await listener.Start(maxListenerStartRetries, stoppingToken);
         }
     }

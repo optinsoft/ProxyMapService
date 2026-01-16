@@ -1,4 +1,6 @@
-﻿using ProxyMapService.Counters;
+﻿// Ignore Spelling: Proxified
+
+using ProxyMapService.Counters;
 using ProxyMapService.Exceptions;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Models;
@@ -16,10 +18,10 @@ namespace ProxyMapService.Services
         private readonly ILogger _logger;
         private readonly SessionsCounter _sessionsCounter = new();
         private readonly HostsCounter _hostsCounter = new();
-        private readonly BytesReadCounter _remoteReadCounter = new("remote");
-        private readonly BytesSentCounter _remoteSentCounter = new("remote");
-        private readonly BytesReadCounter _clientReadCounter = new("client");
-        private readonly BytesSentCounter _clientSentCounter = new("client");
+        private readonly BytesReadCounter _outgoingReadCounter = new("outgoing client");
+        private readonly BytesSentCounter _outgoingSentCounter = new("outgoing client");
+        private readonly BytesReadCounter _incomingReadCounter = new("incoming client");
+        private readonly BytesSentCounter _incomingSentCounter = new("incoming client");
         private readonly BytesLogger? _bytesLogger = null;
         private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;
@@ -27,9 +29,9 @@ namespace ProxyMapService.Services
         private bool _started = false;
         private DateTime? _startTime = null;
         private DateTime? _stopTime = null;
-        private string _serviceId = RandomStringGenerator.GenerateRandomString(6);
-        private List<HostRule> _hostRules = [];
-        private List<IConfigurationRoot> _hostRuleFileConfigurations = [];
+        private readonly string _serviceId = RandomStringGenerator.GenerateRandomString(6);
+        private readonly List<HostRule> _hostRules = [];
+        private readonly List<IConfigurationRoot> _hostRuleFileConfigurations = [];
         
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -53,17 +55,17 @@ namespace ProxyMapService.Services
                 var HostTrafficStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("TrafficStats") ?? false;
                 if (HostTrafficStatsEnabled)
                 {
-                    _remoteReadCounter.BytesReadHandler += _hostsCounter.OnBytesRead;
-                    _remoteSentCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
+                    _outgoingReadCounter.BytesReadHandler += _hostsCounter.OnBytesRead;
+                    _outgoingSentCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
                 }
                 var LogTrafficData = _configuration.GetSection("HostStats")?.GetValue<bool>("LogTrafficData") ?? false;
                 if (LogTrafficData)
                 {
                     _bytesLogger = new BytesLogger(_logger);
-                    _remoteReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                    _remoteSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
-                    _clientReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                    _clientSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                    _outgoingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
+                    _outgoingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                    _incomingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
+                    _incomingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
                 }
             }
             _logger.LogInformation(
@@ -76,8 +78,8 @@ namespace ProxyMapService.Services
         {
             _sessionsCounter.Reset();
             _hostsCounter.Reset();
-            _remoteReadCounter.Reset();
-            _remoteSentCounter.Reset();
+            _outgoingReadCounter.Reset();
+            _outgoingSentCounter.Reset();
         }
 
         private void LoadHostRules()
@@ -137,14 +139,13 @@ namespace ProxyMapService.Services
             foreach (var mapping in proxyMappings)
             {
                 tasks.Add(new ProxyMapper(mapping, _hostRules, userAgent,
-                    _sessionsCounter, _remoteReadCounter, _remoteSentCounter, 
-                    _clientReadCounter, _clientSentCounter, _logger, 
+                    _sessionsCounter, _outgoingReadCounter, _outgoingSentCounter, 
+                    _incomingReadCounter, _incomingSentCounter, _logger, 
                     _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;
             _startTime = DateTime.Now;
             Task allTasks = Task.WhenAll(tasks);
-#pragma warning disable 4014
             allTasks.ContinueWith(
                 t =>
                 {
@@ -157,7 +158,6 @@ namespace ProxyMapService.Services
                         cancellationToken.IsCancellationRequested ? "has been" : "is not");
                 }, 
                 TaskContinuationOptions.None);
-#pragma warning restore 4014
             _logger.LogInformation(
                 "[ProxyService.{}] Proxy mapping tasks have been started at {}.",
                 _serviceId,
@@ -273,32 +273,32 @@ namespace ProxyMapService.Services
 
         public long GetTotalBytesRead()
         {
-            return _remoteReadCounter.TotalBytesRead;
+            return _outgoingReadCounter.TotalBytesRead;
         }
 
         public long GetTotalBytesSent()
         {
-            return _remoteSentCounter.TotalBytesSent;
+            return _outgoingSentCounter.TotalBytesSent;
         }
 
         public long GetProxyBytesRead()
         {
-            return _remoteReadCounter.ProxyBytesRead;
+            return _outgoingReadCounter.ProxyBytesRead;
         }
 
         public long GetProxyBytesSent()
         {
-            return _remoteSentCounter.ProxyBytesSent;
+            return _outgoingSentCounter.ProxyBytesSent;
         }
 
         public long GetBypassBytesRead()
         {
-            return _remoteReadCounter.BypassBytesRead;
+            return _outgoingReadCounter.BypassBytesRead;
         }
 
         public long GetBypassBytesSent()
         {
-            return _remoteSentCounter.BypassBytesSent;
+            return _outgoingSentCounter.BypassBytesSent;
         }
 
         public IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats()

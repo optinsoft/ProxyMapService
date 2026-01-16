@@ -11,23 +11,20 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            using var remoteClient = new TcpClient();
+            using var outgoingClient = new TcpClient();
 
-            if (context.ProxyServer == null)
-            {
-                context.ProxyServer = context.ProxyProvider.GetProxyServer(context);
-            }
+            context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
+            IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
 
-            await remoteClient.ConnectAsync(remoteEndPoint, context.Token);
+            await outgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
 
-            using var localStream = context.Client.GetStream();
-            using var remoteStream = remoteClient.GetStream();
+            using var incomingStream = context.IncomingClient.GetStream();
+            using var outgoingStream = outgoingClient.GetStream();
 
             // Forward both directions simultaneously
-            var forwardTask = localStream.CopyToAsync(remoteStream, context.Token);
-            var reverseTask = remoteStream.CopyToAsync(localStream, context.Token);
+            var forwardTask = incomingStream.CopyToAsync(outgoingStream, context.Token);
+            var reverseTask = outgoingStream.CopyToAsync(incomingStream, context.Token);
 
             await Task.WhenAny(forwardTask, reverseTask);
 

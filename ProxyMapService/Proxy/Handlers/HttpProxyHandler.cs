@@ -56,8 +56,8 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Tunnel;
                 }
 
-                var responseHeaderBytes = context.RemoteStream != null
-                    ? await context.RemoteHeaderStream.ReadHeaderBytes(context.RemoteStream, context.Token)
+                var responseHeaderBytes = context.OutgoingStream != null
+                    ? await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token)
                     : null;
                 if (responseHeaderBytes != null)
                 {
@@ -100,8 +100,8 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
         {
-            if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(requestBytes, context.Token);
+            if (context.OutgoingStream == null) return;
+            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
         }
     }
 }

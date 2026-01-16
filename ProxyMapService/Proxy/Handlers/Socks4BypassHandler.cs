@@ -16,11 +16,11 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostBypassed(context);
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
+            IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
 
             try
             {
-                await context.RemoteClient.ConnectAsync(remoteEndPoint, context.Token);
+                await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (Exception)
             {
@@ -31,7 +31,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnBypassConnected(context);
 
-            context.CreateRemoteClientStream();
+            context.CreateOutgoingClientStream();
 
             await SendSocks4Reply(context, Socks4Command.RequestGranted);
 
@@ -45,13 +45,13 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendSocks4Reply(SessionContext context, Socks4Command command)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];
             if (context.Socks4 != null)
             {
                 Array.Copy(context.Socks4.Bytes, 2, bytes, 2, 6);
             }
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

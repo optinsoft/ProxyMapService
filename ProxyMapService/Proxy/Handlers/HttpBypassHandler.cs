@@ -16,11 +16,11 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostBypassed(context);
 
-            IPEndPoint remoteEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
+            IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
 
             try
             {
-                await context.RemoteClient.ConnectAsync(remoteEndPoint, context.Token);
+                await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (Exception)
             {
@@ -30,7 +30,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnBypassConnected(context);
 
-            context.CreateRemoteClientStream();
+            context.CreateOutgoingClientStream();
 
             if (context.Http?.HTTPVerb == "CONNECT")
             {
@@ -56,15 +56,15 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task SendConnectionEstablised(SessionContext context)
         {
-            if (context.ClientStream == null) return;
+            if (context.IncomingStream == null) return;
             var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n");
-            await context.ClientStream.WriteAsync(bytes, context.Token);
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
 
         private static async Task SendHttpHeaderBytes(SessionContext context, byte[] headerBytes)
         {
-            if (context.RemoteStream == null) return;
-            await context.RemoteStream.WriteAsync(headerBytes, context.Token);
+            if (context.OutgoingStream == null) return;
+            await context.OutgoingStream.WriteAsync(headerBytes, context.Token);
         }
     }
 }

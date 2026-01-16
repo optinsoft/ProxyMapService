@@ -35,14 +35,14 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Tunnel, TunnelHandler.Instance() }
         };
 
-        public static async Task Run(TcpClient client, ProxyMapping mapping, IProxyProvider proxyProvider, 
+        public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
-            string? userAgent, ISessionsCounter? sessionsCounter, IBytesReadCounter? remoteReadCounter, IBytesSentCounter? remoteSentCounter, 
-            IBytesReadCounter? clientReadCounter, IBytesSentCounter? clientSentCounter, ILogger logger, CancellationToken token)
+            string? userAgent, ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
+            IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter, ILogger logger, CancellationToken token)
         {
-            using var context = new SessionContext(client, mapping, proxyProvider, 
-                proxyAuthenticator, usernameParameterResolver, hostRules, userAgent, sessionsCounter, remoteReadCounter, 
-                remoteSentCounter, clientReadCounter, clientSentCounter, logger, token);
+            using var context = new SessionContext(incomingClient, mapping, proxyProvider, 
+                proxyAuthenticator, usernameParameterResolver, hostRules, userAgent, sessionsCounter, outgoingReadCounter, 
+                outgoingSentCounter, incomingReadCounter, incomingSentCounter, logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do
