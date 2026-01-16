@@ -209,9 +209,9 @@ UsernameParameters | Parameters added to the username during proxy server authen
 
 ### ProxyServerFile
 
-Name | Description | Type |
------|-------------|------|
-Path | Path to the file with proxy servers | string |
+Name | Description | Type | Example |
+-----|-------------|------|---------|
+Path | Path to the file with proxy servers | string | `socks-proxy-servers.json` |
 
 **Example** of the file with proxy servers `socks-proxy-servers.json`:
 
@@ -255,27 +255,25 @@ ProxyServer | Use this proxy server when `Action`=`Allow`. Optional (null if use
 Rules are processed in order. If multiple rules match a host, the last one applies. For example, to block all connections except `www.google.com`:
 
 ```json
-{
-    "HostRules": {
-        "Items": [
-            {
-                "Pattern": ".*",
-                "Action": "Deny"
-            },
-            {
-                "HostName": "www.google.com",
-                "Action": "Allow"
-            }
-        ]
-    }
+"HostRules": {
+    "Items": [
+        {
+            "Pattern": ".*",
+            "Action": "Deny"
+        },
+        {
+            "HostName": "www.google.com",
+            "Action": "Allow"
+        }
+    ]
 }
 ```
 
 ### HostRulesFile
 
-Name | Description | Type |
------|-------------|------|
-Path | Path to the file with traffic routing rules | string |
+Name | Description | Type | Example |
+-----|-------------|------|---------|
+Path | Path to the file with traffic routing rules | string | `fiddler-host-rules.json` |
 
 **Example** of the file with traffic routing rules `fiddler-host-rules.json`:
 
