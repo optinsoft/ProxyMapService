@@ -34,6 +34,10 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.HostPort = hostRule.OverrideHostPort.Value;
                 }
+                if (hostRule?.FilesDir != null)
+                {
+                    context.FilesDir = hostRule.FilesDir;
+                }
             }
             if (hostAction == ActionEnum.Allow) 
             {                

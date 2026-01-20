@@ -19,10 +19,12 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.HttpAuthenticated, HttpHostActionHandler.Instance() },
             { HandleStep.HttpProxy, HttpProxyHandler.Instance() },
             { HandleStep.HttpBypass, HttpBypassHandler.Instance() },
+            { HandleStep.HttpFile, HttpFileHandler.Instance() },
             { HandleStep.Socks4Initialized, Socks4AuthenticationHandler.Instance() },
             { HandleStep.Socks4AuthenticationNotRequired, Socks4HostActionHandler.Instance() },
             { HandleStep.Socks4Authenticated, Socks4HostActionHandler.Instance() },
             { HandleStep.Socks4Bypass, Socks4BypassHandler.Instance() },
+            { HandleStep.Socks4File, Socks4FileHandler.Instance() },
             { HandleStep.Socks4Proxy, Socks4ProxyHandler.Instance() },
             { HandleStep.Socks5Initialized, Socks5AuthenticationHandler.Instance() },
             { HandleStep.Socks5AuthenticationNotRequired, Socks5ConnectRequestHandler.Instance() },
@@ -31,6 +33,7 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Socks5ConnectRequested, Socks5HostActionHandler.Instance() },
             { HandleStep.Socks5Proxy, Socks5ProxyHandler.Instance() },
             { HandleStep.Socks5Bypass, Socks5BypassHandler.Instance() },
+            { HandleStep.Socks5File, Socks5FileHandler.Instance() },
             { HandleStep.Proxy, ProxyHandler.Instance() },
             { HandleStep.Tunnel, TunnelHandler.Instance() }
         };

@@ -13,7 +13,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (context.Socks4?.Host == null || context.Socks4.Host.Hostname.Length == 0)
             {
                 context.SessionsCounter?.OnNoHost(context);
-                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
             }
 
@@ -22,14 +22,20 @@ namespace ProxyMapService.Proxy.Handlers
 
             GetContextHostAction(context);
 
-            if (context.HostAction == ActionEnum.Deny)
+            switch (context.HostAction)
             {
-                context.SessionsCounter?.OnHostRejected(context);
-                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
-                return HandleStep.Terminate;
+                case ActionEnum.Allow:
+                    return HandleStep.Proxy;
+                case ActionEnum.Bypass:
+                    return HandleStep.Socks4Bypass;
+                case ActionEnum.File:
+                    return HandleStep.Socks4File;
+                default:
+                    //ActionEnum.Deny
+                    context.SessionsCounter?.OnHostRejected(context);
+                    await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                    return HandleStep.Terminate;
             }
-
-            return context.HostAction == ActionEnum.Bypass ? HandleStep.Socks4Bypass : HandleStep.Proxy;
         }
 
         public static Socks4HostActionHandler Instance()
@@ -37,7 +43,7 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task SendSocks4Reply(SessionContext context, Socks4Command command)
+        private static async Task Socks4Reply(SessionContext context, Socks4Command command)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];

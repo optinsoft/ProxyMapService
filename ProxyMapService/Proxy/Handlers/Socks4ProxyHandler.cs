@@ -56,11 +56,11 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         if (context.Http.HTTPVerb == "CONNECT")
                         {
-                            await SendHttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
+                            await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
                         }
                         else
                         {
-                            var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.GetHTTPTargetPath()} {context.Http?.HTTPProtocol}";
+                            var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.HTTPTargetPath} {context.Http?.HTTPProtocol}";
                             var requestHeaderBytes = context.Http?.GetBytes(false, null, firstLine);
                             if (requestHeaderBytes != null && requestHeaderBytes.Length > 0)
                             {
@@ -70,7 +70,7 @@ namespace ProxyMapService.Proxy.Handlers
                     }
                     if (context.Socks5 != null)
                     {
-                        await SendSocks5Reply(context, Socks5Status.Succeeded);
+                        await Socks5Reply(context, Socks5Status.Succeeded);
                     }
                     return HandleStep.Tunnel;
                 }
@@ -78,15 +78,15 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Http != null)
             {
-                await SendHttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"));
+                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"));
             }
             if (context.Socks4 != null)
             {
-                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
             }
             if (context.Socks5 != null)
             {
-                await SendSocks5Reply(context, Socks5Status.GeneralFailure);
+                await Socks5Reply(context, Socks5Status.GeneralFailure);
             }
 
             return HandleStep.Terminate;

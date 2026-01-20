@@ -11,11 +11,13 @@ namespace ProxyMapService.Proxy.Headers
             Parse(this, array);
         }
 
-        public Address? Host { get; private set; }
-        public long? ContentLength { get; private set; }
         public string? HTTPVerb { get; private set; }
         public string? HTTPTarget { get; private set; }
+        public string? HTTPTargetPath { get; private set; }
+        public Address? HTTPTargetHost { get; private set; }
         public string? HTTPProtocol { get; private set; }
+        public Address? Host { get; private set; }
+        public long? ContentLength { get; private set; }
         public string? ProxyAuthorization { get; private set; }
         public IEnumerable<string>? ArrayList { get; private set; }
 
@@ -24,20 +26,17 @@ namespace ProxyMapService.Proxy.Headers
             return GetBytes(ArrayList, keepProxyHeaders, customProxyAuthorization, customFirstLine);
         }
 
-        public string? GetHTTPTargetPath()
-        {
-            return GetHTTPTargetPath(HTTPTarget);
-        }
-
         private static void Parse(HttpRequestHeader self, byte[] array)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
 
-            self.Host = GetAddress(strings);
-            self.ContentLength = GetContentLength(strings);
             self.HTTPVerb = GetHTTPVerb(strings);
             self.HTTPTarget = GetHTTPTarget(strings);
+            self.HTTPTargetPath = GetHTTPTargetPath(self.HTTPTarget, self.HTTPVerb);
+            self.HTTPTargetHost = GetHTTPTargetHost(self.HTTPTarget, self.HTTPVerb);
             self.HTTPProtocol = GetHTTPProtocol(strings);
+            self.Host = GetHostAddress(strings);
+            self.ContentLength = GetContentLength(strings);
             self.ProxyAuthorization = GetProxyAuthorization(strings);
             self.ArrayList = strings;
         }
@@ -82,7 +81,7 @@ namespace ProxyMapService.Proxy.Headers
             return Encoding.ASCII.GetBytes(builder.ToString());
         }
 
-        private static Address GetAddress(IEnumerable<string> strings)
+        private static Address GetHostAddress(IEnumerable<string> strings)
         {
             const string key = "host:";
 
@@ -92,15 +91,12 @@ namespace ProxyMapService.Proxy.Headers
                 .TrimStart()
                 .Split(':');
 
-            switch (split.Length)
+            return split.Length switch
             {
-                case 1:
-                    return new Address(split[0], 80);
-                case 2:
-                    return new Address(split[0], int.Parse(split[1]));
-                default:
-                    throw new FormatException(string.Join(":", split));
-            }
+                1 => new Address(split[0], 80),
+                2 => new Address(split[0], int.Parse(split[1])),
+                _ => throw new FormatException(string.Join(":", split)),
+            };
         }
 
         private static long GetContentLength(IEnumerable<string> strings)
@@ -125,6 +121,20 @@ namespace ProxyMapService.Proxy.Headers
             return split[1].TrimStart().Split(' ').First();
         }
 
+        private static string? GetHTTPTargetPath(string? target, string? httpVerb)
+        {
+            if (target == null) return null;
+            Uri uri = new(httpVerb == "CONNECT" ? "http://" + target : target);
+            return uri.PathAndQuery;
+        }
+
+        private static Address? GetHTTPTargetHost(string? target, string? httpVerb)
+        {
+            if (target == null) return null;
+            Uri uri = new(httpVerb == "CONNECT" ? "http://" + target : target);
+            return new Address(uri.Host, uri.Port);
+        }
+
         private static string? GetHTTPProtocol(IEnumerable<string> strings)
         {
             var split1 = strings.First().Split(' ', 2);
@@ -142,13 +152,6 @@ namespace ProxyMapService.Proxy.Headers
                 .FirstOrDefault(@string => @string.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .Trim();
-        }
-
-        private static string? GetHTTPTargetPath(string? target)
-        {
-            if (target == null) return null;
-            Uri uri = new(target);
-            return uri.PathAndQuery;
         }
     }
 }

@@ -44,13 +44,13 @@ namespace ProxyMapService.Proxy.Handlers
             return GetUsernameWithParameters(context, context.Mapping.Authentication.Username, context.Mapping.Authentication.UsernameParameters);
         }
 
-        protected static async Task SendHttpReply(SessionContext context, byte[] bytes)
+        protected static async Task HttpReply(SessionContext context, byte[] bytes)
         {
             if (context.IncomingStream == null) return;
             await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
 
-        protected static async Task SendSocks4Reply(SessionContext context, Socks4Command command)
+        protected static async Task Socks4Reply(SessionContext context, Socks4Command command)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];
@@ -61,7 +61,7 @@ namespace ProxyMapService.Proxy.Handlers
             await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
 
-        protected static async Task SendSocks5Reply(SessionContext context, Socks5Status status)
+        protected static async Task Socks5Reply(SessionContext context, Socks5Status status)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];

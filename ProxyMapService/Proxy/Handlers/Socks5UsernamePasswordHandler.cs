@@ -20,19 +20,19 @@ namespace ProxyMapService.Proxy.Handlers
             if (!(context.Socks5?.ParseUsernamePassword(bytesArray) ?? false))
             {
                 context.SessionsCounter?.OnSocks5Failure(context);
-                await SendNotAuthenticated(context);
+                await Socks5ReplyNotAuthenticated(context);
                 return HandleStep.Terminate;
             }
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
                 OnAuthenticated(context);
-                await SendAuthenticated(context);
+                await Socks5ReplyAuthenticated(context);
                 return HandleStep.Socks5Authenticated;
             }
 
             OnAuthenticationInvalid(context);
-            await SendNotAuthenticated(context);
+            await Socks5ReplyNotAuthenticated(context);
             return HandleStep.Terminate;
         }
 
@@ -102,17 +102,17 @@ namespace ProxyMapService.Proxy.Handlers
             return usernamePasswordBytes;
         }
 
-        private static async Task SendAuthenticated(SessionContext context)
+        private static async Task Socks5ReplyAuthenticated(SessionContext context)
         {
-            await SendAuthenticationResult(context, 0x00);
+            await Socks5ReplyAuthenticationResult(context, 0x00);
         }
 
-        private static async Task SendNotAuthenticated(SessionContext context)
+        private static async Task Socks5ReplyNotAuthenticated(SessionContext context)
         {
-            await SendAuthenticationResult(context, 0x01);
+            await Socks5ReplyAuthenticationResult(context, 0x01);
         }
 
-        private static async Task SendAuthenticationResult(SessionContext context, byte result)
+        private static async Task Socks5ReplyAuthenticationResult(SessionContext context, byte result)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x01, result];

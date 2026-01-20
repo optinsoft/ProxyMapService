@@ -28,12 +28,14 @@ namespace ProxyMapService.Proxy.Configurations
         public string? OverrideHostName { get; set; }
         public int? OverrideHostPort { get; set; }
         public ProxyServer? ProxyServer { get; set; }
+        public string? FilesDir { get; set; }
     }
 
     public enum ActionEnum
     {
         Allow,
         Deny,
-        Bypass
+        Bypass,
+        File
     }
 }

@@ -20,7 +20,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (status != Socks5Status.Succeeded)
             {
                 context.SessionsCounter?.OnSocks5Failure(context);
-                await SendReply(context, (byte)status);
+                await Socks5Reply(context, (byte)status);
                 return HandleStep.Terminate;
             }
 
@@ -103,7 +103,7 @@ namespace ProxyMapService.Proxy.Handlers
             return requestBytes;
         }
 
-        private static async Task SendReply(SessionContext context, byte reply)
+        private static async Task Socks5Reply(SessionContext context, byte reply)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, reply, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];

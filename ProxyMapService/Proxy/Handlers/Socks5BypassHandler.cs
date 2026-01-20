@@ -4,6 +4,7 @@ using ProxyMapService.Proxy.Socks;
 using ProxyMapService.Proxy.Counters;
 using System.Net;
 using System.Text;
+using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -17,16 +18,33 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.SessionsCounter?.OnHostBypassed(context);
 
-            IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
-
             try
             {
+                IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
                 await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
+            }
+            catch (SocketException ex)
+            {
+                context.SessionsCounter?.OnBypassFailed(context);
+                Socks5Status status = ex.SocketErrorCode switch
+                {
+                    SocketError.ConnectionRefused => Socks5Status.ConnectionRefused,
+                    SocketError.HostUnreachable => Socks5Status.HostUnreachable,
+                    SocketError.HostNotFound => Socks5Status.HostUnreachable,
+                    SocketError.NoData => Socks5Status.HostUnreachable,
+                    SocketError.TimedOut => Socks5Status.HostUnreachable,
+                    SocketError.TryAgain => Socks5Status.HostUnreachable,
+                    SocketError.AddressNotAvailable => Socks5Status.HostUnreachable,
+                    SocketError.NetworkUnreachable => Socks5Status.NetworkUnreachable,
+                    _ => Socks5Status.GeneralFailure
+                };
+                await Socks5Reply(context, status);
+                throw;
             }
             catch (Exception)
             {
                 context.SessionsCounter?.OnBypassFailed(context);
-                await SendSocks5Reply(context, Socks5Status.NetworkUnreachable);
+                await Socks5Reply(context, Socks5Status.GeneralFailure);
                 throw;
             }
 
@@ -34,7 +52,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.CreateOutgoingClientStream();
 
-            await SendSocks5Reply(context, Socks5Status.Succeeded);
+            await Socks5Reply(context, Socks5Status.Succeeded);
 
             return HandleStep.Tunnel;
         }
@@ -44,7 +62,7 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task SendSocks5Reply(SessionContext context, Socks5Status status)
+        private static async Task Socks5Reply(SessionContext context, Socks5Status status)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];

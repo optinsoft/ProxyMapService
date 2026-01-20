@@ -18,7 +18,7 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Socks4AuthenticationNotRequired;
                 }
                 OnAuthenticationRequired(context);
-                await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
             }
 
@@ -29,7 +29,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
 
             OnAuthenticationInvalid(context);
-            await SendSocks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+            await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
             return HandleStep.Terminate;
         }
 
@@ -53,7 +53,7 @@ namespace ProxyMapService.Proxy.Handlers
             return context.ProxyAuthenticator.Authenticate(context, context.Socks4?.UserId, null);
         }
 
-        private static async Task SendSocks4Reply(SessionContext context, Socks4Command command)
+        private static async Task Socks4Reply(SessionContext context, Socks4Command command)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];
