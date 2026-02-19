@@ -92,7 +92,8 @@ namespace ProxyMapService.Proxy.Handlers
                 headers.Add("Content-Type: text/html; charset=UTF-8");
                 headers.Add($"Content-Length: {contentBytes.Length}");
             }
-            var headerBytes = Encoding.ASCII.GetBytes(String.Join("\r\n", [.. headers, "\r\n\r\n"]));
+            var headerText = String.Join("\r\n", [.. headers, "\r\n"]);
+            var headerBytes = Encoding.ASCII.GetBytes(headerText);
             byte[] bytes = contentBytes.Length > 0 ? new byte[headerBytes.Length + contentBytes.Length] : headerBytes;
             if (contentBytes.Length > 0)
             {
