@@ -7,6 +7,7 @@ namespace ProxyMapService.Proxy.Configurations
         private Regex? _patternRegEx = null;
         private string? _pattern;
         public string? HostName { get; set; }
+        public int? HostPort { get; set; }
         public string? Pattern 
         {
             get => _pattern;

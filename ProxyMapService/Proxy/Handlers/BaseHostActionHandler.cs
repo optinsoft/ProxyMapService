@@ -12,15 +12,18 @@ namespace ProxyMapService.Proxy.Handlers
             ActionEnum hostAction = ActionEnum.Allow;
             foreach (var rule in context.HostRules)
             {
-                if (rule.PatternRegEx != null && rule.PatternRegEx.Match(context.HostName).Success)
+                if (rule.HostPort == null || rule.HostPort == context.HostPort)
                 {
-                    hostAction = rule.Action;
-                    hostRule = rule;
-                }
-                else if (rule.HostName != null && rule.HostName.Equals(context.HostName, StringComparison.OrdinalIgnoreCase))
-                {
-                    hostAction = rule.Action;
-                    hostRule = rule;
+                    if (rule.PatternRegEx != null && rule.PatternRegEx.Match(context.HostName).Success)
+                    {
+                        hostAction = rule.Action;
+                        hostRule = rule;
+                    }
+                    else if (rule.HostName != null && rule.HostName.Equals(context.HostName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        hostAction = rule.Action;
+                        hostRule = rule;
+                    }
                 }
             }
             context.HostAction = hostAction;
