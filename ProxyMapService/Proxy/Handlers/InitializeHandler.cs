@@ -1,6 +1,7 @@
-﻿using ProxyMapService.Proxy.Headers;
+﻿using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Sessions;
-using ProxyMapService.Proxy.Counters;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -20,6 +21,12 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         case 0x00:
                             context.Http = new HttpRequestHeader(requestHeaderBytes);
+                            if (context.Http.BadRequest)
+                            {
+                                context.SessionsCounter?.OnHeaderFailed(context);
+                                await HttpReplyBadRequest(context);
+                                return HandleStep.Terminate;
+                            }
                             return HandleStep.HttpInitialized;
                         case 0x04:
                             context.Socks4 = new Socks4Header(requestHeaderBytes);
@@ -46,6 +53,13 @@ namespace ProxyMapService.Proxy.Handlers
         public static InitializeHandler Instance()
         {
             return Self;
+        }
+
+        private static async Task HttpReplyBadRequest(SessionContext context)
+        {
+            if (context.IncomingStream == null) return;
+            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
+            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

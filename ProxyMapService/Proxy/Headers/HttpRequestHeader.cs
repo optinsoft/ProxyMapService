@@ -11,6 +11,7 @@ namespace ProxyMapService.Proxy.Headers
             Parse(this, array);
         }
 
+        public bool BadRequest { get; private set; }
         public string? HTTPVerb { get; private set; }
         public string? HTTPTarget { get; private set; }
         public string? HTTPTargetPath { get; private set; }
@@ -30,15 +31,23 @@ namespace ProxyMapService.Proxy.Headers
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
 
-            self.HTTPVerb = GetHTTPVerb(strings);
-            self.HTTPTarget = GetHTTPTarget(strings);
-            self.HTTPTargetPath = GetHTTPTargetPath(self.HTTPTarget, self.HTTPVerb);
-            self.HTTPTargetHost = GetHTTPTargetHost(self.HTTPTarget, self.HTTPVerb);
-            self.HTTPProtocol = GetHTTPProtocol(strings);
-            self.Host = GetHostAddress(strings);
-            self.ContentLength = GetContentLength(strings);
-            self.ProxyAuthorization = GetProxyAuthorization(strings);
-            self.ArrayList = strings;
+            self.BadRequest = false;
+            try
+            {
+                self.HTTPVerb = GetHTTPVerb(strings);
+                self.HTTPTarget = GetHTTPTarget(strings);
+                self.HTTPTargetPath = GetHTTPTargetPath(self.HTTPTarget, self.HTTPVerb);
+                self.HTTPTargetHost = GetHTTPTargetHost(self.HTTPTarget, self.HTTPVerb);
+                self.HTTPProtocol = GetHTTPProtocol(strings);
+                self.Host = GetHostAddress(strings);
+                self.ContentLength = GetContentLength(strings);
+                self.ProxyAuthorization = GetProxyAuthorization(strings);
+                self.ArrayList = strings;
+            }
+            catch (UriFormatException)
+            {
+                self.BadRequest = true;
+            }
         }
 
         private static byte[] GetBytes(IEnumerable<string>? arrayList, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine)
