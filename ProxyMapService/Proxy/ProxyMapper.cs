@@ -50,6 +50,10 @@ namespace ProxyMapService.Proxy
         {
             if (mapping.Listen.Ssl)
             {
+                if (String.IsNullOrEmpty(mapping.Listen.CertificatePath))
+                {
+                    throw new InvalidOperationException("SSL server certificate path is not configured.");
+                }
                 _serverCertificate = new X509Certificate2(
                     mapping.Listen.CertificatePath,
                     mapping.Listen.CertificatePassword);
@@ -77,7 +81,7 @@ namespace ProxyMapService.Proxy
             UsernameParameterResolver usernameParameterResolver = new();
 
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
-                await Session.Run(client, mapping, proxyProvider,
+                await Session.Run(client, mapping, _serverCertificate, proxyProvider,
                     proxyAuthenticator, usernameParameterResolver,
                     hostRules, userAgent,
                     sessionsCounter, outgoingReadCounter, outgoingSentCounter,

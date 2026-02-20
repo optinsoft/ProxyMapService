@@ -1,8 +1,9 @@
-﻿using System;
+﻿using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Exceptions;
+using ProxyMapService.Proxy.Sessions;
+using System;
 using System.Net.Security;
 using System.Security.Authentication;
-using ProxyMapService.Proxy.Counters;
-using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -16,6 +17,11 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && context.OutgoingStream != null && !context.Token.IsCancellationRequested)
             {
+                if (context.ServerCertificate == null)
+                {
+                    throw new NullServerCertificateException();
+                }
+
                 using SslStream incomingStream = new SslStream(context.IncomingStream);
                 var outgoingStream = context.OutgoingStream;
 

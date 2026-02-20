@@ -29,7 +29,7 @@ namespace ProxyMapService.Proxy.Handlers
                 context.SessionsCounter?.OnProxyFailed(context);
                 if (context.Http != null)
                 {
-                    await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"));
+                    await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n"));
                 }
                 if (context.Socks4 != null)
                 {
