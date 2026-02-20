@@ -29,5 +29,8 @@
 
         public bool RejectHttpProxy { get; set; }
         public int StickyProxyLifetime {  get; set; }
+        public bool Ssl { get; set; }
+        public string? CertificatePath { get; set; }
+        public string? CertificatePassword { get; set; }
     }
 }

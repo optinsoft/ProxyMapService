@@ -9,6 +9,7 @@ using ProxyMapService.Proxy.Sessions;
 using System.Data;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy
 {
@@ -20,6 +21,7 @@ namespace ProxyMapService.Proxy
     {
         private readonly List<ProxyServer> _proxyServers = [];
         private readonly List<IConfigurationRoot> _proxyServerFileConfigurations = [];
+        private X509Certificate2? _serverCertificate = null;
 
         private void LoadProxyServers()
         {
@@ -46,6 +48,13 @@ namespace ProxyMapService.Proxy
 
         public async Task Start()
         {
+            if (mapping.Listen.Ssl)
+            {
+                _serverCertificate = new X509Certificate2(
+                    mapping.Listen.CertificatePath,
+                    mapping.Listen.CertificatePassword);
+            }
+
             LoadProxyServers();
 
             ProxyProvider proxyProvider = new(_proxyServers);

@@ -8,6 +8,7 @@ using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
 using System.Collections.Specialized;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy.Sessions
 {
@@ -16,6 +17,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
+        public X509Certificate2? ServerCertificate { get; private set; }
         public IProxyProvider ProxyProvider { get; private set; }
         public IProxyAuthenticator ProxyAuthenticator { get; private set; }
         public IUsernameParameterResolver UsernameParameterResolver { get; private set; }
@@ -49,8 +51,9 @@ namespace ProxyMapService.Proxy.Sessions
         public int SessionTime { get; set; }
         public string? FilesDir { get; set; }
 
-        public SessionContext(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
-            IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver,
+        public SessionContext(TcpClient incomingClient, ProxyMapping mapping, X509Certificate2? serverCertificate,
+            IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
+            IUsernameParameterResolver usernameParameterResolver,
             List<HostRule> hostRules, string? userAgent, ISessionsCounter? sessionsCounter, 
             IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
@@ -59,6 +62,7 @@ namespace ProxyMapService.Proxy.Sessions
             IncomingClient = incomingClient;
             OutgoingClient = new TcpClient();
             Mapping = mapping;
+            ServerCertificate = serverCertificate; 
             ProxyProvider = proxyProvider;
             ProxyAuthenticator = proxyAuthenticator;
             UsernameParameterResolver = usernameParameterResolver;

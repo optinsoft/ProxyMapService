@@ -6,6 +6,7 @@ using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy.Sessions
 {
@@ -35,15 +36,17 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Socks5Bypass, Socks5BypassHandler.Instance() },
             { HandleStep.Socks5File, Socks5FileHandler.Instance() },
             { HandleStep.Proxy, ProxyHandler.Instance() },
-            { HandleStep.Tunnel, TunnelHandler.Instance() }
+            { HandleStep.Tunnel, TunnelHandler.Instance() },
+            { HandleStep.RawTunnel, RawTunnelHandler.Instance() },
+            { HandleStep.SslTunnel, SslTunnelHandler.Instance() }
         };
 
-        public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
+        public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, X509Certificate2? serverCertificate, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             string? userAgent, ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter, ILogger logger, CancellationToken token)
         {
-            using var context = new SessionContext(incomingClient, mapping, proxyProvider, 
+            using var context = new SessionContext(incomingClient, mapping, serverCertificate, proxyProvider, 
                 proxyAuthenticator, usernameParameterResolver, hostRules, userAgent, sessionsCounter, outgoingReadCounter, 
                 outgoingSentCounter, incomingReadCounter, incomingSentCounter, logger, token);
             sessionsCounter?.OnSessionStarted(context);
