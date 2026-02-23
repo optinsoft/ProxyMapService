@@ -48,30 +48,33 @@ namespace ProxyMapService.Proxy
 
         public async Task Start()
         {
-            if (mapping.Listen.Ssl)
+            try
             {
-                if (String.IsNullOrEmpty(mapping.Listen.CertificatePath))
+                if (!String.IsNullOrEmpty(mapping.Listen.CertificatePath))
                 {
-                    throw new InvalidOperationException("SSL server certificate path is not configured.");
+                    _serverCertificate = new X509Certificate2(
+                        mapping.Listen.CertificatePath,
+                        mapping.Listen.CertificatePassword);
                 }
-                _serverCertificate = new X509Certificate2(
-                    mapping.Listen.CertificatePath,
-                    mapping.Listen.CertificatePassword);
-            }
 
-            LoadProxyServers();
+                LoadProxyServers();
 
-            ProxyProvider proxyProvider = new(_proxyServers);
-            ProxyAuthenticator proxyAuthenticator = new(mapping.Authentication);
+                ProxyProvider proxyProvider = new(_proxyServers);
+                ProxyAuthenticator proxyAuthenticator = new(mapping.Authentication);
 
-            List<Task> tasks = [];
+                List<Task> tasks = [];
 
-            for (int port = mapping.Listen.PortRange.Start; port <= mapping.Listen.PortRange.End; port++)
+                for (int port = mapping.Listen.PortRange.Start; port <= mapping.Listen.PortRange.End; port++)
+                {
+                    tasks.Add(StartListenerAsync(port, proxyProvider, proxyAuthenticator));
+                }
+
+                await Task.WhenAll(tasks); ;
+            } 
+            catch (Exception ex)
             {
-                tasks.Add(StartListenerAsync(port, proxyProvider, proxyAuthenticator));
+                logger.LogError(ex, "ProxyMapper.Start failed with exception");
             }
-
-            await Task.WhenAll(tasks); ;
         }
 
         private async Task StartListenerAsync(int listenPort, ProxyProvider proxyProvider, ProxyAuthenticator proxyAuthenticator)

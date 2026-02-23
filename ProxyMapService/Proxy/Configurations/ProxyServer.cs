@@ -9,6 +9,7 @@ namespace ProxyMapService.Proxy.Configurations
         public ProxyType ProxyType { get; set; } = ProxyType.Http;
         public string Username { get; set; } = String.Empty;
         public string Password { get; set; } = String.Empty;
+        public bool ResolveIP { get; set; }
         public UsernameParameterList UsernameParameters { get; init; } = new();
     }
 }

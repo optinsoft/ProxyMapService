@@ -12,6 +12,12 @@ namespace ProxyMapService.Proxy.Headers
             Parse(this, array);
         }
 
+        public Socks4Header(string hostName, int hostPort, string? userId)
+        {
+            var connectBytes = GetConnectRequestBytes(hostName, hostPort, userId);
+            Parse(this, connectBytes);
+        }
+
         public byte Version {
             get => Bytes[0];
         }

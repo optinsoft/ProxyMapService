@@ -21,12 +21,11 @@ namespace ProxyMapService.Proxy.Handlers
                     !String.IsNullOrEmpty(context.Http?.ProxyAuthorization)
                     ? Encoding.ASCII.GetString(Convert.FromBase64String(context.Http.ProxyAuthorization)).Split(':')
                     : null;
-                string? clientUserid =
+                string? clientUserId =
                     httpProxyAuthorization != null
                     ? httpProxyAuthorization[0]
                     : (!String.IsNullOrEmpty(context.Socks5?.Username) ? context.Socks5?.Username : context.Socks4?.UserId);
-                var connectBytes = Socks4Header.GetConnectRequestBytes(context.HostName, context.HostPort, clientUserid);
-                socks4 = new Socks4Header(connectBytes);
+                socks4 = new Socks4Header(context.HostName, context.HostPort, clientUserId);
             }
 
             context.OutgoingHeaderStream.SocksVersion = 0x04;
@@ -60,11 +59,11 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                         else
                         {
-                            var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.HTTPTargetPath} {context.Http?.HTTPProtocol}";
-                            var requestHeaderBytes = context.Http?.GetBytes(false, null, firstLine);
-                            if (requestHeaderBytes != null && requestHeaderBytes.Length > 0)
+                            var requestFirstLine = $"{context.Http.HTTPVerb} {context.Http.HTTPTargetPath} {context.Http.HTTPProtocol}";
+                            var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine);
+                            if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                             {
-                                await SendHttpRequest(context, requestHeaderBytes);
+                                await SendHttpRequest(context, httpRequestBytes);
                             }
                         }
                     }
@@ -78,7 +77,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Http != null)
             {
-                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"));
+                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n"));
             }
             if (context.Socks4 != null)
             {

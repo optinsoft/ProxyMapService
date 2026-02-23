@@ -27,24 +27,32 @@ namespace ProxyMapService.Proxy.Handlers
                 }
             }
             context.HostAction = hostAction;
-            if (hostAction != ActionEnum.Deny)
+            if (hostAction != ActionEnum.Deny && hostRule != null)
             {
-                if (hostRule?.OverrideHostName != null)
+                if (hostRule.OverrideHostName != null)
                 {
                     context.HostName = hostRule.OverrideHostName;
                 }
-                if (hostRule?.OverrideHostPort != null)
+                if (hostRule.OverrideHostPort != null)
                 {
                     context.HostPort = hostRule.OverrideHostPort.Value;
                 }
-                if (hostRule?.FilesDir != null)
+                if (hostRule.Ssl != null)
+                {
+                    context.Ssl = (bool)hostRule.Ssl;
+                }
+                if (hostRule.ServerCertificate != null)
+                {
+                    context.ServerCertificate = hostRule.ServerCertificate;
+                }
+                if (hostRule.FilesDir != null)
                 {
                     context.FilesDir = hostRule.FilesDir;
                 }
             }
-            if (hostAction == ActionEnum.Allow) 
+            if (hostAction == ActionEnum.Allow && hostRule != null) 
             {                
-                if (hostRule?.ProxyServer != null)
+                if (hostRule.ProxyServer != null)
                 {
                     context.ProxyServer = hostRule.ProxyServer;
                 }

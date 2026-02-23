@@ -15,6 +15,14 @@ namespace ProxyMapService.Proxy.Headers
             ParseMethods(this, array);
         }
 
+        public Socks5Header(string? username, string? password)
+        {
+            var methodsBytes = GetMethodsBytes(username, password);
+            ParseMethods(this, methodsBytes);
+            Username = username;
+            Password = password;
+        }
+
         public byte Version { get; private set; }
         public byte NMethods { get; private set; }
         public byte[]? Methods { get; private set; }
@@ -55,6 +63,38 @@ namespace ProxyMapService.Proxy.Headers
             array[2 + ulen] = plen;
             Array.Copy(passwordBytes, 0, array, 3 + ulen, plen);
             return array;
+        }
+
+        public static byte[] GetConnectRequestBytes(IPEndPoint hostEndPoint)
+        {
+            byte[] addressBytes, portBytes;
+            portBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
+            addressBytes = hostEndPoint.Address.GetAddressBytes();
+            byte[] requestBytes;
+            switch (hostEndPoint.Address.AddressFamily)
+            {
+                case AddressFamily.InterNetwork:
+                    requestBytes = new byte[10];
+                    requestBytes[3] = 0x01;
+                    Array.Copy(addressBytes, 0, requestBytes, 4, 4);
+                    Array.Copy(portBytes, 0, requestBytes, 8, 2);
+                    break;
+                case AddressFamily.InterNetworkV6:
+                    requestBytes = new byte[22];
+                    requestBytes[3] = 0x04;
+                    Array.Copy(addressBytes, 0, requestBytes, 4, 16);
+                    Array.Copy(portBytes, 0, requestBytes, 20, 2);
+                    break;
+                default:
+                    throw new ArgumentException(
+                        "Invalid host address family.",
+                        hostEndPoint.Address.AddressFamily.ToString()
+                    );
+            }
+            requestBytes[0] = 0x05;
+            requestBytes[1] = 0x01;
+            requestBytes[2] = 0x0;
+            return requestBytes;
         }
 
         public static byte[] GetConnectRequestBytes(string host, int port)

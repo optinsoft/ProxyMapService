@@ -56,11 +56,11 @@ namespace ProxyMapService.Proxy.Handlers
             }
             else
             {
-                var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.HTTPTargetPath} {context.Http?.HTTPProtocol}";
-                var headerBytes = context.Http?.GetBytes(false, null, firstLine);
-                if (headerBytes != null && headerBytes.Length > 0)
+                var requestFirstLine = $"{context.Http?.HTTPVerb} {context.Http?.HTTPTargetPath} {context.Http?.HTTPProtocol}";
+                var httpRequestBytes = context.Http?.GetBytes(false, null, requestFirstLine);
+                if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    await SendHttpRequest(context, headerBytes);
+                    await SendHttpRequest(context, httpRequestBytes);
                 }
             }
 

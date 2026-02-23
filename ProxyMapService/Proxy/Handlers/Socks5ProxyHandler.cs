@@ -1,9 +1,12 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -30,8 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
                      httpProxyAuthorization != null && httpProxyAuthorization.Length > 1
                     ? httpProxyAuthorization[1]
                     : null;
-                var methodsBytes = Socks5Header.GetMethodsBytes(clientUsername, clientPassword);
-                socks5 = new Socks5Header(methodsBytes);
+                socks5 = new Socks5Header(clientUsername, clientPassword);
             }
 
             context.OutgoingHeaderStream.SocksVersion = 0x05;
@@ -53,46 +55,66 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (status == Socks5Status.Succeeded)
             {
-                var requestBytes = Socks5Header.GetConnectRequestBytes(context.HostName, context.HostPort);
-                await SendSocks5Request(context, requestBytes);
+                IPEndPoint? hostEndPoint = null;
 
-                if (context.Socks5 != null)
+                if (context.ProxyServer?.ResolveIP == true)
                 {
-                    return HandleStep.Tunnel;
+                    try
+                    {
+                        hostEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
+                    }
+                    catch (Exception)
+                    {
+                        status = Socks5Status.HostUnreachable;
+                    }
                 }
-
-                var socks5Reply = await ReadSocks5Reply(context);
-                status = socks5Reply != null && socks5Reply[0] == 0x05 ? (Socks5Status)socks5Reply[1] : Socks5Status.GeneralFailure;
 
                 if (status == Socks5Status.Succeeded)
                 {
-                    if (context.Http != null)
+                    byte[] requestBytes = hostEndPoint != null
+                        ? Socks5Header.GetConnectRequestBytes(hostEndPoint)
+                        : Socks5Header.GetConnectRequestBytes(context.HostName, context.HostPort);
+
+                    await SendSocks5Request(context, requestBytes);
+
+                    if (context.Socks5 != null)
                     {
-                        if (context.Http.HTTPVerb == "CONNECT")
+                        return HandleStep.Tunnel;
+                    }
+
+                    var socks5Reply = await ReadSocks5Reply(context);
+                    status = socks5Reply != null && socks5Reply[0] == 0x05 ? (Socks5Status)socks5Reply[1] : Socks5Status.GeneralFailure;
+
+                    if (status == Socks5Status.Succeeded)
+                    {
+                        if (context.Http != null)
                         {
-                            await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
-                        }
-                        else
-                        {
-                            var firstLine = $"{context.Http?.HTTPVerb} {context.Http?.HTTPTargetPath} {context.Http?.HTTPProtocol}";
-                            var requestHeaderBytes = context.Http?.GetBytes(false, null, firstLine);
-                            if (requestHeaderBytes != null && requestHeaderBytes.Length > 0)
+                            if (context.Http.HTTPVerb == "CONNECT")
                             {
-                                await SendHttpRequest(context, requestHeaderBytes);
+                                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
+                            }
+                            else
+                            {
+                                var requestFirstLine = $"{context.Http.HTTPVerb} {context.Http.HTTPTargetPath} {context.Http.HTTPProtocol}";
+                                var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine);
+                                if (httpRequestBytes != null && httpRequestBytes.Length > 0)
+                                {
+                                    await SendHttpRequest(context, httpRequestBytes);
+                                }
                             }
                         }
+                        if (context.Socks4 != null)
+                        {
+                            await Socks4Reply(context, Socks4Command.RequestGranted);
+                        }
+                        return HandleStep.Tunnel;
                     }
-                    if (context.Socks4 != null)
-                    {
-                        await Socks4Reply(context, Socks4Command.RequestGranted);
-                    }
-                    return HandleStep.Tunnel;
                 }
             }
 
             if (context.Http != null)
             {
-                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n"));
+                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n"));
             }
             if (context.Socks4 != null)
             {
