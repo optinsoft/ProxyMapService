@@ -24,8 +24,7 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            context.HostName = context.Http.HTTPTargetHost.Hostname;
-            context.HostPort = context.Http.HTTPTargetHost.Port;
+            context.Host = context.Http.HTTPTargetHost;
 
             GetContextHostAction(context);
 

@@ -4,6 +4,7 @@ using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
 using System.Collections.Specialized;
@@ -14,6 +15,8 @@ namespace ProxyMapService.Proxy.Sessions
 {
     public class SessionContext : IDisposable
     {
+        private HostAddress _host;
+
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
@@ -43,8 +46,13 @@ namespace ProxyMapService.Proxy.Sessions
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }
-        public string HostName { get; set; }
-        public int HostPort { get; set; }
+        public HostAddress Host { 
+            get => _host;
+            set
+            {
+                _host.Assign(value);
+            }
+        }
         public ActionEnum? HostAction { get; set; }
         public ProxyServer? ProxyServer { get; set; }
         public bool Proxified { get; set; }
@@ -87,7 +95,7 @@ namespace ProxyMapService.Proxy.Sessions
             Token = token;
             IncomingHeaderStream = new ReadHeaderStream(this, incomingReadCounter);
             OutgoingHeaderStream = new ReadHeaderStream(this, outgoingReadCounter);
-            HostName = "";
+            _host = new HostAddress("", 0);
         }
 
         public void CreateIncomingClientStream()

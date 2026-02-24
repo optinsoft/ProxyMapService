@@ -15,7 +15,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
 
-            IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
+            IPEndPoint outgoingEndPoint = HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
 
             await outgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
 

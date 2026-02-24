@@ -61,7 +61,7 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     try
                     {
-                        hostEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
+                        hostEndPoint = context.Host.GetIPEndPoint();
                     }
                     catch (Exception)
                     {
@@ -73,7 +73,7 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     byte[] requestBytes = hostEndPoint != null
                         ? Socks5Header.GetConnectRequestBytes(hostEndPoint)
-                        : Socks5Header.GetConnectRequestBytes(context.HostName, context.HostPort);
+                        : Socks5Header.GetConnectRequestBytes(context.Host.Hostname, context.Host.Port);
 
                     await SendSocks5Request(context, requestBytes);
 

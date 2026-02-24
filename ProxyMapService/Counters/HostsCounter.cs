@@ -34,7 +34,7 @@ namespace ProxyMapService.Counters
             var context = (SessionContext)sender;
             lock (_lock)
             {
-                var hostStats = _hostStats.GetValueOrDefault(context.HostName, new()
+                var hostStats = _hostStats.GetValueOrDefault(context.Host.Hostname, new()
                 {
                     Count = 0,
                     Proxified = context.Proxified,
@@ -43,7 +43,7 @@ namespace ProxyMapService.Counters
                     BytesSent = 0
                 });
                 hostStats.Count += 1;
-                _hostStats[context.HostName] = hostStats;
+                _hostStats[context.Host.Hostname] = hostStats;
             }
         }
 
@@ -53,10 +53,10 @@ namespace ProxyMapService.Counters
             var context = (SessionContext)sender;
             lock (_lock)
             {
-                if (_hostStats.TryGetValue(context.HostName, out HostStats? hostStats))
+                if (_hostStats.TryGetValue(context.Host.Hostname, out HostStats? hostStats))
                 {
                     hostStats.BytesRead += e.BytesRead;
-                    _hostStats[context.HostName] = hostStats;
+                    _hostStats[context.Host.Hostname] = hostStats;
                 }
             }
         }
@@ -67,10 +67,10 @@ namespace ProxyMapService.Counters
             var context = (SessionContext)sender;
             lock (_lock)
             {
-                if (_hostStats.TryGetValue(context.HostName, out HostStats? hostStats))
+                if (_hostStats.TryGetValue(context.Host.Hostname, out HostStats? hostStats))
                 {
                     hostStats.BytesSent += e.BytesSent;
-                    _hostStats[context.HostName] = hostStats;
+                    _hostStats[context.Host.Hostname] = hostStats;
                 }
             }
         }

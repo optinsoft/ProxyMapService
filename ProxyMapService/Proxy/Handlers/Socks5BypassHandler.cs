@@ -20,7 +20,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             try
             {
-                IPEndPoint outgoingEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
+                IPEndPoint outgoingEndPoint = context.Host.GetIPEndPoint();
                 await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (SocketException ex)

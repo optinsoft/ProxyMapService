@@ -20,8 +20,7 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            context.HostName = context.Socks5.Host.Hostname;
-            context.HostPort = context.Socks5.Host.Port;
+            context.Host = context.Socks5.Host;
 
             GetContextHostAction(context);
 

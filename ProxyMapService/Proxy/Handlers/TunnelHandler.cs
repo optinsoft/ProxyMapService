@@ -1,9 +1,12 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using Microsoft.AspNetCore;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -38,7 +41,7 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     await outgoingSslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
                     {
-                        TargetHost = context.HostName, // MUST match certificate CN/SAN
+                        TargetHost = context.Host.Hostname, // MUST match certificate CN/SAN
                         EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
                         CertificateRevocationCheckMode = X509RevocationMode.Online
                     });
@@ -60,7 +63,9 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task TwoWayTunnel(SessionContext context, Stream incomingStream, Stream outgoingStream)
         {
-            var forwardTask = Tunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter);
+            var forwardTask = context.Host.Overwritten 
+                ? OverrideHostTunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter)
+                : Tunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter);
             var reverseTask = Tunnel(outgoingStream, incomingStream, context, context.OutgoingReadCounter, context.IncomingSentCounter);
             await Task.WhenAny(forwardTask, reverseTask);
         }
@@ -92,6 +97,45 @@ namespace ProxyMapService.Proxy.Handlers
                             context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
                         }
                         await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
+                    }
+                } while (bytesRead > 0 && !token.IsCancellationRequested);
+            }
+            catch (ObjectDisposedException)
+            {
+                //context.Logger.LogError("ObjectDisposedException: {ErrorMessage}", ex.Message);
+            }
+        }
+
+        private static async Task OverrideHostTunnel(Stream source, Stream destination, SessionContext context,
+        IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter)
+        {
+
+            var tunnelId = ++_tunnelId;
+
+            var buffer = new byte[BufferSize];
+
+            CancellationToken token = context.Token;
+
+            try
+            {
+                int bytesRead, allBytesRead = 0;
+                do
+                {
+                    if (readCounter != null && readCounter.IsLogReading)
+                    {
+                        context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", tunnelId, StreamDirectionName.GetName(readCounter.Direction));
+                    }
+                    bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
+                    if (bytesRead > 0)
+                    {
+                        var readMemory = buffer.AsMemory(0, bytesRead);
+                        var sendBuffer = allBytesRead == 0 ? HttpHostRewriter.OverrideHostHeader(readMemory, context.Host.Hostname, context.Host.Port) ?? readMemory : readMemory;
+                        allBytesRead += bytesRead;
+                        if (sentCounter != null && sentCounter.IsLogSending)
+                        {
+                            context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
+                        }
+                        await destination.WriteAsync(sendBuffer, token);
                     }
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
             }

@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Headers
         public byte Atyp { 
             get => ConnectRequest[3]; 
         }
-        public Address? Host { get; private set; }
+        public HostAddress? Host { get; private set; }
 
         public static byte[] GetMethodsBytes(string? username, string? password)
         {
@@ -181,20 +181,20 @@ namespace ProxyMapService.Proxy.Headers
                     if (10 != array.Length) return Socks5Status.AddressTypeNotSupported;
                     addr = GetAddrBytesFromArray(array, 4, 4);
                     port = GetAddrPortFromArray(array, 8);
-                    Host = new Address(addr, port);
+                    Host = new HostAddress(addr, port);
                     break;
                 case 0x03:
                     alen = (int)array[4];
                     if (7 + alen != array.Length) return Socks5Status.AddressTypeNotSupported;
                     addr = GetAddrBytesFromArray(array, 5, alen);
                     port = GetAddrPortFromArray(array, 5 + alen);
-                    Host = new Address(Encoding.ASCII.GetString(addr), port);
+                    Host = new HostAddress(Encoding.ASCII.GetString(addr), port);
                     break;
                 case 0x04:
                     if (22 != array.Length) return Socks5Status.AddressTypeNotSupported;
                     addr = GetAddrBytesFromArray(array, 4, 16);
                     port = GetAddrPortFromArray(array, 20);
-                    Host = new Address(addr, port);
+                    Host = new HostAddress(addr, port);
                     break;
                 default:
                     return Socks5Status.AddressTypeNotSupported;

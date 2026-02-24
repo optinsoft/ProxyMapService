@@ -1,26 +1,58 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 
 namespace ProxyMapService.Proxy.Network
 {
-    public class Address
+    public class HostAddress
     {
-        public Address(string hostname, int port)
+        public HostAddress(string hostname, int port)
         {
             Hostname = hostname;
             Port = port;
         }
 
-        public Address(byte[] ipBytes, int port)
+        public HostAddress(byte[] ipBytes, int port)
         {
             IPAddress ipAddress = new(ipBytes);
             Hostname = ipAddress.ToString();
             Port = port;
         }
 
-        public string Hostname { get; }
-        public int Port { get; }
+        public string Hostname { get; private set; }
+        public int Port { get; private set; }
+        public bool Overwritten { get; private set; }
 
-        protected bool Equals(Address other)
+        public void Assign(HostAddress host)
+        {
+            Hostname = host.Hostname;
+            Port = host.Port;
+            Overwritten = false;
+        }
+
+        public override string ToString()
+        {
+            return $"{Hostname}:{Port}";
+        }
+
+        public void OverrideHostName(string hostname)
+        {
+            if (!string.Equals(Hostname, hostname))
+            {
+                Hostname = hostname;
+                Overwritten = true;
+            }
+        }
+
+        public void OverridePort(int port)
+        {
+            if (Port != port)
+            {
+                Port = port;
+                Overwritten = true;
+            }
+        }
+
+        protected bool Equals(HostAddress other)
         {
             return string.Equals(Hostname, other.Hostname) && Port == other.Port;
         }
@@ -30,7 +62,7 @@ namespace ProxyMapService.Proxy.Network
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((Address) obj);
+            return Equals((HostAddress) obj);
         }
 
         public override int GetHashCode()

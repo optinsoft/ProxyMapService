@@ -18,8 +18,8 @@ namespace ProxyMapService.Proxy.Handlers
             if (http == null)
             {
                 List<string> connectHttpCommand = [
-                    $"CONNECT {context.HostName}:{context.HostPort} HTTP/1.1",
-                    $"Host: {context.HostName}:{context.HostPort}"
+                    $"CONNECT {context.Host} HTTP/1.1",
+                    $"Host: {context.Host}"
 
                 ];
                 if (!string.IsNullOrEmpty(context.UserAgent))
@@ -38,7 +38,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 try
                 {
-                    IPEndPoint hostEndPoint = Address.GetIPEndPoint(context.HostName, context.HostPort);
+                    IPEndPoint hostEndPoint = context.Host.GetIPEndPoint();
                     requestFirstLine = $"{http?.HTTPVerb} {hostEndPoint.Address}:{hostEndPoint.Port} {http?.HTTPProtocol}";
                 }
                 catch (Exception ex)

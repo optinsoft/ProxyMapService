@@ -25,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
                     httpProxyAuthorization != null
                     ? httpProxyAuthorization[0]
                     : (!String.IsNullOrEmpty(context.Socks5?.Username) ? context.Socks5?.Username : context.Socks4?.UserId);
-                socks4 = new Socks4Header(context.HostName, context.HostPort, clientUserId);
+                socks4 = new Socks4Header(context.Host.Hostname, context.Host.Port, clientUserId);
             }
 
             context.OutgoingHeaderStream.SocksVersion = 0x04;
@@ -37,7 +37,7 @@ namespace ProxyMapService.Proxy.Handlers
                 ? GetContextAuthenticationUsernameWithParameters(context)
                 : (context.Mapping.Authentication.RemoveAuthentication ? null : socks4.UserId));
 
-            var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.HostName, context.HostPort, userId);
+            var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.Host.Hostname, context.Host.Port, userId);
             await SendSocks4Request(context, socks4ConnectBytes);
 
             if (context.Socks4 != null)

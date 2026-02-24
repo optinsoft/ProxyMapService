@@ -12,14 +12,14 @@ namespace ProxyMapService.Proxy.Handlers
             ActionEnum hostAction = ActionEnum.Allow;
             foreach (var rule in context.HostRules)
             {
-                if (rule.HostPort == null || rule.HostPort == context.HostPort)
+                if (rule.HostPort == null || rule.HostPort == context.Host.Port)
                 {
-                    if (rule.PatternRegEx != null && rule.PatternRegEx.Match(context.HostName).Success)
+                    if (rule.PatternRegEx != null && rule.PatternRegEx.Match(context.Host.Hostname).Success)
                     {
                         hostAction = rule.Action;
                         hostRule = rule;
                     }
-                    else if (rule.HostName != null && rule.HostName.Equals(context.HostName, StringComparison.OrdinalIgnoreCase))
+                    else if (rule.HostName != null && rule.HostName.Equals(context.Host.Hostname, StringComparison.OrdinalIgnoreCase))
                     {
                         hostAction = rule.Action;
                         hostRule = rule;
@@ -31,11 +31,11 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (hostRule.OverrideHostName != null)
                 {
-                    context.HostName = hostRule.OverrideHostName;
+                    context.Host.OverrideHostName(hostRule.OverrideHostName);
                 }
                 if (hostRule.OverrideHostPort != null)
                 {
-                    context.HostPort = hostRule.OverrideHostPort.Value;
+                    context.Host.OverridePort(hostRule.OverrideHostPort.Value);
                 }
                 if (hostRule.Ssl != null)
                 {

@@ -26,12 +26,12 @@ namespace ProxyMapService.Proxy.Headers
             get => Bytes[1];
         }
         public byte[] Bytes { get; private set; } = [0, 0, 0, 0, 0, 0, 0, 0];
-        public Address? Host { get; private set; }
+        public HostAddress? Host { get; private set; }
         public string? UserId { get; private set; }
 
         public static byte[] GetConnectRequestBytes(string host, int port, string? userId)
         {
-            IPEndPoint hostEndPoint = Address.GetIPEndPoint(host, port);
+            IPEndPoint hostEndPoint = HostAddress.GetIPEndPoint(host, port);
             byte[] portBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
             byte[] addrBytes = hostEndPoint.Address.GetAddressBytes();
             byte[] userIdBytes = Encoding.ASCII.GetBytes(userId ?? "");
@@ -65,7 +65,7 @@ namespace ProxyMapService.Proxy.Headers
             {
                 if (array.Length != 8) return;
             }
-            self.Host = new Address(addr, port);
+            self.Host = new HostAddress(addr, port);
             self.UserId = userId;
         }
 

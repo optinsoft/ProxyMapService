@@ -17,8 +17,7 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            context.HostName = context.Socks4.Host.Hostname;
-            context.HostPort = context.Socks4.Host.Port;
+            context.Host = context.Socks4.Host;
 
             GetContextHostAction(context);
 

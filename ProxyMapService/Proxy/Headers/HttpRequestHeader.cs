@@ -15,9 +15,9 @@ namespace ProxyMapService.Proxy.Headers
         public string? HTTPVerb { get; private set; }
         public string? HTTPTarget { get; private set; }
         public string? HTTPTargetPath { get; private set; }
-        public Address? HTTPTargetHost { get; private set; }
+        public HostAddress? HTTPTargetHost { get; private set; }
         public string? HTTPProtocol { get; private set; }
-        public Address? Host { get; private set; }
+        public HostAddress? Host { get; private set; }
         public long? ContentLength { get; private set; }
         public string? ProxyAuthorization { get; private set; }
         public IEnumerable<string>? ArrayList { get; private set; }
@@ -90,7 +90,7 @@ namespace ProxyMapService.Proxy.Headers
             return Encoding.ASCII.GetBytes(builder.ToString());
         }
 
-        private static Address GetHostAddress(IEnumerable<string> strings)
+        private static HostAddress GetHostAddress(IEnumerable<string> strings)
         {
             const string key = "host:";
 
@@ -102,8 +102,8 @@ namespace ProxyMapService.Proxy.Headers
 
             return split.Length switch
             {
-                1 => new Address(split[0], 80),
-                2 => new Address(split[0], int.Parse(split[1])),
+                1 => new HostAddress(split[0], 80),
+                2 => new HostAddress(split[0], int.Parse(split[1])),
                 _ => throw new FormatException(string.Join(":", split)),
             };
         }
@@ -137,11 +137,11 @@ namespace ProxyMapService.Proxy.Headers
             return uri.PathAndQuery;
         }
 
-        private static Address? GetHTTPTargetHost(string? target, string? httpVerb)
+        private static HostAddress? GetHTTPTargetHost(string? target, string? httpVerb)
         {
             if (target == null) return null;
             Uri uri = new(httpVerb == "CONNECT" ? "http://" + target : target);
-            return new Address(uri.Host, uri.Port);
+            return new HostAddress(uri.Host, uri.Port);
         }
 
         private static string? GetHTTPProtocol(IEnumerable<string> strings)
