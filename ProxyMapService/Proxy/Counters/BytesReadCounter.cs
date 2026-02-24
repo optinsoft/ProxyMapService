@@ -4,13 +4,16 @@ namespace ProxyMapService.Proxy.Counters
 {
     public class BytesReadCounter(StreamDirection direction) : IBytesReadCounter
     {
+        private bool _logReading;
         private readonly StreamDirection _direction = direction;
         private readonly object _lock = new();
         private long _total;
         private long _proxified;
         private long _bypassed;
 
-        public StreamDirection Direction { get { return _direction; } }
+        public bool LogReading { get => _logReading; set => _logReading = value; }
+
+        public StreamDirection Direction => _direction;
 
         public long TotalBytesRead { 
             get 
@@ -64,6 +67,8 @@ namespace ProxyMapService.Proxy.Counters
                 }
             }
         }
+
+        public bool IsLogReading => _logReading;
 
         public void Reset()
         {

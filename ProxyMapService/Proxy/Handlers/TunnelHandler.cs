@@ -20,9 +20,6 @@ namespace ProxyMapService.Proxy.Handlers
                 using SslStream? incomingSslStream = context.Ssl ? new(context.IncomingStream) : null;
                 using SslStream? outgoingSslStream = context.UpstreamSsl ? new(context.OutgoingStream) : null;
 
-                Stream incomingStream = context.IncomingStream;
-                Stream outgoingStream = context.OutgoingStream;
-
                 if (incomingSslStream != null)
                 {
                     if (context.ServerCertificate == null)
@@ -35,8 +32,6 @@ namespace ProxyMapService.Proxy.Handlers
                         clientCertificateRequired: false, // Set to true if you require client certificates
                         enabledSslProtocols: SslProtocols.Tls12 | SslProtocols.Tls13, // Specify supported protocols
                         checkCertificateRevocation: true);
-
-                    incomingStream = incomingSslStream;
                 }
 
                 if (outgoingSslStream != null)
@@ -47,11 +42,12 @@ namespace ProxyMapService.Proxy.Handlers
                         EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
                         CertificateRevocationCheckMode = X509RevocationMode.Online
                     });
-
-                    outgoingStream = outgoingSslStream;
                 }
 
-                await TwoWayTunnel(context, incomingStream, outgoingStream);
+                using CountingStream? incomingSslCountingStream = incomingSslStream != null ? new CountingStream(incomingSslStream, context, context.IncomingSslCounter, null) : null;
+                using CountingStream? outgoingSslCountingStream = outgoingSslStream != null ? new CountingStream(outgoingSslStream, context, context.OutgoingSslCounter, null) : null;
+
+                await TwoWayTunnel(context, incomingSslCountingStream ?? context.IncomingStream, outgoingSslCountingStream ?? context.OutgoingStream);
             }
 
             return HandleStep.Terminate;
@@ -84,14 +80,14 @@ namespace ProxyMapService.Proxy.Handlers
                 int bytesRead;
                 do
                 {
-                    if (readCounter != null)
+                    if (readCounter != null && readCounter.IsLogReading)
                     {
                         context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", tunnelId, StreamDirectionName.GetName(readCounter.Direction));
                     }
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
                     if (bytesRead > 0)
                     {
-                        if (sentCounter != null)
+                        if (sentCounter != null && sentCounter.IsLogSending)
                         {
                             context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
                         }

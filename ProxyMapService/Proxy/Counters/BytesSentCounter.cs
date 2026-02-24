@@ -4,11 +4,14 @@ namespace ProxyMapService.Proxy.Counters
 {
     public class BytesSentCounter(StreamDirection direction) : IBytesSentCounter
     {
+        private bool _logSending;
         private readonly StreamDirection _direction = direction;
         private readonly object _lock = new();
         private long _total;
         private long _proxified;
         private long _bypassed;
+
+        public bool LogSending { get => _logSending; set => _logSending = value; }
 
         public StreamDirection Direction { get { return _direction; } }
 
@@ -66,6 +69,8 @@ namespace ProxyMapService.Proxy.Counters
                 }
             }
         }
+
+        public bool IsLogSending { get => _logSending; }
 
         public void Reset()
         {

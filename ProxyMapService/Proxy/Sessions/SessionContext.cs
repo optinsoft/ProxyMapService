@@ -30,6 +30,8 @@ namespace ProxyMapService.Proxy.Sessions
         public IBytesSentCounter? OutgoingSentCounter { get; private set; }
         public IBytesReadCounter? IncomingReadCounter { get; private set; }
         public IBytesSentCounter? IncomingSentCounter { get; private set; }
+        public IBytesReadCounter? IncomingSslCounter { get; private set; }
+        public IBytesReadCounter? OutgoingSslCounter { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
 
@@ -60,6 +62,7 @@ namespace ProxyMapService.Proxy.Sessions
             List<HostRule> hostRules, string? userAgent, ISessionsCounter? sessionsCounter, 
             IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
+            IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
             ILogger logger, CancellationToken token)
         {
             IncomingClient = incomingClient;
@@ -78,6 +81,8 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingSentCounter = outgoingSentCounter;
             IncomingReadCounter = incomingReadCounter;
             IncomingSentCounter = incomingSentCounter;
+            IncomingSslCounter = incomingSslCounter;
+            OutgoingSslCounter = outgoingSslCounter;
             Logger = logger;
             Token = token;
             IncomingHeaderStream = new ReadHeaderStream(this, incomingReadCounter);

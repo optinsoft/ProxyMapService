@@ -22,6 +22,8 @@ namespace ProxyMapService.Services
         private readonly BytesSentCounter _outgoingSentCounter = new(StreamDirection.Upstream);
         private readonly BytesReadCounter _incomingReadCounter = new(StreamDirection.Downstream);
         private readonly BytesSentCounter _incomingSentCounter = new(StreamDirection.Downstream);
+        private readonly BytesReadCounter _incomingSslCounter = new(StreamDirection.Downstream);
+        private readonly BytesReadCounter _outgoingSslCounter = new(StreamDirection.Upstream);
         private readonly BytesLogger? _bytesLogger = null;
         private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;
@@ -47,6 +49,7 @@ namespace ProxyMapService.Services
         {
             _configuration = configuration;
             _logger = logger;
+            _bytesLogger = new BytesLogger(_logger);
             var HostStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("Enabled") ?? false;
             if (HostStatsEnabled)
             {
@@ -58,15 +61,32 @@ namespace ProxyMapService.Services
                     _outgoingReadCounter.BytesReadHandler += _hostsCounter.OnBytesRead;
                     _outgoingSentCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
                 }
-                var LogTrafficData = _configuration.GetSection("HostStats")?.GetValue<bool>("LogTrafficData") ?? false;
-                if (LogTrafficData)
-                {
-                    _bytesLogger = new BytesLogger(_logger);
-                    _outgoingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                    _outgoingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
-                    _incomingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                    _incomingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
-                }
+            }
+            var LogReading = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogReading") ?? false;
+            if (LogReading)
+            {
+                _incomingReadCounter.LogReading = true;
+                _outgoingReadCounter.LogReading = true;
+            }
+            var LogSending = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSending") ?? false;
+            if (LogSending)
+            {
+                _incomingSentCounter.LogSending = true;
+                _outgoingSentCounter.LogSending = true;
+            }
+            var LogTrafficData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogTrafficData") ?? false;
+            if (LogTrafficData)
+            {
+                _outgoingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
+                _outgoingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                _incomingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
+                _incomingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+            }
+            var LogSslDecodedData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSslDecodedData") ?? false;
+            if (LogSslDecodedData)
+            {
+                _incomingSslCounter.BytesReadHandler += _bytesLogger.LogSslBytesDecoded;
+                _outgoingSslCounter.BytesReadHandler += _bytesLogger.LogSslBytesDecoded;
             }
             _logger.LogInformation(
                 "[ProxyService.{}] Service is created at {}.",
@@ -80,6 +100,10 @@ namespace ProxyMapService.Services
             _hostsCounter.Reset();
             _outgoingReadCounter.Reset();
             _outgoingSentCounter.Reset();
+            _incomingReadCounter.Reset();
+            _incomingSentCounter.Reset();
+            _incomingSslCounter.Reset();
+            _outgoingSslCounter.Reset();
         }
 
         private void LoadHostRules()
@@ -120,7 +144,8 @@ namespace ProxyMapService.Services
 
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
-            
+            var logStep = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogStep") ?? false;
+
             if (proxyMappings == null || proxyMappings.Count == 0)
             {
                 throw new NoMappingsException();
@@ -140,8 +165,9 @@ namespace ProxyMapService.Services
             {
                 tasks.Add(new ProxyMapper(mapping, _hostRules, userAgent,
                     _sessionsCounter, _outgoingReadCounter, _outgoingSentCounter, 
-                    _incomingReadCounter, _incomingSentCounter, _logger, 
-                    _maxListenerStartRetries, cancellationToken).Start());
+                    _incomingReadCounter, _incomingSentCounter,
+                    _incomingSslCounter, _outgoingSslCounter,
+                    _logger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;
             _startTime = DateTime.Now;

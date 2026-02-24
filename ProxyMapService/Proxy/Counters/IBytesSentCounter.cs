@@ -8,6 +8,7 @@ namespace ProxyMapService.Proxy.Counters
         long TotalBytesSent { get; }
         long ProxyBytesSent { get; }
         long BypassBytesSent { get; }
+        bool IsLogSending {  get; }
         void Reset();
         void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex);
     }

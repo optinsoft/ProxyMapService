@@ -42,7 +42,9 @@ namespace ProxyMapService.Proxy.Sessions
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             string? userAgent, ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
-            IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter, ILogger logger, CancellationToken token)
+            IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
+            IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
+            ILogger logger, bool logStep, CancellationToken token)
         {
             X509Certificate2? serverCertificate;
             try
@@ -59,16 +61,24 @@ namespace ProxyMapService.Proxy.Sessions
                 mapping.Listen.Ssl, serverCertificate, proxyProvider, 
                 proxyAuthenticator, usernameParameterResolver, hostRules, userAgent,
                 sessionsCounter, outgoingReadCounter, outgoingSentCounter,
-                incomingReadCounter, incomingSentCounter, logger, token);
+                incomingReadCounter, incomingSentCounter, 
+                incomingSslCounter, outgoingSslCounter,
+                logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do
             {
                 try
                 {
-                    logger.LogDebug("Run step: {step}", step);
+                    if (logStep)
+                    {
+                        logger.LogDebug("Run step: {step}", step);
+                    }
                     step = await Handlers[step].Run(context);
-                    logger.LogDebug("Next step: {step}", step);
+                    if (logStep)
+                    {
+                        logger.LogDebug("Next step: {step}", step);
+                    }
                 }
                 catch (Exception ex)
                 {
