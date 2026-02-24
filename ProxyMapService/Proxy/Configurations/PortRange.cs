@@ -1,8 +1,8 @@
 ﻿namespace ProxyMapService.Proxy.Configurations
 {
-    public class PortRange(int start, int end)
+    public class PortRange
     {
-        public int Start { get; set; } = start;
-        public int End { get; set; } = end;
+        public int Start { get; set; }
+        public int End { get; set; }
     }
 }

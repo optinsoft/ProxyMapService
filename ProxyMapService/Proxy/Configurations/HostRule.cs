@@ -55,12 +55,12 @@ namespace ProxyMapService.Proxy.Configurations
             {
                 if (!_certificateinitialized)
                 {
-                    _certificateinitialized = true;
                     if (_certificatePath != null)
                     {
                         _serverCertificate = new X509Certificate2(
                             _certificatePath,
                             _certificatePassword);
+                        _certificateinitialized = true;
                     }
                 }
                 return _serverCertificate;

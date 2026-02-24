@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Fare;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
@@ -21,7 +23,6 @@ namespace ProxyMapService.Proxy
     {
         private readonly List<ProxyServer> _proxyServers = [];
         private readonly List<IConfigurationRoot> _proxyServerFileConfigurations = [];
-        private X509Certificate2? _serverCertificate = null;
 
         private void LoadProxyServers()
         {
@@ -50,13 +51,6 @@ namespace ProxyMapService.Proxy
         {
             try
             {
-                if (!String.IsNullOrEmpty(mapping.Listen.CertificatePath))
-                {
-                    _serverCertificate = new X509Certificate2(
-                        mapping.Listen.CertificatePath,
-                        mapping.Listen.CertificatePassword);
-                }
-
                 LoadProxyServers();
 
                 ProxyProvider proxyProvider = new(_proxyServers);
@@ -66,7 +60,14 @@ namespace ProxyMapService.Proxy
 
                 for (int port = mapping.Listen.PortRange.Start; port <= mapping.Listen.PortRange.End; port++)
                 {
-                    tasks.Add(StartListenerAsync(port, proxyProvider, proxyAuthenticator));
+                    if (port > 0 && port < 65536)
+                    {
+                        tasks.Add(StartListenerAsync(port, proxyProvider, proxyAuthenticator));
+                    }
+                    else
+                    {
+                        logger.LogWarning("Bad listen port: {}", port);
+                    }
                 }
 
                 await Task.WhenAll(tasks); ;
@@ -84,7 +85,7 @@ namespace ProxyMapService.Proxy
             UsernameParameterResolver usernameParameterResolver = new();
 
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
-                await Session.Run(client, mapping, _serverCertificate, proxyProvider,
+                await Session.Run(client, mapping, proxyProvider,
                     proxyAuthenticator, usernameParameterResolver,
                     hostRules, userAgent,
                     sessionsCounter, outgoingReadCounter, outgoingSentCounter,

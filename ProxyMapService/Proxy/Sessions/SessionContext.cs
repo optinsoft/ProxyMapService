@@ -52,7 +52,8 @@ namespace ProxyMapService.Proxy.Sessions
         public int SessionTime { get; set; }
         public string? FilesDir { get; set; }
 
-        public SessionContext(TcpClient incomingClient, ProxyMapping mapping, X509Certificate2? serverCertificate,
+        public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
+            bool ssl, X509Certificate2? serverCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             IUsernameParameterResolver usernameParameterResolver,
             List<HostRule> hostRules, string? userAgent, ISessionsCounter? sessionsCounter, 
@@ -63,8 +64,8 @@ namespace ProxyMapService.Proxy.Sessions
             IncomingClient = incomingClient;
             OutgoingClient = new TcpClient();
             Mapping = mapping;
-            Ssl = mapping.Listen.Ssl;
-            ServerCertificate = serverCertificate; 
+            Ssl = ssl;
+            ServerCertificate = serverCertificate;
             ProxyProvider = proxyProvider;
             ProxyAuthenticator = proxyAuthenticator;
             UsernameParameterResolver = usernameParameterResolver;

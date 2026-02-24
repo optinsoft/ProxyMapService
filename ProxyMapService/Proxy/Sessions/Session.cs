@@ -41,14 +41,27 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.SslTunnel, SslTunnelHandler.Instance() }
         };
 
-        public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, X509Certificate2? serverCertificate, IProxyProvider proxyProvider, 
+        public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             string? userAgent, ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter, ILogger logger, CancellationToken token)
         {
-            using var context = new SessionContext(incomingClient, mapping, serverCertificate, proxyProvider, 
-                proxyAuthenticator, usernameParameterResolver, hostRules, userAgent, sessionsCounter, outgoingReadCounter, 
-                outgoingSentCounter, incomingReadCounter, incomingSentCounter, logger, token);
+            X509Certificate2? serverCertificate;
+            try
+            {
+                serverCertificate = mapping.Listen.ServerCertificate;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("Error: {ErrorMessage}", ex.Message);
+                incomingClient.Close();
+                return;
+            }
+            using var context = new SessionContext(incomingClient, mapping, 
+                mapping.Listen.Ssl, serverCertificate, proxyProvider, 
+                proxyAuthenticator, usernameParameterResolver, hostRules, userAgent,
+                sessionsCounter, outgoingReadCounter, outgoingSentCounter,
+                incomingReadCounter, incomingSentCounter, logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do
