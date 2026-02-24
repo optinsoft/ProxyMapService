@@ -40,6 +40,11 @@ namespace ProxyMapService.Proxy.Handlers
                 if (hostRule.Ssl != null)
                 {
                     context.Ssl = (bool)hostRule.Ssl;
+                    context.UpstreamSsl = context.Ssl;
+                }
+                if (hostRule.UpstreamSsl != null)
+                {
+                    context.UpstreamSsl = (bool)hostRule.UpstreamSsl;
                 }
                 if (hostRule.ServerCertificate != null)
                 {

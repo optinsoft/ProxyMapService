@@ -18,6 +18,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
         public bool Ssl { get; set; }
+        public bool UpstreamSsl { get; set; }
         public X509Certificate2? ServerCertificate { get; set; }
         public IProxyProvider ProxyProvider { get; private set; }
         public IProxyAuthenticator ProxyAuthenticator { get; private set; }
@@ -65,6 +66,7 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingClient = new TcpClient();
             Mapping = mapping;
             Ssl = ssl;
+            UpstreamSsl = ssl;
             ServerCertificate = serverCertificate;
             ProxyProvider = proxyProvider;
             ProxyAuthenticator = proxyAuthenticator;

@@ -25,8 +25,6 @@
         Socks5File,
         Proxy,
         Tunnel,
-        SslTunnel,
-        RawTunnel,
         Terminate,
     }
 }
