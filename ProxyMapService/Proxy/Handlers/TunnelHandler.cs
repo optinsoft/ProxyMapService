@@ -72,8 +72,9 @@ namespace ProxyMapService.Proxy.Handlers
         private static async Task Tunnel(Stream source, Stream destination, SessionContext context,
             IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter)
         {
+           
             var tunnelId = ++_tunnelId;
-
+            
             var buffer = new byte[BufferSize];
 
             CancellationToken token = context.Token;
@@ -85,14 +86,14 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     if (readCounter != null)
                     {
-                        context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", tunnelId, readCounter.Direction);
+                        context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", tunnelId, StreamDirectionName.GetName(readCounter.Direction));
                     }
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
                     if (bytesRead > 0)
                     {
                         if (sentCounter != null)
                         {
-                            context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, sentCounter.Direction);
+                            context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
                         }
                         await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
                     }

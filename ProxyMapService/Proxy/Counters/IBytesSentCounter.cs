@@ -4,7 +4,7 @@ namespace ProxyMapService.Proxy.Counters
 {
     public interface IBytesSentCounter
     {
-        string Direction { get; }
+        StreamDirection Direction { get; }
         long TotalBytesSent { get; }
         long ProxyBytesSent { get; }
         long BypassBytesSent { get; }

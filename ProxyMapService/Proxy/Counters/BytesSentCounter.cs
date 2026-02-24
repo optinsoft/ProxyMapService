@@ -2,15 +2,15 @@
 
 namespace ProxyMapService.Proxy.Counters
 {
-    public class BytesSentCounter(string direction) : IBytesSentCounter
+    public class BytesSentCounter(StreamDirection direction) : IBytesSentCounter
     {
-        private readonly string _direction = direction;
+        private readonly StreamDirection _direction = direction;
         private readonly object _lock = new();
         private long _total;
         private long _proxified;
         private long _bypassed;
 
-        public string Direction { get { return _direction; } }
+        public StreamDirection Direction { get { return _direction; } }
 
         public long TotalBytesSent
         {

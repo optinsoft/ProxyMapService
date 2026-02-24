@@ -18,10 +18,10 @@ namespace ProxyMapService.Services
         private readonly ILogger _logger;
         private readonly SessionsCounter _sessionsCounter = new();
         private readonly HostsCounter _hostsCounter = new();
-        private readonly BytesReadCounter _outgoingReadCounter = new("outgoing client");
-        private readonly BytesSentCounter _outgoingSentCounter = new("outgoing client");
-        private readonly BytesReadCounter _incomingReadCounter = new("incoming client");
-        private readonly BytesSentCounter _incomingSentCounter = new("incoming client");
+        private readonly BytesReadCounter _outgoingReadCounter = new(StreamDirection.Upstream);
+        private readonly BytesSentCounter _outgoingSentCounter = new(StreamDirection.Upstream);
+        private readonly BytesReadCounter _incomingReadCounter = new(StreamDirection.Downstream);
+        private readonly BytesSentCounter _incomingSentCounter = new(StreamDirection.Downstream);
         private readonly BytesLogger? _bytesLogger = null;
         private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;

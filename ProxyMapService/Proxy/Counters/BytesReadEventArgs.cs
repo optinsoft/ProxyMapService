@@ -7,6 +7,6 @@ namespace ProxyMapService.Proxy.Counters
         public int BytesRead { get; set; }
         public byte[]? BytesData { get; set; }
         public int StartIndex { get; set; }
-        public string? Direction { get; set; }
+        public StreamDirection Direction { get; set; }
     }
 }
