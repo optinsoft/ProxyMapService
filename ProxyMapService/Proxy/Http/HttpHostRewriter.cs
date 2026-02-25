@@ -36,6 +36,9 @@ namespace ProxyMapService.Proxy.Http
         {
             var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
 
+            if (searchStart < 0)
+                return -1; // Searching was terminated
+
             // Validate the beginning of the HTTP request
             if (!StartsWithHttpMethod(span, true))
             {
