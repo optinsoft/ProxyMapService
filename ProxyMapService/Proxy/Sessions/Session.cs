@@ -4,7 +4,6 @@ using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
-using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -41,7 +40,8 @@ namespace ProxyMapService.Proxy.Sessions
 
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
-            string? userAgent, ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
+            string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
+            ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
             IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
             ILogger logger, bool logStep, CancellationToken token)
@@ -49,7 +49,7 @@ namespace ProxyMapService.Proxy.Sessions
             X509Certificate2? serverCertificate;
             try
             {
-                serverCertificate = mapping.Listen.ServerCertificate;
+                serverCertificate = sslServerConfig.ServerCertificate;
             }
             catch (Exception ex)
             {
@@ -59,7 +59,8 @@ namespace ProxyMapService.Proxy.Sessions
             }
             using var context = new SessionContext(incomingClient, mapping, 
                 mapping.Listen.Ssl, serverCertificate, proxyProvider, 
-                proxyAuthenticator, usernameParameterResolver, hostRules, userAgent,
+                proxyAuthenticator, usernameParameterResolver, hostRules, 
+                userAgent, sslClientConfig, sslServerConfig,
                 sessionsCounter, outgoingReadCounter, outgoingSentCounter,
                 incomingReadCounter, incomingSentCounter, 
                 incomingSslCounter, outgoingSslCounter,

@@ -7,7 +7,6 @@ using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
-using System.Collections.Specialized;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -22,6 +21,8 @@ namespace ProxyMapService.Proxy.Sessions
         public ProxyMapping Mapping { get; private set; }
         public bool Ssl { get; set; }
         public bool UpstreamSsl { get; set; }
+        public SslClientOptionsConfig SslClientConfig { get; private set; }
+        public SslServerOptionsConfig SslServerConfig { get; private set; }
         public X509Certificate2? ServerCertificate { get; set; }
         public IProxyProvider ProxyProvider { get; private set; }
         public IProxyAuthenticator ProxyAuthenticator { get; private set; }
@@ -67,7 +68,9 @@ namespace ProxyMapService.Proxy.Sessions
             bool ssl, X509Certificate2? serverCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             IUsernameParameterResolver usernameParameterResolver,
-            List<HostRule> hostRules, string? userAgent, ISessionsCounter? sessionsCounter, 
+            List<HostRule> hostRules, string? userAgent,
+            SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
+            ISessionsCounter? sessionsCounter, 
             IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
             IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
@@ -84,6 +87,8 @@ namespace ProxyMapService.Proxy.Sessions
             UsernameParameterResolver = usernameParameterResolver;
             HostRules = hostRules;
             UserAgent = userAgent;
+            SslClientConfig = sslClientConfig;
+            SslServerConfig = sslServerConfig;
             SessionsCounter = sessionsCounter;
             OutgoingReadCounter = outgoingReadCounter;
             OutgoingSentCounter = outgoingSentCounter;

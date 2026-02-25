@@ -34,7 +34,9 @@ namespace ProxyMapService.Services
         private readonly string _serviceId = RandomStringGenerator.GenerateRandomString(6);
         private readonly List<HostRule> _hostRules = [];
         private readonly List<IConfigurationRoot> _hostRuleFileConfigurations = [];
-        
+        private SslClientOptionsConfig _sslClientOptions = new();
+        private SslServerOptionsConfig _sslServerOptions = new();
+
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
             set => _stoppingToken = value;
@@ -144,6 +146,8 @@ namespace ProxyMapService.Services
 
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
+            _sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
+            _sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
             var logStep = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogStep") ?? false;
 
             if (proxyMappings == null || proxyMappings.Count == 0)
@@ -163,7 +167,8 @@ namespace ProxyMapService.Services
             List<Task> tasks = [];
             foreach (var mapping in proxyMappings)
             {
-                tasks.Add(new ProxyMapper(mapping, _hostRules, userAgent,
+                tasks.Add(new ProxyMapper(mapping, _hostRules, 
+                    userAgent, _sslClientOptions, _sslServerOptions,
                     _sessionsCounter, _outgoingReadCounter, _outgoingSentCounter, 
                     _incomingReadCounter, _incomingSentCounter,
                     _incomingSslCounter, _outgoingSslCounter,

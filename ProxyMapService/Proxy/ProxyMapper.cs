@@ -10,13 +10,15 @@ using ProxyMapService.Proxy.Resolvers;
 using ProxyMapService.Proxy.Sessions;
 using System.Data;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy
 {
     public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
-        string? userAgent, ISessionsCounter? sessionsCounter,
+        string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
+        ISessionsCounter? sessionsCounter,
         IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
         IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
         IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
@@ -88,7 +90,7 @@ namespace ProxyMapService.Proxy
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
                 await Session.Run(client, mapping, proxyProvider,
                     proxyAuthenticator, usernameParameterResolver,
-                    hostRules, userAgent,
+                    hostRules, userAgent, sslClientConfig, sslServerConfig,
                     sessionsCounter, outgoingReadCounter, outgoingSentCounter,
                     incomingReadCounter, incomingSentCounter,
                     incomingSslCounter, outgoingSslCounter,

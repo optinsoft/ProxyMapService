@@ -21,6 +21,16 @@ namespace ProxyMapService.Proxy.Handlers
                 using SslStream? incomingSslStream = context.Ssl ? new(context.IncomingStream) : null;
                 using SslStream? outgoingSslStream = context.UpstreamSsl ? new(context.OutgoingStream) : null;
 
+                if (outgoingSslStream != null)
+                {
+                    await outgoingSslStream.AuthenticateAsClientAsync(BuildSslClientOptions(context), context.Token);
+                    /*
+                    var serverCertificate = outgoingSslStream.RemoteCertificate;
+                    var certificate = new X509Certificate2(serverCertificate);
+                    context.Logger.LogDebug("Server Certificate Subject: {}", certificate.Subject);
+                    */
+                }
+
                 if (incomingSslStream != null)
                 {
                     if (context.ServerCertificate == null)
@@ -28,21 +38,7 @@ namespace ProxyMapService.Proxy.Handlers
                         throw new NullServerCertificateException();
                     }
 
-                    await incomingSslStream.AuthenticateAsServerAsync(
-                        context.ServerCertificate,
-                        clientCertificateRequired: false, // Set to true if you require client certificates
-                        enabledSslProtocols: SslProtocols.Tls12 | SslProtocols.Tls13, // Specify supported protocols
-                        checkCertificateRevocation: true);
-                }
-
-                if (outgoingSslStream != null)
-                {
-                    await outgoingSslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
-                    {
-                        TargetHost = context.Host.Hostname, // MUST match certificate CN/SAN
-                        EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                        CertificateRevocationCheckMode = X509RevocationMode.Online
-                    });
+                    await incomingSslStream.AuthenticateAsServerAsync(BuildSslServerOptions(context), context.Token);
                 }
 
                 using CountingStream? incomingSslCountingStream = incomingSslStream != null ? new CountingStream(incomingSslStream, context, context.IncomingSslCounter, null) : null;
@@ -157,6 +153,47 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 //context.Logger.LogError("ObjectDisposedException: {ErrorMessage}", ex.Message);
             }
+        }
+
+        private static SslProtocols ParseProtocols(string protocols)
+        {
+            SslProtocols result = SslProtocols.None;
+
+            foreach (var protocol in protocols.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                result |= Enum.Parse<SslProtocols>(protocol.Trim(), ignoreCase: true);
+            }
+
+            return result;
+        }
+
+        private static SslClientAuthenticationOptions BuildSslClientOptions(
+            SessionContext context)
+        {
+            var protocols = ParseProtocols(context.SslClientConfig.EnabledSslProtocols);
+            return new SslClientAuthenticationOptions
+            {
+                TargetHost = context.Host.Hostname,
+                EnabledSslProtocols = protocols,
+                CertificateRevocationCheckMode = context.SslClientConfig.CheckCertificateRevocation
+                    ? X509RevocationMode.Online
+                    : X509RevocationMode.NoCheck
+            };
+        }
+
+        private static SslServerAuthenticationOptions BuildSslServerOptions(
+            SessionContext context)
+        {
+            var protocols = ParseProtocols(context.SslServerConfig.EnabledSslProtocols);
+            return new SslServerAuthenticationOptions
+            {
+                EnabledSslProtocols = protocols,
+                ClientCertificateRequired = context.SslServerConfig.ClientCertificateRequired,
+                ServerCertificate = context.ServerCertificate,
+                CertificateRevocationCheckMode = context.SslServerConfig.CheckCertificateRevocation
+                    ? X509RevocationMode.Online
+                    : X509RevocationMode.NoCheck
+            };
         }
     }
 }
