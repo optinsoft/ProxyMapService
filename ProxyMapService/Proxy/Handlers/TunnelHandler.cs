@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore;
-using ProxyMapService.Proxy.Counters;
+﻿using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -113,12 +111,14 @@ namespace ProxyMapService.Proxy.Handlers
             var tunnelId = ++_tunnelId;
 
             var buffer = new byte[BufferSize];
+            using var ms = new MemoryStream();
 
             CancellationToken token = context.Token;
 
             try
             {
-                int bytesRead, allBytesRead = 0;
+                int bytesRead, headersEnd, searchStart = 0;
+                bool readHeaders = true;
                 do
                 {
                     if (readCounter != null && readCounter.IsLogReading)
@@ -128,14 +128,28 @@ namespace ProxyMapService.Proxy.Handlers
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
                     if (bytesRead > 0)
                     {
-                        var readMemory = buffer.AsMemory(0, bytesRead);
-                        var sendBuffer = allBytesRead == 0 ? HttpHostRewriter.OverrideHostHeader(readMemory, context.Host.Hostname, context.Host.Port) ?? readMemory : readMemory;
-                        allBytesRead += bytesRead;
-                        if (sentCounter != null && sentCounter.IsLogSending)
+                        if (readHeaders)
                         {
-                            context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
+                            ms.Write(buffer, 0, bytesRead);
+                            if ((headersEnd = HttpHostRewriter.FindHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
+                            {
+                                readHeaders = false;
+                                var sendBuffer = HttpHostRewriter.OverrideHostHeader(ms, headersEnd, context.Host.Hostname, context.Host.Port) ?? buffer.AsMemory(0, bytesRead);
+                                if (sentCounter != null && sentCounter.IsLogSending)
+                                {
+                                    context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
+                                }
+                                await destination.WriteAsync(sendBuffer, token);
+                            }
                         }
-                        await destination.WriteAsync(sendBuffer, token);
+                        else
+                        {
+                            if (sentCounter != null && sentCounter.IsLogSending)
+                            {
+                                context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
+                            }
+                            await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
+                        }
                     }
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
             }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -10,13 +11,64 @@ namespace ProxyMapService.Proxy.Http
             "HEAD", "OPTIONS", "PATCH", "TRACE", "CONNECT"
         };
 
-        public static Memory<byte>? OverrideHostHeader(Memory<byte> input, string hostname, int port)
-        {
-            ReadOnlySpan<byte> span = input.Span;
+        private static readonly byte[][] HttpMethodPrefixBytes =
+            HttpMethods.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
 
-            // Find end of headers: \r\n\r\n
-            int headersEnd = IndexOf(span, "\r\n\r\n"u8);
+        private static bool StartsWithHttpMethod(ReadOnlySpan<byte> span, bool partially)
+        {
+            foreach (var method in HttpMethodPrefixBytes)
+            {
+                var methodSpan = method.AsSpan();
+
+                int compareLength = partially ? Math.Min(span.Length, methodSpan.Length) : methodSpan.Length;
+
+                if (span.Slice(0, compareLength)
+                        .SequenceEqual(methodSpan.Slice(0, compareLength)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static int FindHeadersEnd(MemoryStream ms, ref int searchStart)
+        {
+            var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
+
+            // Validate the beginning of the HTTP request
+            if (!StartsWithHttpMethod(span, true))
+            {
+                // ATTENTION!!! Terminate searching
+                searchStart = -1;
+                return -1;
+            }
+
+            int index = span.Slice(searchStart).IndexOf("\r\n\r\n"u8);
+            if (index >= 0)
+            {
+                index += searchStart;
+            }
+            else
+            {
+                searchStart = Math.Max(0, span.Length - 3);
+            }
+
+            return index;
+        }
+
+        public static Memory<byte>? OverrideHostHeader(MemoryStream ms, int headersEnd, string hostname, int port)
+        {
+            var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
+
+            // Validate the end of the HTTP headers
             if (headersEnd < 0)
+                return null;
+            if (!span.Slice(headersEnd, 4).SequenceEqual("\r\n\r\n"u8))
+                return null;
+
+            // Validate the beginning of the HTTP request
+            if (!StartsWithHttpMethod(span, false))
                 return null;
 
             int headerSectionLength = headersEnd + 4; // include \r\n\r\n
@@ -25,7 +77,7 @@ namespace ProxyMapService.Proxy.Http
             var bodyBytes = span.Slice(headerSectionLength);
 
             string headers = Encoding.ASCII.GetString(headerBytes);
-
+            /*
             // Validate first line is HTTP request
             int firstLineEnd = headers.IndexOf("\r\n", StringComparison.Ordinal);
             if (firstLineEnd <= 0)
@@ -38,7 +90,7 @@ namespace ProxyMapService.Proxy.Http
 
             if (!isHttp)
                 return null;
-
+            */
             // Split header lines
             var lines = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
 
@@ -68,16 +120,6 @@ namespace ProxyMapService.Proxy.Http
             bodyBytes.CopyTo(result.AsSpan(modifiedHeaderBytes.Length));
 
             return new Memory<byte>(result);
-        }
-
-        private static int IndexOf(ReadOnlySpan<byte> span, ReadOnlySpan<byte> value)
-        {
-            for (int i = 0; i <= span.Length - value.Length; i++)
-            {
-                if (span.Slice(i, value.Length).SequenceEqual(value))
-                    return i;
-            }
-            return -1;
         }
     }
 }
