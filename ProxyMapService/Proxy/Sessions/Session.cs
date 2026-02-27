@@ -46,10 +46,11 @@ namespace ProxyMapService.Proxy.Sessions
             IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
             ILogger logger, bool logStep, CancellationToken token)
         {
-            X509Certificate2? serverCertificate;
+            X509Certificate2? serverCertificate, caCertificate;
             try
             {
                 serverCertificate = sslServerConfig.ServerCertificate;
+                caCertificate = sslServerConfig.CACertificate;
             }
             catch (Exception ex)
             {
@@ -58,9 +59,9 @@ namespace ProxyMapService.Proxy.Sessions
                 return;
             }
             using var context = new SessionContext(incomingClient, mapping, 
-                mapping.Listen.Ssl, serverCertificate, proxyProvider, 
-                proxyAuthenticator, usernameParameterResolver, hostRules, 
-                userAgent, sslClientConfig, sslServerConfig,
+                mapping.Listen.Ssl, serverCertificate, caCertificate,
+                proxyProvider, proxyAuthenticator, usernameParameterResolver, 
+                hostRules, userAgent, sslClientConfig, sslServerConfig,
                 sessionsCounter, outgoingReadCounter, outgoingSentCounter,
                 incomingReadCounter, incomingSentCounter, 
                 incomingSslCounter, outgoingSslCounter,

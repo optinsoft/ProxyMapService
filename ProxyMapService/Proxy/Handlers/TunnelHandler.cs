@@ -4,6 +4,7 @@ using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using System.Net.Security;
 using System.Security.Authentication;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -20,25 +21,35 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 using SslStream? incomingSslStream = context.Ssl ? new(context.IncomingStream) : null;
                 using SslStream? outgoingSslStream = context.UpstreamSsl ? new(context.OutgoingStream) : null;
+                
+                string subjectName = $"CN=*.{context.Host.Hostname}";
+                X509Certificate2? serverCertificate = context.ServerCertificate;
 
                 if (outgoingSslStream != null)
                 {
                     await outgoingSslStream.AuthenticateAsClientAsync(BuildSslClientOptions(context), context.Token);
-                    /*
-                    var serverCertificate = outgoingSslStream.RemoteCertificate;
-                    var certificate = new X509Certificate2(serverCertificate);
-                    context.Logger.LogDebug("Server Certificate Subject: {}", certificate.Subject);
-                    */
+                    if (outgoingSslStream.RemoteCertificate != null)
+                    {
+                        var cert = new X509Certificate2(outgoingSslStream.RemoteCertificate);
+                        context.Logger.LogDebug("Server Certificate Subject: {}", cert.Subject);
+                        subjectName = cert.Subject;
+                    }
                 }
 
                 if (incomingSslStream != null)
                 {
-                    if (context.ServerCertificate == null)
+                    if (serverCertificate == null)
                     {
-                        throw new NullServerCertificateException();
+                        if (context.CACertificate != null)
+                        {
+                            serverCertificate = CreateSignedCertificate(context, subjectName, context.CACertificate);
+                        }
+                        else
+                        {
+                            throw new NullServerCertificateException();
+                        }
                     }
-
-                    await incomingSslStream.AuthenticateAsServerAsync(BuildSslServerOptions(context), context.Token);
+                    await incomingSslStream.AuthenticateAsServerAsync(BuildSslServerOptions(context, serverCertificate), context.Token);
                 }
 
                 using CountingStream? incomingSslCountingStream = incomingSslStream != null ? new CountingStream(incomingSslStream, context, context.IncomingSslCounter, null) : null;
@@ -182,18 +193,58 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         private static SslServerAuthenticationOptions BuildSslServerOptions(
-            SessionContext context)
+            SessionContext context, X509Certificate2 serverCertificate)
         {
             var protocols = ParseProtocols(context.SslServerConfig.EnabledSslProtocols);
             return new SslServerAuthenticationOptions
             {
                 EnabledSslProtocols = protocols,
                 ClientCertificateRequired = context.SslServerConfig.ClientCertificateRequired,
-                ServerCertificate = context.ServerCertificate,
+                ServerCertificate = serverCertificate,
                 CertificateRevocationCheckMode = context.SslServerConfig.CheckCertificateRevocation
                     ? X509RevocationMode.Online
                     : X509RevocationMode.NoCheck
             };
+        }
+
+        private static X509Certificate2 CreateSignedCertificate(SessionContext context, string subjectName,  X509Certificate2 issuerCert)
+        {
+            using var rsa = RSA.Create(2048);
+            
+            var request = new CertificateRequest(
+                subjectName, 
+                rsa, 
+                HashAlgorithmName.SHA256, 
+                RSASignaturePadding.Pkcs1);
+
+            // Add Subject Alternative Name (Crucial for SslStream/Browsers)
+            var sanBuilder = new SubjectAlternativeNameBuilder();
+            sanBuilder.AddDnsName(context.Host.Hostname);
+            request.CertificateExtensions.Add(sanBuilder.Build());
+
+            // Standard TLS Server usage
+            request.CertificateExtensions.Add(
+                new X509EnhancedKeyUsageExtension(
+                    new OidCollection { 
+                        new Oid("1.3.6.1.5.5.7.3.1") 
+                    }, 
+                    false));
+
+            // Create a unique Serial Number
+            byte[] serialNumber = Guid.NewGuid().ToByteArray();
+
+            // SIGN the request using the CA's private key
+            using X509Certificate2 ephemeralCert = request.Create(
+                issuerCert,
+                DateTimeOffset.Now.AddDays(-1),
+                DateTimeOffset.Now.AddYears(2),
+                serialNumber);
+
+            // Join the private key to the public cert
+            var certWithKey = ephemeralCert.CopyWithPrivateKey(rsa);
+
+            // FIX: Export and Re-import to move the key from Ephemeral -> Persisted
+            return new X509Certificate2(certWithKey.Export(X509ContentType.Pfx));
         }
     }
 }
