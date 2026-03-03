@@ -3,6 +3,7 @@ using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using ProxyMapService.Proxy.Counters;
 using System.Net;
+using ProxyMapService.Proxy.Proto;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -24,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception)
             {
                 context.SessionsCounter?.OnBypassFailed(context);
-                await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
                 throw;
             }
 
@@ -32,7 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.CreateOutgoingClientStream();
 
-            await Socks4Reply(context, Socks4Command.RequestGranted);
+            await Socks4Proto.Socks4Reply(context, Socks4Command.RequestGranted);
 
             return HandleStep.Tunnel;
         }
@@ -40,17 +41,6 @@ namespace ProxyMapService.Proxy.Handlers
         public static Socks4BypassHandler Instance()
         {
             return Self;
-        }
-
-        private static async Task Socks4Reply(SessionContext context, Socks4Command command)
-        {
-            if (context.IncomingStream == null) return;
-            byte[] bytes = [0x0, (byte)command, 0, 0, 0, 0, 0, 0];
-            if (context.Socks4 != null)
-            {
-                Array.Copy(context.Socks4.Bytes, 2, bytes, 2, 6);
-            }
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

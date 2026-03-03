@@ -1,9 +1,8 @@
-﻿using ProxyMapService.Proxy.Counters;
-using ProxyMapService.Proxy.Network;
+﻿using ProxyMapService.Proxy.Network;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
-using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -29,15 +28,15 @@ namespace ProxyMapService.Proxy.Handlers
                 context.SessionsCounter?.OnProxyFailed(context);
                 if (context.Http != null)
                 {
-                    await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n"));
+                    await HttpProto.HttpReplyBadGateway(context);
                 }
                 if (context.Socks4 != null)
                 {
-                    await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                    await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
                 }
                 if (context.Socks5 != null)
                 {
-                    await Socks5Reply(context, Socks5Status.GeneralFailure);
+                    await Socks5Proto.Socks5Reply(context, Socks5Status.GeneralFailure);
                 }
                 throw;
             }

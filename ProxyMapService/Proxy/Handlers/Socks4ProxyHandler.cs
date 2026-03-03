@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
@@ -38,7 +39,7 @@ namespace ProxyMapService.Proxy.Handlers
                 : (context.Mapping.Authentication.RemoveAuthentication ? null : socks4.UserId));
 
             var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.Host.Hostname, context.Host.Port, userId);
-            await SendSocks4Request(context, socks4ConnectBytes);
+            await Socks4Proto.SendSocks4Request(context, socks4ConnectBytes);
 
             if (context.Socks4 != null)
             {
@@ -55,7 +56,7 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         if (context.Http.HTTPVerb == "CONNECT")
                         {
-                            await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n"));
+                            await HttpProto.HttpReplyConnectionEstablished(context);
                         }
                         else
                         {
@@ -63,13 +64,13 @@ namespace ProxyMapService.Proxy.Handlers
                             var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine);
                             if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                             {
-                                await SendHttpRequest(context, httpRequestBytes);
+                                await HttpProto.SendHttpRequest(context, httpRequestBytes);
                             }
                         }
                     }
                     if (context.Socks5 != null)
                     {
-                        await Socks5Reply(context, Socks5Status.Succeeded);
+                        await Socks5Proto.Socks5Reply(context, Socks5Status.Succeeded);
                     }
                     return HandleStep.Tunnel;
                 }
@@ -77,15 +78,15 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Http != null)
             {
-                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n"));
+                await HttpProto.HttpReplyBadGateway(context);
             }
             if (context.Socks4 != null)
             {
-                await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
             }
             if (context.Socks5 != null)
             {
-                await Socks5Reply(context, Socks5Status.GeneralFailure);
+                await Socks5Proto.Socks5Reply(context, Socks5Status.GeneralFailure);
             }
 
             return HandleStep.Terminate;
@@ -94,18 +95,6 @@ namespace ProxyMapService.Proxy.Handlers
         public static Socks4ProxyHandler Instance()
         {
             return Self;
-        }
-
-        private static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
-        {
-            if (context.OutgoingStream == null) return;
-            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
-        }
-
-        private static async Task SendSocks4Request(SessionContext context, byte[] requestBytes)
-        {
-            if (context.OutgoingStream == null) return;
-            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
         }
     }
 }

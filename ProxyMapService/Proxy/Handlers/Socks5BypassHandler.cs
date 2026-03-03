@@ -1,10 +1,8 @@
-﻿using ProxyMapService.Proxy.Network;
-using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
-using ProxyMapService.Proxy.Counters;
 using System.Net;
-using System.Text;
 using System.Net.Sockets;
+using ProxyMapService.Proxy.Proto;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -38,13 +36,13 @@ namespace ProxyMapService.Proxy.Handlers
                     SocketError.NetworkUnreachable => Socks5Status.NetworkUnreachable,
                     _ => Socks5Status.GeneralFailure
                 };
-                await Socks5Reply(context, status);
+                await Socks5Proto.Socks5Reply(context, status);
                 throw;
             }
             catch (Exception)
             {
                 context.SessionsCounter?.OnBypassFailed(context);
-                await Socks5Reply(context, Socks5Status.GeneralFailure);
+                await Socks5Proto.Socks5Reply(context, Socks5Status.GeneralFailure);
                 throw;
             }
 
@@ -52,7 +50,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.CreateOutgoingClientStream();
 
-            await Socks5Reply(context, Socks5Status.Succeeded);
+            await Socks5Proto.Socks5Reply(context, Socks5Status.Succeeded);
 
             return HandleStep.Tunnel;
         }
@@ -60,13 +58,6 @@ namespace ProxyMapService.Proxy.Handlers
         public static Socks5BypassHandler Instance()
         {
             return Self;
-        }
-
-        private static async Task Socks5Reply(SessionContext context, Socks5Status status)
-        {
-            if (context.IncomingStream == null) return;
-            byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

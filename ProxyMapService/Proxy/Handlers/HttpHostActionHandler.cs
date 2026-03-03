@@ -1,6 +1,6 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
-using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -13,14 +13,14 @@ namespace ProxyMapService.Proxy.Handlers
             if (context.Mapping.Listen.RejectHttpProxy && context.Http?.HTTPVerb != "CONNECT")
             {
                 context.SessionsCounter?.OnHttpRejected(context);
-                await HttpReplyMethodNotAllowed(context);
+                await HttpProto.HttpReplyMethodNotAllowed(context);
                 return HandleStep.Terminate;
             }
 
             if (context.Http?.HTTPTargetHost == null || context.Http.HTTPTargetHost.Hostname.Length == 0)
             {
                 context.SessionsCounter?.OnNoHost(context);
-                await HttpReplyBadRequest(context);
+                await HttpProto.HttpReplyBadRequest(context);
                 return HandleStep.Terminate;
             }
 
@@ -39,7 +39,7 @@ namespace ProxyMapService.Proxy.Handlers
                 default:
                     //ActionEnum.Deny
                     context.SessionsCounter?.OnHostRejected(context);
-                    await HttpReplyForbidden(context);
+                    await HttpProto.HttpReplyForbidden(context);
                     return HandleStep.Terminate;
             }
         }
@@ -47,27 +47,6 @@ namespace ProxyMapService.Proxy.Handlers
         public static HttpHostActionHandler Instance()
         {
             return Self;
-        }
-
-        private static async Task HttpReplyBadRequest(SessionContext context)
-        {
-            if (context.IncomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
-        }
-
-        private static async Task HttpReplyForbidden(SessionContext context)
-        {
-            if (context.IncomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
-        }
-
-        private static async Task HttpReplyMethodNotAllowed(SessionContext context)
-        {
-            if (context.IncomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

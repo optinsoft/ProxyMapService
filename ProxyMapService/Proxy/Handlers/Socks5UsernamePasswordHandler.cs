@@ -1,8 +1,6 @@
 ﻿using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Sessions;
-using ProxyMapService.Proxy.Counters;
-using System.IO;
-using System.Text;
+using ProxyMapService.Proxy.Proto;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -16,23 +14,23 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 throw new NullClientStreamException();
             }
-            byte[]? bytesArray = await ReadUsernamePassword(context.IncomingStream, context.Token);
+            byte[]? bytesArray = await Socks5Proto.ReadUsernamePassword(context);
             if (!(context.Socks5?.ParseUsernamePassword(bytesArray) ?? false))
             {
                 context.SessionsCounter?.OnSocks5Failure(context);
-                await Socks5ReplyNotAuthenticated(context);
+                await Socks5Proto.Socks5ReplyNotAuthenticated(context);
                 return HandleStep.Terminate;
             }
 
             if (IsProxyAuthorizationCredentialsCorrect(context))
             {
                 OnAuthenticated(context);
-                await Socks5ReplyAuthenticated(context);
+                await Socks5Proto.Socks5ReplyAuthenticated(context);
                 return HandleStep.Socks5Authenticated;
             }
 
             OnAuthenticationInvalid(context);
-            await Socks5ReplyNotAuthenticated(context);
+            await Socks5Proto.Socks5ReplyNotAuthenticated(context);
             return HandleStep.Terminate;
         }
 
@@ -44,79 +42,6 @@ namespace ProxyMapService.Proxy.Handlers
         private static bool IsProxyAuthorizationCredentialsCorrect(SessionContext context)
         {
             return context.ProxyAuthenticator.Authenticate(context, context.Socks5?.Username, context.Socks5?.Password);
-        }
-
-        private static async Task<byte[]?> ReadUsernamePassword(CountingStream client, CancellationToken token)
-        {
-            byte[] readBuffer = new byte[1];
-            using MemoryStream memoryStream = new();
-            byte[] usernamePasswordBytes = [];
-
-            client.PauseReadCount();
-            try
-            {
-
-                int bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-                if (bytesRead <= 0) return null;
-                memoryStream.Write(readBuffer, 0, bytesRead);
-
-                if (readBuffer[0] != 0x01) return null;
-
-                bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-                if (bytesRead <= 0) return null;
-                memoryStream.Write(readBuffer, 0, bytesRead);
-
-                int ulen = (int)readBuffer[0];
-
-                for (int i = 0; i < ulen; ++i)
-                {
-                    bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-                    if (bytesRead <= 0) return null;
-                    memoryStream.Write(readBuffer, 0, bytesRead);
-                }
-
-                bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-                if (bytesRead <= 0) return null;
-                memoryStream.Write(readBuffer, 0, bytesRead);
-
-                int plen = (int)readBuffer[0];
-
-                for (int i = 0; i < plen; ++i)
-                {
-                    bytesRead = await client.ReadAsync(readBuffer.AsMemory(0, 1), token);
-                    if (bytesRead <= 0) return null;
-                    memoryStream.Write(readBuffer, 0, bytesRead);
-                }
-
-            }
-            finally
-            {
-                if (memoryStream.Length > 0)
-                {
-                    usernamePasswordBytes = memoryStream.ToArray();
-                    client.OnBytesRead(usernamePasswordBytes.Length, usernamePasswordBytes, 0);
-                }
-                client.ResumeReadCount();
-            }
-
-            return usernamePasswordBytes;
-        }
-
-        private static async Task Socks5ReplyAuthenticated(SessionContext context)
-        {
-            await Socks5ReplyAuthenticationResult(context, 0x00);
-        }
-
-        private static async Task Socks5ReplyNotAuthenticated(SessionContext context)
-        {
-            await Socks5ReplyAuthenticationResult(context, 0x01);
-        }
-
-        private static async Task Socks5ReplyAuthenticationResult(SessionContext context, byte result)
-        {
-            if (context.IncomingStream == null) return;
-            byte[] bytes = [0x01, result];
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
-        }
+        }        
     }
 }

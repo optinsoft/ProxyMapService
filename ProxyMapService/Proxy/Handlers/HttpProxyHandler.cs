@@ -1,4 +1,4 @@
-﻿using ProxyMapService.Proxy.Network;
+﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
@@ -68,7 +68,7 @@ namespace ProxyMapService.Proxy.Handlers
                 var httpRequestBytes = http?.GetBytes(true, proxyAuthorization, requestFirstLine);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    await SendHttpRequest(context, httpRequestBytes);
+                    await HttpProto.SendHttpRequest(context, httpRequestBytes);
 
                     if (context.Http != null)
                     {
@@ -85,11 +85,11 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             if (context.Socks4 != null)
                             {
-                                await Socks4Reply(context, Socks4Command.RequestGranted);
+                                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestGranted);
                             }
                             if (context.Socks5 != null)
                             {
-                                await Socks5Reply(context, Socks5Status.Succeeded);
+                                await Socks5Proto.Socks5Reply(context, Socks5Status.Succeeded);
                             }
                             return HandleStep.Tunnel;
                         }
@@ -99,15 +99,15 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Http != null)
             {
-                await HttpReply(context, Encoding.ASCII.GetBytes("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n"));
+                await HttpProto.HttpReplyBadGateway(context);
             }
             if (context.Socks4 != null)
             {
-                await Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
             }
             if (context.Socks5 != null)
             {
-                await Socks5Reply(context, Socks5Status.GeneralFailure);
+                await Socks5Proto.Socks5Reply(context, Socks5Status.GeneralFailure);
             }
 
             return HandleStep.Terminate;
@@ -116,12 +116,6 @@ namespace ProxyMapService.Proxy.Handlers
         public static HttpProxyHandler Instance()
         {
             return Self;
-        }
-
-        private static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
-        {
-            if (context.OutgoingStream == null) return;
-            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Proto;
+using ProxyMapService.Proxy.Sessions;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -17,7 +18,7 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.HttpAuthenticationNotRequired;
                 }
                 OnAuthenticationRequired(context);
-                await HttpReplyProxyAuthenticationRequired(context);
+                await HttpProto.HttpReplyProxyAuthenticationRequired(context);
                 return HandleStep.Terminate;
             }
 
@@ -28,7 +29,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
 
             OnAuthenticationInvalid(context);
-            await HttpReplyProxyUnauthorized(context);
+            await HttpProto.HttpReplyProxyUnauthorized(context);
             return HandleStep.Terminate;
         }
 
@@ -57,20 +58,6 @@ namespace ProxyMapService.Proxy.Handlers
             var password = parts.Length > 1 ? parts[1] : null;
 
             return context.ProxyAuthenticator.Authenticate(context, username, password);
-        }
-
-        private static async Task HttpReplyProxyAuthenticationRequired(SessionContext context)
-        {
-            if (context.IncomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
-        }
-
-        private static async Task HttpReplyProxyUnauthorized(SessionContext context)
-        {
-            if (context.IncomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 401 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }

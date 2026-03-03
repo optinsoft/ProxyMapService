@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -14,25 +15,25 @@ namespace ProxyMapService.Proxy.Handlers
                 if (IsMethodPresent(context, 0x02))
                 {
                     OnAuthenticationRequired(context);
-                    await Socks5ReplySelectMethod(context, 0x02);
+                    await Socks5Proto.Socks5ReplySelectMethod(context, 0x02);
                     return HandleStep.Socks5UsernamePasswordAuthentication;
                 }
                 OnAuthenticationNotRequired(context);
                 if (!IsMethodPresent(context, 0x0))
                 {
-                    await Socks5ReplyNoMethod(context);
+                    await Socks5Proto.Socks5ReplyNoMethod(context);
                     return HandleStep.Terminate;
                 }
-                await Socks5ReplySelectMethod(context, 0x0);
+                await Socks5Proto.Socks5ReplySelectMethod(context, 0x0);
                 return HandleStep.Socks5AuthenticationNotRequired;
             }
             OnAuthenticationRequired(context);
             if (!IsMethodPresent(context, 0x02))
             {
-                await Socks5ReplyNoMethod(context);
+                await Socks5Proto.Socks5ReplyNoMethod(context);
                 return HandleStep.Terminate;
             }
-            await Socks5ReplySelectMethod(context, 0x02);
+            await Socks5Proto.Socks5ReplySelectMethod(context, 0x02);
             return HandleStep.Socks5UsernamePasswordAuthentication;
         }
 
@@ -57,18 +58,6 @@ namespace ProxyMapService.Proxy.Handlers
                 }
             }
             return false;
-        }
-
-        private static async Task Socks5ReplyNoMethod(SessionContext context)
-        {
-            await Socks5ReplySelectMethod(context, 0xff);
-        }
-
-        private static async Task Socks5ReplySelectMethod(SessionContext context, byte method)
-        {
-            if (context.IncomingStream == null) return;
-            byte[] bytes = [0x05, method];
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
         }
     }
 }
