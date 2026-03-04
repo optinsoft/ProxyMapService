@@ -1,4 +1,6 @@
-﻿using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Proto;
+using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Socks;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -8,7 +10,8 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            return HandleStep.Terminate;
+            await Socks5Proto.Socks5Reply(context, Socks5Status.Succeeded);
+            return HandleStep.HandleFileRequest;
         }
 
         public static Socks5FileHandler Instance()

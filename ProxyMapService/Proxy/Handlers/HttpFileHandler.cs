@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Proto;
+using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -8,7 +9,11 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            return HandleStep.Terminate;
+            if (context.Http?.HTTPVerb == "CONNECT")
+            {
+                await HttpProto.HttpReplyConnectionEstablished(context);
+            }
+            return HandleStep.HandleFileRequest;
         }
 
         public static HttpFileHandler Instance()

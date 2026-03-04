@@ -132,14 +132,20 @@ namespace ProxyMapService.Proxy.Headers
 
         private static string? GetHTTPTargetPath(string? target, string? httpVerb)
         {
-            if (target == null) return null;
+            if (target == null) 
+                return null;
+            if (target?.StartsWith('/') == true) 
+                return target;
             Uri uri = new(httpVerb == "CONNECT" ? "http://" + target : target);
             return uri.PathAndQuery;
         }
 
         private static HostAddress? GetHTTPTargetHost(string? target, string? httpVerb)
         {
-            if (target == null) return null;
+            if (target == null) 
+                return null;
+            if (target?.StartsWith('/') == true) 
+                return null;
             Uri uri = new(httpVerb == "CONNECT" ? "http://" + target : target);
             return new HostAddress(uri.Host, uri.Port);
         }

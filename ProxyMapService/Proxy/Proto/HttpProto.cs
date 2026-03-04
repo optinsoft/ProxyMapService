@@ -1,30 +1,43 @@
 ﻿using ProxyMapService.Proxy.Sessions;
+using System.IO;
+using System.Net.Mime;
+using System.Net.Sockets;
 using System.Text;
+using static System.Net.WebRequestMethods;
 
 namespace ProxyMapService.Proxy.Proto
 {
     public class HttpProto
     {
-        public static async Task HttpReplyConnectionEstablished(SessionContext context)
+        public static async Task HttpReplyConnectionEstablished(Stream? incomingStream, CancellationToken token)
         {
-            if (context.IncomingStream == null) return;
+            if (incomingStream == null) return;
             var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
+            await incomingStream.WriteAsync(bytes, token);
         }
 
-        public static async Task HttpReplyError(SessionContext context, string httpStatusLine, string? errorMessage = null)
+        public static async Task HttpReplyConnectionEstablished(SessionContext context)
         {
-            if (context.IncomingStream == null) return;
+            await HttpReplyConnectionEstablished(context.IncomingStream, context.Token);
+        }
+
+        public static async Task HttpReplyError(Stream? incomingStream, CancellationToken token, string httpStatusLine, List<string>? customHeaders = null, string? errorMessage = null)
+        {
+            if (incomingStream == null) return;
             List<string> headers = [
-                httpStatusLine,
-                "Connection: close"
+                httpStatusLine
             ];
+            if (customHeaders != null)
+            {
+                headers.AddRange(customHeaders);
+            }
+            headers.Add("Connection: close");
             byte[] contentBytes = string.IsNullOrEmpty(errorMessage) ? [] : Encoding.UTF8.GetBytes(errorMessage);
             if (contentBytes.Length > 0)
             {
                 headers.Add("Content-Type: text/html; charset=UTF-8");
-                headers.Add($"Content-Length: {contentBytes.Length}");
             }
+            headers.Add($"Content-Length: {contentBytes.Length}");
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
             byte[] bytes = contentBytes.Length > 0 ? new byte[headerBytes.Length + contentBytes.Length] : headerBytes;
@@ -33,52 +46,148 @@ namespace ProxyMapService.Proxy.Proto
                 Buffer.BlockCopy(headerBytes, 0, bytes, 0, headerBytes.Length);
                 Buffer.BlockCopy(contentBytes, 0, bytes, headerBytes.Length, contentBytes.Length);
             }
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
+            await incomingStream.WriteAsync(bytes, token);
+        }
+
+        public static async Task HttpReplyError(Stream? incomingStream, CancellationToken token, string httpStatusLine, string? errorMessage)
+        {
+            await HttpReplyError(incomingStream, token, httpStatusLine, null, errorMessage);
+        }
+
+        public static async Task HttpReplyError(SessionContext context, string httpStatusLine, string? errorMessage = null)
+        {
+            await HttpReplyError(context.IncomingStream, context.Token, httpStatusLine, errorMessage);
+        }
+
+        public static async Task HttpReplyBadGateway(Stream? incomingStream, CancellationToken token, string? errorMessage = null)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 502 Bad Gateway", errorMessage);
         }
 
         public static async Task HttpReplyBadGateway(SessionContext context, string? errorMessage = null)
         {
-            await HttpReplyError(context, "HTTP/1.1 502 Bad Gateway", errorMessage);
+            await HttpReplyBadGateway(context.IncomingStream, context.Token, errorMessage);
+        }
+
+        public static async Task HttpReplyGatewayTimeout(Stream? incomingStream, CancellationToken token, string? errorMessage = null)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 504 Gateway Timeout", errorMessage);
         }
 
         public static async Task HttpReplyGatewayTimeout(SessionContext context, string? errorMessage = null)
         {
-            await HttpReplyError(context, "HTTP/1.1 504 Gateway Timeout", errorMessage);
+            await HttpReplyGatewayTimeout(context.IncomingStream, context.Token, errorMessage);
+        }
+
+        public static async Task HttpReplyProxyAuthenticationRequired(Stream? incomingStream, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 407 Proxy Authentication Required", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""]);
         }
 
         public static async Task HttpReplyProxyAuthenticationRequired(SessionContext context)
         {
-            if (context.IncomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
+            await HttpReplyProxyAuthenticationRequired(context.IncomingStream, context.Token);
+        }
+
+        public static async Task HttpReplyProxyUnauthorized(Stream? incomingStream, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 401 Unauthorized", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""]);
         }
 
         public static async Task HttpReplyProxyUnauthorized(SessionContext context)
         {
-            if (context.IncomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 401 Unauthorized\r\nProxy-Authenticate: Basic realm=\"Pass Through Proxy\"\r\nConnection: close\r\n\r\n");
-            await context.IncomingStream.WriteAsync(bytes, context.Token);
+            await HttpReplyProxyUnauthorized(context.IncomingStream, context.Token);
+        }
+
+        public static async Task HttpReplyBadRequest(Stream? incomingStream, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 400 Bad Request");
         }
 
         public static async Task HttpReplyBadRequest(SessionContext context)
         {
-            await HttpReplyError(context, "HTTP/1.1 400 Bad Request");
+            await HttpReplyBadRequest(context.IncomingStream, context.Token);
+        }
+
+        public static async Task HttpReplyForbidden(Stream? incomingStream, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 403 Forbidden");
         }
 
         public static async Task HttpReplyForbidden(SessionContext context)
         {
-            await HttpReplyError(context, "HTTP/1.1 403 Forbidden");
+            await HttpReplyForbidden(context.IncomingStream, context.Token);
         }
 
+        public static async Task HttpReplyNotFound(Stream? incomingStream, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 404 Not Found");
+        }
+
+        public static async Task HttpReplyNotFound(SessionContext context)
+        {
+            await HttpReplyNotFound(context.IncomingStream, context.Token);
+        }
+
+        public static async Task HttpReplyMethodNotAllowed(Stream? incomingStream, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, token, "HTTP/1.1 405 Method Not Allowed");
+        }
+        
         public static async Task HttpReplyMethodNotAllowed(SessionContext context)
         {
-            await HttpReplyError(context, "HTTP/1.1 405 Method Not Allowed");
+            await HttpReplyMethodNotAllowed(context.IncomingStream, context.Token);
+        }
+
+        public static async Task HttpReplyFileStream(Stream? incomingStream, CancellationToken token, FileStream fileStream)
+        {
+            if (incomingStream == null) return;
+
+            var fileInfo = new FileInfo(fileStream.Name);
+            string contentType = GetContentType(fileInfo.Extension);
+
+            List<string> headers = [
+                "HTTP/1.1 200 OK",
+                "Connection: close",
+                $"Content-Length: {fileInfo.Length}",
+                $"Content-Type: {contentType}"
+            ];
+            var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
+            var headerBytes = Encoding.ASCII.GetBytes(headerText);
+
+            await incomingStream.WriteAsync(headerBytes, token);
+            await fileStream.CopyToAsync(incomingStream, token);
+        }
+
+        public static async Task SendHttpRequest(Stream? outgoingStream, CancellationToken token, byte[] requestBytes)
+        {
+            if (outgoingStream == null) return;
+            await outgoingStream.WriteAsync(requestBytes, token);
         }
 
         public static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
         {
-            if (context.OutgoingStream == null) return;
-            await context.OutgoingStream.WriteAsync(requestBytes, context.Token);
+            await SendHttpRequest(context.OutgoingStream, context.Token, requestBytes);
+        }
+
+        private static string GetContentType(string extension)
+        {
+            return extension.ToLowerInvariant() switch
+            {
+                ".html" => "text/html; charset=utf-8",
+                ".htm" => "text/html; charset=utf-8",
+                ".css" => "text/css",
+                ".js" => "application/javascript",
+                ".json" => "application/json",
+                ".png" => "image/png",
+                ".jpg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
+                ".gif" => "image/gif",
+                ".svg" => "image/svg+xml",
+                ".txt" => "text/plain; charset=utf-8",
+                ".ico" => "image/x-icon",
+                _ => "application/octet-stream"
+            };
         }
     }
 }

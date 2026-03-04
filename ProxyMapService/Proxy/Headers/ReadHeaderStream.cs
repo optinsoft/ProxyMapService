@@ -9,9 +9,6 @@ namespace ProxyMapService.Proxy.Headers
         private static readonly byte[] Delimiter = [0x0d, 0x0a, 0x0d, 0x0a];
         private const int BufferSize = 8192;
 
-        private readonly SessionContext _context = context;
-        private readonly IBytesReadCounter? _readCounter = readCounter;
-
         private readonly MemoryStream _memoryStream = new();
         private readonly byte[] _readBuffer = new byte[BufferSize];
         private int _bufferPos = 0;

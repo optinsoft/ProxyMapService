@@ -1,4 +1,6 @@
-﻿using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Proto;
+using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Socks;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -8,7 +10,8 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            return HandleStep.Terminate;
+            await Socks4Proto.Socks4Reply(context, Socks4Command.RequestGranted);
+            return HandleStep.HandleFileRequest;
         }
 
         public static Socks4FileHandler Instance()

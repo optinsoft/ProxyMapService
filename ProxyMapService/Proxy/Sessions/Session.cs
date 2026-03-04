@@ -35,7 +35,8 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Socks5Bypass, Socks5BypassHandler.Instance() },
             { HandleStep.Socks5File, Socks5FileHandler.Instance() },
             { HandleStep.Proxy, ProxyHandler.Instance() },
-            { HandleStep.Tunnel, TunnelHandler.Instance() }
+            { HandleStep.Tunnel, TunnelHandler.Instance() },
+            { HandleStep.HandleFileRequest, FileRequestHandler.Instance() }
         };
 
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 

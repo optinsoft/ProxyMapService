@@ -2,9 +2,8 @@
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Ssl;
 using System.Net.Security;
-using System.Security.Authentication;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -27,7 +26,7 @@ namespace ProxyMapService.Proxy.Handlers
 
                 if (outgoingSslStream != null)
                 {
-                    await outgoingSslStream.AuthenticateAsClientAsync(BuildSslClientOptions(context), context.Token);
+                    await outgoingSslStream.AuthenticateAsClientAsync(SslOptionsFactory.BuildSslClientOptions(context), context.Token);
                     if (outgoingSslStream.RemoteCertificate != null)
                     {
                         var cert = new X509Certificate2(outgoingSslStream.RemoteCertificate);
@@ -42,14 +41,14 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         if (context.CACertificate != null)
                         {
-                            serverCertificate = CreateSignedCertificate(context, subjectName, context.CACertificate);
+                            serverCertificate = SslOptionsFactory.CreateSignedCertificate(context, subjectName, context.CACertificate);
                         }
                         else
                         {
                             throw new NullServerCertificateException();
                         }
                     }
-                    await incomingSslStream.AuthenticateAsServerAsync(BuildSslServerOptions(context, serverCertificate), context.Token);
+                    await incomingSslStream.AuthenticateAsServerAsync(SslOptionsFactory.BuildSslServerOptions(context, serverCertificate), context.Token);
                 }
 
                 using CountingStream? incomingSslCountingStream = incomingSslStream != null ? new CountingStream(incomingSslStream, context, context.IncomingSslCounter, null) : null;
@@ -112,7 +111,7 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         private static async Task OverrideHostTunnel(Stream source, Stream destination, SessionContext context,
-        IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter)
+            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter)
         {
 
             var tunnelId = ++_tunnelId;
@@ -138,7 +137,7 @@ namespace ProxyMapService.Proxy.Handlers
                         if (readHeaders)
                         {
                             ms.Write(buffer, 0, bytesRead);
-                            if ((headersEnd = HttpHostRewriter.FindHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
+                            if ((headersEnd = HttpParser.FindHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
                             {
                                 readHeaders = false;
                                 var sendBuffer = HttpHostRewriter.OverrideHostHeader(ms, headersEnd, context.Host.Hostname, context.Host.Port) ?? buffer.AsMemory(0, bytesRead);
@@ -164,87 +163,6 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 //context.Logger.LogError("ObjectDisposedException: {ErrorMessage}", ex.Message);
             }
-        }
-
-        private static SslProtocols ParseProtocols(string protocols)
-        {
-            SslProtocols result = SslProtocols.None;
-
-            foreach (var protocol in protocols.Split(',', StringSplitOptions.RemoveEmptyEntries))
-            {
-                result |= Enum.Parse<SslProtocols>(protocol.Trim(), ignoreCase: true);
-            }
-
-            return result;
-        }
-
-        private static SslClientAuthenticationOptions BuildSslClientOptions(
-            SessionContext context)
-        {
-            var protocols = ParseProtocols(context.SslClientConfig.EnabledSslProtocols);
-            return new SslClientAuthenticationOptions
-            {
-                TargetHost = context.Host.Hostname,
-                EnabledSslProtocols = protocols,
-                CertificateRevocationCheckMode = context.SslClientConfig.CheckCertificateRevocation
-                    ? X509RevocationMode.Online
-                    : X509RevocationMode.NoCheck
-            };
-        }
-
-        private static SslServerAuthenticationOptions BuildSslServerOptions(
-            SessionContext context, X509Certificate2 serverCertificate)
-        {
-            var protocols = ParseProtocols(context.SslServerConfig.EnabledSslProtocols);
-            return new SslServerAuthenticationOptions
-            {
-                EnabledSslProtocols = protocols,
-                ClientCertificateRequired = context.SslServerConfig.ClientCertificateRequired,
-                ServerCertificate = serverCertificate,
-                CertificateRevocationCheckMode = context.SslServerConfig.CheckCertificateRevocation
-                    ? X509RevocationMode.Online
-                    : X509RevocationMode.NoCheck
-            };
-        }
-
-        private static X509Certificate2 CreateSignedCertificate(SessionContext context, string subjectName,  X509Certificate2 issuerCert)
-        {
-            using var rsa = RSA.Create(2048);
-            
-            var request = new CertificateRequest(
-                subjectName, 
-                rsa, 
-                HashAlgorithmName.SHA256, 
-                RSASignaturePadding.Pkcs1);
-
-            // Add Subject Alternative Name (Crucial for SslStream/Browsers)
-            var sanBuilder = new SubjectAlternativeNameBuilder();
-            sanBuilder.AddDnsName(context.Host.Hostname);
-            request.CertificateExtensions.Add(sanBuilder.Build());
-
-            // Standard TLS Server usage
-            request.CertificateExtensions.Add(
-                new X509EnhancedKeyUsageExtension(
-                    new OidCollection { 
-                        new Oid("1.3.6.1.5.5.7.3.1") 
-                    }, 
-                    false));
-
-            // Create a unique Serial Number
-            byte[] serialNumber = Guid.NewGuid().ToByteArray();
-
-            // SIGN the request using the CA's private key
-            using X509Certificate2 ephemeralCert = request.Create(
-                issuerCert,
-                DateTimeOffset.Now.AddDays(-1),
-                DateTimeOffset.Now.AddYears(2),
-                serialNumber);
-
-            // Join the private key to the public cert
-            var certWithKey = ephemeralCert.CopyWithPrivateKey(rsa);
-
-            // FIX: Export and Re-import to move the key from Ephemeral -> Persisted
-            return new X509Certificate2(certWithKey.Export(X509ContentType.Pfx));
         }
     }
 }

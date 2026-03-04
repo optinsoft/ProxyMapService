@@ -68,7 +68,7 @@ namespace ProxyMapService.Proxy.Configurations
             }
         }
         public ProxyServer? ProxyServer { get; set; }
-        public string? FilesDir { get; set; }
+        public string? RootDir { get; set; }
     }
 
     public enum ActionEnum

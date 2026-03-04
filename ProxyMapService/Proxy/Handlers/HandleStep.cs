@@ -25,6 +25,7 @@
         Socks5File,
         Proxy,
         Tunnel,
+        HandleFileRequest,
         Terminate,
     }
 }

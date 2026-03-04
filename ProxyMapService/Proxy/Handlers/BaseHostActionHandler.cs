@@ -50,9 +50,9 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.ServerCertificate = hostRule.ServerCertificate;
                 }
-                if (hostRule.FilesDir != null)
+                if (hostRule.RootDir != null)
                 {
-                    context.FilesDir = hostRule.FilesDir;
+                    context.RootDir = hostRule.RootDir;
                 }
             }
             if (hostAction == ActionEnum.Allow && hostRule != null) 

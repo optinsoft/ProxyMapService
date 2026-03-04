@@ -63,7 +63,7 @@ namespace ProxyMapService.Proxy.Sessions
         public UsernameParameterList? UsernameParameters { get; set; }
         public string? SessionId { get; set; }
         public int SessionTime { get; set; }
-        public string? FilesDir { get; set; }
+        public string? RootDir { get; set; }
 
         public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
             bool ssl, X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
