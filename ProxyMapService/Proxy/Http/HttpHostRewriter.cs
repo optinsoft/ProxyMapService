@@ -5,9 +5,9 @@ namespace ProxyMapService.Proxy.Http
 {
     public class HttpHostRewriter
     {
-        public static Memory<byte>? OverrideHostHeader(MemoryStream ms, int headersEnd, string hostname, int port)
+        public static byte[]? OverrideHostHeader(byte[] buffer, int bufferLength, int headersEnd, string hostname, int port)
         {
-            var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
+            var span = buffer.AsSpan(0, bufferLength);
 
             // Validate the end of the HTTP headers
             if (headersEnd < 0)
@@ -67,7 +67,7 @@ namespace ProxyMapService.Proxy.Http
             Buffer.BlockCopy(modifiedHeaderBytes, 0, result, 0, modifiedHeaderBytes.Length);
             bodyBytes.CopyTo(result.AsSpan(modifiedHeaderBytes.Length));
 
-            return new Memory<byte>(result);
+            return result;
         }
     }
 }

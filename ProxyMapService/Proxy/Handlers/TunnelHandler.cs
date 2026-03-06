@@ -3,8 +3,10 @@ using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
+using System;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -67,51 +69,13 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task TwoWayTunnel(SessionContext context, Stream incomingStream, Stream outgoingStream)
         {
-            var forwardTask = context.Host.Overwritten 
-                ? OverrideHostTunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter)
-                : Tunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter);
-            var reverseTask = Tunnel(outgoingStream, incomingStream, context, context.OutgoingReadCounter, context.IncomingSentCounter);
+            var forwardTask = Tunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter, context.Host.Overwritten);
+            var reverseTask = Tunnel(outgoingStream, incomingStream, context, context.OutgoingReadCounter, context.IncomingSentCounter, false);
             await Task.WhenAny(forwardTask, reverseTask);
         }
 
         private static async Task Tunnel(Stream source, Stream destination, SessionContext context,
-            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter)
-        {
-           
-            var tunnelId = ++_tunnelId;
-            
-            var buffer = new byte[BufferSize];
-
-            CancellationToken token = context.Token;
-
-            try
-            {
-                int bytesRead;
-                do
-                {
-                    if (readCounter != null && readCounter.IsLogReading)
-                    {
-                        context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", tunnelId, StreamDirectionName.GetName(readCounter.Direction));
-                    }
-                    bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
-                    if (bytesRead > 0)
-                    {
-                        if (sentCounter != null && sentCounter.IsLogSending)
-                        {
-                            context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
-                        }
-                        await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
-                    }
-                } while (bytesRead > 0 && !token.IsCancellationRequested);
-            }
-            catch (ObjectDisposedException)
-            {
-                //context.Logger.LogError("ObjectDisposedException: {ErrorMessage}", ex.Message);
-            }
-        }
-
-        private static async Task OverrideHostTunnel(Stream source, Stream destination, SessionContext context,
-            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter)
+            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter, bool overrideHost)
         {
 
             var tunnelId = ++_tunnelId;
@@ -124,7 +88,7 @@ namespace ProxyMapService.Proxy.Handlers
             try
             {
                 int bytesRead, headersEnd, searchStart = 0;
-                bool readHeaders = true;
+                bool readHeaders = overrideHost;
                 do
                 {
                     if (readCounter != null && readCounter.IsLogReading)
@@ -140,12 +104,17 @@ namespace ProxyMapService.Proxy.Handlers
                             if ((headersEnd = HttpParser.FindHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
                             {
                                 readHeaders = false;
-                                var sendBuffer = HttpHostRewriter.OverrideHostHeader(ms, headersEnd, context.Host.Hostname, context.Host.Port) ?? buffer.AsMemory(0, bytesRead);
+                                byte[]? sendBytes = null;
+                                if (overrideHost)
+                                {
+                                    sendBytes = HttpHostRewriter.OverrideHostHeader(ms.GetBuffer(), (int)ms.Length, headersEnd, context.Host.Hostname, context.Host.Port);
+                                }
+                                sendBytes ??= ms.ToArray();
                                 if (sentCounter != null && sentCounter.IsLogSending)
                                 {
                                     context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
                                 }
-                                await destination.WriteAsync(sendBuffer, token);
+                                await destination.WriteAsync(sendBytes.AsMemory(0, sendBytes.Length), token);
                             }
                         }
                         else
