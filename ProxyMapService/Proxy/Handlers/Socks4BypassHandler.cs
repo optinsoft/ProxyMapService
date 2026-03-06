@@ -25,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception)
             {
                 context.SessionsCounter?.OnBypassFailed(context);
-                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                 throw;
             }
 
@@ -33,7 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.CreateOutgoingClientStream();
 
-            await Socks4Proto.Socks4Reply(context, Socks4Command.RequestGranted);
+            await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestGranted);
 
             return HandleStep.Tunnel;
         }

@@ -14,7 +14,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (context.Socks4?.Host == null || context.Socks4.Host.Hostname.Length == 0)
             {
                 context.SessionsCounter?.OnNoHost(context);
-                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
             }
 
@@ -33,7 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
                 default:
                     //ActionEnum.Deny
                     context.SessionsCounter?.OnHostRejected(context);
-                    await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                    await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                     return HandleStep.Terminate;
             }
         }

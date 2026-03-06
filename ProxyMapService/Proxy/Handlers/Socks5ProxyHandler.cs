@@ -101,7 +101,7 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                         if (context.Socks4 != null)
                         {
-                            await Socks4Proto.Socks4Reply(context, Socks4Command.RequestGranted);
+                            await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestGranted);
                         }
                         return HandleStep.Tunnel;
                     }
@@ -114,11 +114,11 @@ namespace ProxyMapService.Proxy.Handlers
             }
             if (context.Socks4 != null)
             {
-                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
             }
             if (context.Socks5 != null)
             {
-                await Socks5Proto.Socks5Reply(context, Socks5Status.GeneralFailure);
+                await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
             }
 
             return HandleStep.Terminate;

@@ -18,7 +18,7 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Socks4AuthenticationNotRequired;
                 }
                 OnAuthenticationRequired(context);
-                await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+                await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
             }
 
@@ -29,7 +29,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
 
             OnAuthenticationInvalid(context);
-            await Socks4Proto.Socks4Reply(context, Socks4Command.RequestRejectedOrFailed);
+            await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
             return HandleStep.Terminate;
         }
 

@@ -10,7 +10,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            await Socks4Proto.Socks4Reply(context, Socks4Command.RequestGranted);
+            await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestGranted);
             return HandleStep.HandleFileRequest;
         }
 

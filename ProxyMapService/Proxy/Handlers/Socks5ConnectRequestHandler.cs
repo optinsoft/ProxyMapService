@@ -20,7 +20,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (status != Socks5Status.Succeeded)
             {
                 context.SessionsCounter?.OnSocks5Failure(context);
-                await Socks5Proto.Socks5Reply(context, status);
+                await Socks5Proto.Socks5ReplyStatus(context, status);
                 return HandleStep.Terminate;
             }
 

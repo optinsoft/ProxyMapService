@@ -30,7 +30,7 @@ namespace ProxyMapService.Proxy.Handlers
                     if (outgoingSslStream.RemoteCertificate != null)
                     {
                         var cert = new X509Certificate2(outgoingSslStream.RemoteCertificate);
-                        context.Logger.LogDebug("Server Certificate Subject: {}", cert.Subject);
+                        //context.Logger.LogDebug("Server Certificate Subject: {}", cert.Subject);
                         subjectName = cert.Subject;
                     }
                 }

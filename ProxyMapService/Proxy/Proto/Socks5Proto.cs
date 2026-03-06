@@ -6,7 +6,7 @@ namespace ProxyMapService.Proxy.Proto
 {
     public class Socks5Proto
     {
-        public static async Task Socks5Reply(SessionContext context, Socks5Status status)
+        public static async Task Socks5ReplyStatus(SessionContext context, Socks5Status status)
         {
             if (context.IncomingStream == null) return;
             byte[] bytes = [0x05, (byte)status, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x10, 0x10];

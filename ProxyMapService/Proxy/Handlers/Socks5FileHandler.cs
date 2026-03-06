@@ -10,7 +10,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            await Socks5Proto.Socks5Reply(context, Socks5Status.Succeeded);
+            await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
             return HandleStep.HandleFileRequest;
         }
 

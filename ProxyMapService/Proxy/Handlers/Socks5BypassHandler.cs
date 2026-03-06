@@ -36,13 +36,13 @@ namespace ProxyMapService.Proxy.Handlers
                     SocketError.NetworkUnreachable => Socks5Status.NetworkUnreachable,
                     _ => Socks5Status.GeneralFailure
                 };
-                await Socks5Proto.Socks5Reply(context, status);
+                await Socks5Proto.Socks5ReplyStatus(context, status);
                 throw;
             }
             catch (Exception)
             {
                 context.SessionsCounter?.OnBypassFailed(context);
-                await Socks5Proto.Socks5Reply(context, Socks5Status.GeneralFailure);
+                await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
                 throw;
             }
 
@@ -50,7 +50,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.CreateOutgoingClientStream();
 
-            await Socks5Proto.Socks5Reply(context, Socks5Status.Succeeded);
+            await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
 
             return HandleStep.Tunnel;
         }
