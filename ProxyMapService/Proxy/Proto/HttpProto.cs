@@ -1,9 +1,5 @@
 ﻿using ProxyMapService.Proxy.Sessions;
-using System.IO;
-using System.Net.Mime;
-using System.Net.Sockets;
 using System.Text;
-using static System.Net.WebRequestMethods;
 
 namespace ProxyMapService.Proxy.Proto
 {

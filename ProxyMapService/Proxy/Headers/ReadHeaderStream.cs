@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
 {
-    public class ReadHeaderStream(SessionContext context, IBytesReadCounter? readCounter) : IDisposable
+    public class ReadHeaderStream : IDisposable
     {
         private static readonly byte[] Delimiter = [0x0d, 0x0a, 0x0d, 0x0a];
         private const int BufferSize = 8192;

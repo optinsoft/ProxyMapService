@@ -73,12 +73,20 @@ namespace ProxyMapService.Proxy.Handlers
 
                     await Socks5Proto.SendSocks5Request(context, requestBytes);
 
+                    var socks5Reply = await Socks5Proto.ReadConnectReply(context);
+
                     if (context.Socks5 != null)
                     {
+                        if (socks5Reply != null && socks5Reply.Length > 0)
+                        {
+                            if (context.IncomingStream != null)
+                            {
+                                await context.IncomingStream.WriteAsync(socks5Reply, context.Token);
+                            }
+                        }
                         return HandleStep.Tunnel;
                     }
 
-                    var socks5Reply = await Socks5Proto.ReadConnectReply(context);
                     status = socks5Reply != null && socks5Reply[0] == 0x05 ? (Socks5Status)socks5Reply[1] : Socks5Status.GeneralFailure;
 
                     if (status == Socks5Status.Succeeded)

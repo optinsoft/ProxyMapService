@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Proto;
+﻿using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Net;
@@ -70,14 +71,20 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);
 
+                    var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
+
                     if (context.Http != null)
                     {
+                        if (responseHeaderBytes != null && responseHeaderBytes.Length > 0)
+                        {
+                            if (context.IncomingStream != null)
+                            {
+                                await context.IncomingStream.WriteAsync(responseHeaderBytes, context.Token);
+                            }
+                        }
                         return HandleStep.Tunnel;
                     }
 
-                    var responseHeaderBytes = context.OutgoingStream != null
-                        ? await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token)
-                        : null;
                     if (responseHeaderBytes != null)
                     {
                         var responseHttp = new HttpResponseHeader(responseHeaderBytes);

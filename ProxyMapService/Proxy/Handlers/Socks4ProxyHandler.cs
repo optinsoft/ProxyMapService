@@ -41,12 +41,20 @@ namespace ProxyMapService.Proxy.Handlers
             var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.Host.Hostname, context.Host.Port, userId);
             await Socks4Proto.SendSocks4Request(context, socks4ConnectBytes);
 
+            var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
+
             if (context.Socks4 != null)
             {
+                if (responseHeaderBytes != null && responseHeaderBytes.Length > 0)
+                {
+                    if (context.IncomingStream != null)
+                    {
+                        await context.IncomingStream.WriteAsync(responseHeaderBytes, context.Token);
+                    }
+                }
                 return HandleStep.Tunnel;
             }
 
-            var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
             if (responseHeaderBytes != null)
             {
                 var responseSocks4 = new Socks4Header(responseHeaderBytes);

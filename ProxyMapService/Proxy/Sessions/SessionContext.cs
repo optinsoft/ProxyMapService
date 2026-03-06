@@ -100,8 +100,8 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingSslCounter = outgoingSslCounter;
             Logger = logger;
             Token = token;
-            IncomingHeaderStream = new ReadHeaderStream(this, incomingReadCounter);
-            OutgoingHeaderStream = new ReadHeaderStream(this, outgoingReadCounter);
+            IncomingHeaderStream = new ReadHeaderStream();
+            OutgoingHeaderStream = new ReadHeaderStream();
             _host = new HostAddress("", 0);
         }
 
