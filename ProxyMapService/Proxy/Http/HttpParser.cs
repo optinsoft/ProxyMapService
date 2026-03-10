@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using ProxyMapService.Proxy.Sessions;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -76,6 +77,36 @@ namespace ProxyMapService.Proxy.Http
             int headerSectionLength = headersEnd + 4; // include \r\n\r\n
 
             return span.Slice(0, headerSectionLength).ToArray();
+        }
+
+        public static HttpHeaderLinesAndBody? GetHeaderLinesAndBody(MemoryStream ms, int headersEnd)
+        {
+            var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
+
+            // Validate the end of the HTTP headers
+            if (headersEnd < 0)
+                return null;
+            if (!span.Slice(headersEnd, 4).SequenceEqual("\r\n\r\n"u8))
+                return null;
+
+            // Validate the beginning of the HTTP request
+            if (!StartsWithHttpMethod(span, false))
+                return null;
+
+            int headerSectionLength = headersEnd + 4; // include \r\n\r\n
+
+            var headerSpan = span.Slice(0, headerSectionLength);
+            var body = span.Slice(headerSectionLength);
+
+            string headers = Encoding.ASCII.GetString(headerSpan);
+
+            var lines = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
+
+            return new HttpHeaderLinesAndBody
+            {
+                headerLines = lines,
+                bodyBytes = body.ToArray(),
+            };
         }
     }
 }

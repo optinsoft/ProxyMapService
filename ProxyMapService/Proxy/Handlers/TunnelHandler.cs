@@ -1,9 +1,11 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -104,17 +106,30 @@ namespace ProxyMapService.Proxy.Handlers
                             if ((headersEnd = HttpParser.FindHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
                             {
                                 readHeaders = false;
-                                byte[]? sendBytes = null;
-                                if (overrideHost)
+                                bool headerModified = false;
+                                var headerAndBody = HttpParser.GetHeaderLinesAndBody(ms, headersEnd);
+                                if (headerAndBody != null)
                                 {
-                                    sendBytes = HttpHostRewriter.OverrideHostHeader(ms.GetBuffer(), (int)ms.Length, headersEnd, context.Host.Hostname, context.Host.Port);
+                                    if (overrideHost)
+                                    {
+                                        if (HttpHostRewriter.OverrideHostHeader(headerAndBody.headerLines, context.Host.Hostname, context.Host.Port))
+                                        {
+                                            headerModified = true;
+                                        }
+                                    }
                                 }
-                                sendBytes ??= ms.ToArray();
                                 if (sentCounter != null && sentCounter.IsLogSending)
                                 {
                                     context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", tunnelId, StreamDirectionName.GetName(sentCounter.Direction));
                                 }
-                                await destination.WriteAsync(sendBytes.AsMemory(0, sendBytes.Length), token);
+                                if (headerAndBody != null && headerModified)
+                                {
+                                    await SendModifiedHeadersAndBody(destination, headerAndBody.headerLines, headerAndBody.bodyBytes, token);
+                                }
+                                else
+                                {
+                                    await destination.WriteAsync(ms.GetBuffer().AsMemory(0, (int)ms.Length), token);
+                                }
                             }
                         }
                         else
@@ -131,6 +146,17 @@ namespace ProxyMapService.Proxy.Handlers
             catch (ObjectDisposedException)
             {
                 //context.Logger.LogError("ObjectDisposedException: {ErrorMessage}", ex.Message);
+            }
+        }
+
+        private static async Task SendModifiedHeadersAndBody(Stream destination, string[] headerLines, byte[]? bodyBytes, CancellationToken token)
+        {
+            string modifiedHeaders = string.Join("\r\n", headerLines);
+            byte[] modifiedHeaderBytes = Encoding.ASCII.GetBytes(modifiedHeaders);
+            await destination.WriteAsync(modifiedHeaderBytes.AsMemory(0, modifiedHeaderBytes.Length), token);
+            if (bodyBytes?.Length > 0)
+            {
+                await destination.WriteAsync(bodyBytes.AsMemory(0, bodyBytes.Length), token);
             }
         }
     }
