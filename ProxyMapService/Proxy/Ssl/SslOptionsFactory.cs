@@ -49,7 +49,7 @@ namespace ProxyMapService.Proxy.Ssl
             };
         }
 
-        public static X509Certificate2 CreateSignedCertificate(SessionContext context, string subjectName, X509Certificate2 issuerCert)
+        public static X509Certificate2 CreateSignedCertificate(string subjectName, string hostname, X509Certificate2 issuerCert)
         {
             using var rsa = RSA.Create(2048);
 
@@ -61,7 +61,7 @@ namespace ProxyMapService.Proxy.Ssl
 
             // Add Subject Alternative Name (Crucial for SslStream/Browsers)
             var sanBuilder = new SubjectAlternativeNameBuilder();
-            sanBuilder.AddDnsName(context.Host.Hostname);
+            sanBuilder.AddDnsName(hostname);
             request.CertificateExtensions.Add(sanBuilder.Build());
 
             // Standard TLS Server usage

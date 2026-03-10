@@ -21,7 +21,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 using SslStream? incomingSslStream = context.Ssl ? new(context.IncomingStream) : null;
 
-                string subjectName = $"CN=*.{context.Host.Hostname}";
+                string subjectName = $"CN=*.{context.Host.OriginalHostname}";
                 X509Certificate2? serverCertificate = context.ServerCertificate;
 
                 if (incomingSslStream != null)
@@ -30,7 +30,7 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         if (context.CACertificate != null)
                         {
-                            serverCertificate = SslOptionsFactory.CreateSignedCertificate(context, subjectName, context.CACertificate);
+                            serverCertificate = SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate);
                         }
                         else
                         {

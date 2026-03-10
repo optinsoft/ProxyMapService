@@ -18,6 +18,11 @@ namespace ProxyMapService.Proxy.Handlers
         private const int BufferSize = 8192;
         private static int _tunnelId = 0;
 
+        private class TunnelOptions
+        {
+            public bool OverrideHost { get; set; }
+        }
+
         public async Task<HandleStep> Run(SessionContext context)
         {
             if (context.IncomingStream != null && context.OutgoingStream != null && !context.Token.IsCancellationRequested)
@@ -25,18 +30,20 @@ namespace ProxyMapService.Proxy.Handlers
                 using SslStream? incomingSslStream = context.Ssl ? new(context.IncomingStream) : null;
                 using SslStream? outgoingSslStream = context.UpstreamSsl ? new(context.OutgoingStream) : null;
                 
-                string subjectName = $"CN=*.{context.Host.Hostname}";
+                string subjectName = $"CN=*.{context.Host.OriginalHostname}";
                 X509Certificate2? serverCertificate = context.ServerCertificate;
 
                 if (outgoingSslStream != null)
                 {
                     await outgoingSslStream.AuthenticateAsClientAsync(SslOptionsFactory.BuildSslClientOptions(context), context.Token);
+                    /*
                     if (outgoingSslStream.RemoteCertificate != null)
                     {
                         var cert = new X509Certificate2(outgoingSslStream.RemoteCertificate);
                         //context.Logger.LogDebug("Server Certificate Subject: {}", cert.Subject);
                         subjectName = cert.Subject;
                     }
+                    */
                 }
 
                 if (incomingSslStream != null)
@@ -45,7 +52,7 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         if (context.CACertificate != null)
                         {
-                            serverCertificate = SslOptionsFactory.CreateSignedCertificate(context, subjectName, context.CACertificate);
+                            serverCertificate = SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate);
                         }
                         else
                         {
@@ -71,14 +78,18 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task TwoWayTunnel(SessionContext context, Stream incomingStream, Stream outgoingStream)
         {
-            var forwardTask = Tunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter, context.Host.Overwritten);
-            var reverseTask = Tunnel(outgoingStream, incomingStream, context, context.OutgoingReadCounter, context.IncomingSentCounter, false);
+            var forwardTask = Tunnel(incomingStream, outgoingStream, context, context.IncomingReadCounter, context.OutgoingSentCounter, 
+                new TunnelOptions{
+                    OverrideHost = context.Host.Overwritten 
+                });
+            var reverseTask = Tunnel(outgoingStream, incomingStream, context, context.OutgoingReadCounter, context.IncomingSentCounter);
             await Task.WhenAny(forwardTask, reverseTask);
         }
 
         private static async Task Tunnel(Stream source, Stream destination, SessionContext context,
-            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter, bool overrideHost)
+            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter, TunnelOptions? options = null)
         {
+            options ??= new TunnelOptions();
 
             var tunnelId = ++_tunnelId;
 
@@ -90,7 +101,7 @@ namespace ProxyMapService.Proxy.Handlers
             try
             {
                 int bytesRead, headersEnd, searchStart = 0;
-                bool readHeaders = overrideHost;
+                bool readHeaders = options.OverrideHost;
                 do
                 {
                     if (readCounter != null && readCounter.IsLogReading)
@@ -110,9 +121,9 @@ namespace ProxyMapService.Proxy.Handlers
                                 var headerAndBody = HttpParser.GetHeaderLinesAndBody(ms, headersEnd);
                                 if (headerAndBody != null)
                                 {
-                                    if (overrideHost)
+                                    if (options.OverrideHost)
                                     {
-                                        if (HttpHostRewriter.OverrideHostHeader(headerAndBody.headerLines, context.Host.Hostname, context.Host.Port))
+                                        if (HttpHostRewriter.OverrideHostHeader(headerAndBody.headerLines, context.Host))
                                         {
                                             headerModified = true;
                                         }

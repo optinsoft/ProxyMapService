@@ -66,7 +66,7 @@ namespace ProxyMapService.Proxy.Handlers
                     ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{GetContextAuthenticationUsernameWithParameters(context)}:{context.Mapping.Authentication.Password}"))
                     : (context.Mapping.Authentication.RemoveAuthentication ? "" : clientAuthorization));
 
-                var httpRequestBytes = http?.GetBytes(true, proxyAuthorization, requestFirstLine);
+                var httpRequestBytes = http?.GetBytes(true, proxyAuthorization, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);

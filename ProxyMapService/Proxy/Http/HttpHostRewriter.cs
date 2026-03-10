@@ -1,11 +1,12 @@
 ﻿using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Network;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
     public class HttpHostRewriter
     {
-        public static bool OverrideHostHeader(string[] lines, string hostname, int port)
+        public static bool OverrideHostHeader(string[] lines, HostAddress host)
         {
             bool hostFound = false;
 
@@ -13,7 +14,7 @@ namespace ProxyMapService.Proxy.Http
             {
                 if (lines[i].StartsWith("Host:", StringComparison.OrdinalIgnoreCase))
                 {
-                    lines[i] = $"Host: {hostname}:{port}";
+                    lines[i] = $"Host: {host.Hostname}:{host.Port}";
                     hostFound = true;
                     break;
                 }

@@ -69,7 +69,7 @@ namespace ProxyMapService.Proxy.Handlers
                         else
                         {
                             var requestFirstLine = $"{context.Http.HTTPVerb} {context.Http.HTTPTargetPath} {context.Http.HTTPProtocol}";
-                            var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine);
+                            var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
                             if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                             {
                                 await HttpProto.SendHttpRequest(context, httpRequestBytes);

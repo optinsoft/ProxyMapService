@@ -5,28 +5,44 @@ namespace ProxyMapService.Proxy.Network
 {
     public class HostAddress
     {
+        private string _originalHostname = string.Empty;
+        private int _originalPort;
+        private string _hostname = string.Empty;
+        private int _port;
+        private bool _overwritten;
+
         public HostAddress(string hostname, int port)
         {
-            Hostname = hostname;
-            Port = port;
+            _originalHostname = hostname;
+            _originalPort = port;
+            _hostname = _originalHostname;
+            _port = _originalPort;
+            _overwritten = false;
         }
 
         public HostAddress(byte[] ipBytes, int port)
         {
             IPAddress ipAddress = new(ipBytes);
-            Hostname = ipAddress.ToString();
-            Port = port;
+            _originalHostname = ipAddress.ToString();
+            _originalPort = port;
+            _hostname = _originalHostname;
+            _port = _originalPort;
+            _overwritten = false;
         }
 
-        public string Hostname { get; private set; }
-        public int Port { get; private set; }
-        public bool Overwritten { get; private set; }
+        public string OriginalHostname { get => _originalHostname; }
+        public int OriginalPort { get => _originalPort; }
+        public string Hostname { get => _hostname; }
+        public int Port { get => _port; }
+        public bool Overwritten { get => _overwritten; }
 
         public void Assign(HostAddress host)
         {
-            Hostname = host.Hostname;
-            Port = host.Port;
-            Overwritten = false;
+            _originalHostname = host.Hostname;
+            _originalPort = host.Port;
+            _hostname = _originalHostname;
+            _port = _originalPort;
+            _overwritten = false;
         }
 
         public override string ToString()
@@ -38,8 +54,8 @@ namespace ProxyMapService.Proxy.Network
         {
             if (!string.Equals(Hostname, hostname))
             {
-                Hostname = hostname;
-                Overwritten = true;
+                _hostname = hostname;
+                _overwritten = true;
             }
         }
 
@@ -47,8 +63,8 @@ namespace ProxyMapService.Proxy.Network
         {
             if (Port != port)
             {
-                Port = port;
-                Overwritten = true;
+                _port = port;
+                _overwritten = true;
             }
         }
 

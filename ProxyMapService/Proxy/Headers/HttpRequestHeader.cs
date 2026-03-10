@@ -22,9 +22,9 @@ namespace ProxyMapService.Proxy.Headers
         public string? ProxyAuthorization { get; private set; }
         public IEnumerable<string>? ArrayList { get; private set; }
 
-        public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine)
+        public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {
-            return GetBytes(ArrayList, keepProxyHeaders, customProxyAuthorization, customFirstLine);
+            return GetBytes(ArrayList, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
         }
 
         private static void Parse(HttpRequestHeader self, byte[] array)
@@ -50,7 +50,7 @@ namespace ProxyMapService.Proxy.Headers
             }
         }
 
-        private static byte[] GetBytes(IEnumerable<string>? arrayList, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine)
+        private static byte[] GetBytes(IEnumerable<string>? arrayList, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {
             var builder = new StringBuilder();
 
@@ -69,9 +69,23 @@ namespace ProxyMapService.Proxy.Headers
                 var line = 0;
                 foreach (var @string in enumerable)
                 {
-                    if (line > 0 || customFirstLine == null)
+                    if (line == 0)
                     {
-                        builder.Append(@string).Append("\r\n");
+                        if (customFirstLine == null)
+                        {
+                            builder.Append(@string).Append("\r\n");
+                        }
+                    }
+                    else
+                    {
+                        if (host?.Overwritten == true && @string.StartsWith("Host:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            builder.Append($"Host: {host.Hostname}:{host.Port}").Append("\r\n");
+                        }
+                        else
+                        {
+                            builder.Append(@string).Append("\r\n");
+                        }
                     }
                     line += 1;
                 }
