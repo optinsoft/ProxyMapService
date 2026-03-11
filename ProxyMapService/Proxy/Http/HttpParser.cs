@@ -22,7 +22,7 @@ namespace ProxyMapService.Proxy.Http
 
                 int compareLength = partially ? Math.Min(span.Length, methodSpan.Length) : methodSpan.Length;
 
-                if (span.Slice(0, compareLength)
+                if (compareLength <= span.Length && span.Slice(0, compareLength)
                         .SequenceEqual(methodSpan.Slice(0, compareLength)))
                 {
                     return true;
@@ -67,6 +67,8 @@ namespace ProxyMapService.Proxy.Http
             // Validate the end of the HTTP headers
             if (headersEnd < 0)
                 return null;
+            if (span.Length < headersEnd + 4)
+                return null;
             if (!span.Slice(headersEnd, 4).SequenceEqual("\r\n\r\n"u8))
                 return null;
 
@@ -85,6 +87,8 @@ namespace ProxyMapService.Proxy.Http
 
             // Validate the end of the HTTP headers
             if (headersEnd < 0)
+                return null;
+            if (span.Length < headersEnd + 4)
                 return null;
             if (!span.Slice(headersEnd, 4).SequenceEqual("\r\n\r\n"u8))
                 return null;

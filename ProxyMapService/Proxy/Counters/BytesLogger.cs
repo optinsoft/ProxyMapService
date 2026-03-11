@@ -12,10 +12,16 @@ namespace ProxyMapService.Proxy.Counters
             var bytesData = e.BytesData;
             var startIndex = e.StartIndex;
             var direction = e.Direction;
+            var tunnel = e.TunnelId != null ? $" [tunnel {e.TunnelId}]" : "";
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesRead + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesRead - i * 16, 16))
             ));
-            _logger.LogInformation("{arrows} read {count} byte(s) from the {direction}:\r\n{data}", StreamDirectionArrows.GetReadArrows(direction), bytesRead, StreamDirectionName.GetName(direction), logData);
+            _logger.LogInformation("{arrows}{tunnel} read {count} byte(s) from the {direction}:\r\n{data}", 
+                StreamDirectionArrows.GetReadArrows(direction), 
+                tunnel,
+                bytesRead, 
+                StreamDirectionName.GetName(direction), 
+                logData);
         }
 
         public void LogBytesSent(object? sender, BytesSentEventArgs e)
@@ -24,10 +30,16 @@ namespace ProxyMapService.Proxy.Counters
             var bytesData = e.BytesData;
             var startIndex = e.StartIndex;
             var direction = e.Direction;
+            var tunnel = e.TunnelId != null ? $" [tunnel {e.TunnelId}]" : "";
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesSent + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesSent - i * 16, 16))
             ));
-            _logger.LogInformation("{arrows} sent {count} byte(s) to the {direction}:\r\n{data}", StreamDirectionArrows.GetSentArrows(direction), bytesSent, StreamDirectionName.GetName(direction), logData);
+            _logger.LogInformation("{arrows}{tunnel} sent {count} byte(s) to the {direction}:\r\n{data}", 
+                StreamDirectionArrows.GetSentArrows(direction),
+                tunnel,
+                bytesSent, 
+                StreamDirectionName.GetName(direction), 
+                logData);
         }
 
         public void LogSslBytesDecoded(object? sender, BytesReadEventArgs e)
@@ -36,10 +48,34 @@ namespace ProxyMapService.Proxy.Counters
             var bytesData = e.BytesData;
             var startIndex = e.StartIndex;
             var direction = e.Direction;
+            var tunnel = e.TunnelId != null ? $" [tunnel {e.TunnelId}]" : "";
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesRead + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesRead - i * 16, 16))
             ));
-            _logger.LogInformation("{arrows} decoded {count} byte(s) from the {direction}:\r\n{data}", StreamDirectionArrows.GetReadArrows(direction), bytesRead, StreamDirectionName.GetName(direction), logData);
+            _logger.LogInformation("{arrows}{tunnel} decoded {count} byte(s) from the {direction}:\r\n{data}", 
+                StreamDirectionArrows.GetReadArrows(direction),
+                tunnel,
+                bytesRead, 
+                StreamDirectionName.GetName(direction), 
+                logData);
+        }
+
+        public void LogSslBytesEncoded(object? sender, BytesSentEventArgs e)
+        {
+            var bytesSent = e.BytesSent;
+            var bytesData = e.BytesData;
+            var startIndex = e.StartIndex;
+            var direction = e.Direction;
+            var tunnel = e.TunnelId != null ? $" [tunnel {e.TunnelId}]" : "";
+            var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesSent + 15) / 16).Select(i =>
+                FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesSent - i * 16, 16))
+            ));
+            _logger.LogInformation("{arrows}{tunnel} encoded {count} byte(s) to the {direction}:\r\n{data}", 
+                StreamDirectionArrows.GetSentArrows(direction),
+                tunnel,
+                bytesSent, 
+                StreamDirectionName.GetName(direction), 
+                logData);
         }
 
         private static string FormatLogData(byte[] data, int startIndex, int length)

@@ -21,7 +21,8 @@ namespace ProxyMapService.Proxy
         ISessionsCounter? sessionsCounter,
         IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
         IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
-        IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
+        IBytesReadCounter? incomingReadSslCounter, IBytesReadCounter? outgoingReadSslCounter,
+        IBytesSentCounter? incomingSentSslCounter, IBytesSentCounter? outgoingSentSslCounter,
         ILogger logger, bool logStep, int maxListenerStartRetries, CancellationToken stoppingToken)
     {
         private readonly List<ProxyServer> _proxyServers = [];
@@ -93,7 +94,8 @@ namespace ProxyMapService.Proxy
                     hostRules, userAgent, sslClientConfig, sslServerConfig,
                     sessionsCounter, outgoingReadCounter, outgoingSentCounter,
                     incomingReadCounter, incomingSentCounter,
-                    incomingSslCounter, outgoingSslCounter,
+                    incomingReadSslCounter, outgoingReadSslCounter,
+                    incomingSentSslCounter, outgoingSentSslCounter,
                     logger, logStep, token);
 
             using var listener = new Listener(incomingEndPoint, incomingClientHandler, logger);

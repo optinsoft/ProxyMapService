@@ -1,23 +1,25 @@
 ﻿using ProxyMapService.Proxy.Sessions;
-using System;
-using System.Net.Sockets;
-using System.Reflection;
 
 namespace ProxyMapService.Proxy.Counters
 {
-    public class CountingStream(Stream stream, SessionContext context, IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter) : Stream
+    public class CountingStream(Stream stream, SessionContext context, 
+        IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter,
+        int? readTunnelId = null, int? sentTunnelId = null) : Stream
     {
         private bool _readCountPaused = false;
         private bool _sentCountPaused = false;
 
+        public int? ReadTunnelId { get; set; } = readTunnelId;
+        public int? SentTunnelId { get; set; } = sentTunnelId;
+
         public virtual void OnBytesRead(int bytesRead, byte[]? bytesData, int startIndex)
         {
-            readCounter?.OnBytesRead(context, bytesRead, bytesData, startIndex);
+            readCounter?.OnBytesRead(context, bytesRead, bytesData, startIndex, ReadTunnelId);
         }
 
         public virtual void OnBytesSent(int bytesSent, byte[]? bytesData, int startIndex)
         {
-            sentCounter?.OnBytesSent(context, bytesSent, bytesData, startIndex);
+            sentCounter?.OnBytesSent(context, bytesSent, bytesData, startIndex, SentTunnelId);
         }
 
         public void PauseReadCount() { _readCountPaused = true; }
@@ -30,7 +32,7 @@ namespace ProxyMapService.Proxy.Counters
             var bytesRead = await stream.ReadAsync(buffer, cancellationToken);
             if (!_readCountPaused)
             {
-                readCounter?.OnBytesRead(context, bytesRead, buffer.ToArray(), 0);
+                readCounter?.OnBytesRead(context, bytesRead, buffer.ToArray(), 0, ReadTunnelId);
             }
             return bytesRead;
         }
@@ -40,7 +42,7 @@ namespace ProxyMapService.Proxy.Counters
             await stream.WriteAsync(buffer, cancellationToken);
             if (!_sentCountPaused)
             {
-                sentCounter?.OnBytesSent(context, buffer.Length, buffer.ToArray(), 0);
+                sentCounter?.OnBytesSent(context, buffer.Length, buffer.ToArray(), 0, SentTunnelId);
             }
         }
 

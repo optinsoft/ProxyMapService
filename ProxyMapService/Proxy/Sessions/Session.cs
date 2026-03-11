@@ -44,7 +44,8 @@ namespace ProxyMapService.Proxy.Sessions
             string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
-            IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
+            IBytesReadCounter? incomingReadSslCounter, IBytesReadCounter? outgoingReadSslCounter,
+            IBytesSentCounter? incomingSentSslCounter, IBytesSentCounter? outgoingSentSslCounter,
             ILogger logger, bool logStep, CancellationToken token)
         {
             X509Certificate2? serverCertificate, caCertificate;
@@ -65,7 +66,8 @@ namespace ProxyMapService.Proxy.Sessions
                 hostRules, userAgent, sslClientConfig, sslServerConfig,
                 sessionsCounter, outgoingReadCounter, outgoingSentCounter,
                 incomingReadCounter, incomingSentCounter, 
-                incomingSslCounter, outgoingSslCounter,
+                incomingReadSslCounter, outgoingReadSslCounter,
+                incomingSentSslCounter, outgoingSentSslCounter,
                 logger, token);
             sessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;

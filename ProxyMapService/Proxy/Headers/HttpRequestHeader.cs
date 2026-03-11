@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Microsoft.Extensions.Primitives;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 
 namespace ProxyMapService.Proxy.Headers
@@ -73,7 +74,15 @@ namespace ProxyMapService.Proxy.Headers
                     {
                         if (customFirstLine == null)
                         {
-                            builder.Append(@string).Append("\r\n");
+                            var firstLine = host?.Overwritten == true ? HttpHeaderRewriter.OverrideHttpCommandHost(@string, host) : null;
+                            if (firstLine != null)
+                            { 
+                                builder.Append(firstLine).Append("\r\n");
+                            }
+                            else
+                            {
+                                builder.Append(@string).Append("\r\n");
+                            }
                         }
                     }
                     else
@@ -101,7 +110,9 @@ namespace ProxyMapService.Proxy.Headers
                 builder.Append("\r\n");
             }
 
-            return Encoding.ASCII.GetBytes(builder.ToString());
+            var header = builder.ToString();
+
+            return Encoding.ASCII.GetBytes(header);
         }
 
         private static HostAddress GetHostAddress(IEnumerable<string> strings)

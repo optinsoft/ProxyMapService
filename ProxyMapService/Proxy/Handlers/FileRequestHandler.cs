@@ -40,7 +40,10 @@ namespace ProxyMapService.Proxy.Handlers
                     await incomingSslStream.AuthenticateAsServerAsync(SslOptionsFactory.BuildSslServerOptions(context, serverCertificate), context.Token);
                 }
 
-                using CountingStream? incomingSslCountingStream = incomingSslStream != null ? new CountingStream(incomingSslStream, context, context.IncomingSslCounter, null) : null;
+                using CountingStream? incomingSslCountingStream = 
+                    incomingSslStream != null 
+                    ? new CountingStream(incomingSslStream, context, context.IncomingReadSslCounter, context.IncomingSentSslCounter) 
+                    : null;
 
                 return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream);
             }

@@ -35,8 +35,10 @@ namespace ProxyMapService.Proxy.Sessions
         public IBytesSentCounter? OutgoingSentCounter { get; private set; }
         public IBytesReadCounter? IncomingReadCounter { get; private set; }
         public IBytesSentCounter? IncomingSentCounter { get; private set; }
-        public IBytesReadCounter? IncomingSslCounter { get; private set; }
-        public IBytesReadCounter? OutgoingSslCounter { get; private set; }
+        public IBytesReadCounter? IncomingReadSslCounter { get; private set; }
+        public IBytesReadCounter? OutgoingReadSslCounter { get; private set; }
+        public IBytesSentCounter? IncomingSentSslCounter { get; private set; }
+        public IBytesSentCounter? OutgoingSentSslCounter { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
 
@@ -74,7 +76,8 @@ namespace ProxyMapService.Proxy.Sessions
             ISessionsCounter? sessionsCounter, 
             IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
             IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
-            IBytesReadCounter? incomingSslCounter, IBytesReadCounter? outgoingSslCounter,
+            IBytesReadCounter? incomingReadSslCounter, IBytesReadCounter? outgoingReadSslCounter,
+            IBytesSentCounter? incomingSentSslCounter, IBytesSentCounter? outgoingSentSslCounter,
             ILogger logger, CancellationToken token)
         {
             IncomingClient = incomingClient;
@@ -96,8 +99,10 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingSentCounter = outgoingSentCounter;
             IncomingReadCounter = incomingReadCounter;
             IncomingSentCounter = incomingSentCounter;
-            IncomingSslCounter = incomingSslCounter;
-            OutgoingSslCounter = outgoingSslCounter;
+            IncomingReadSslCounter = incomingReadSslCounter;
+            OutgoingReadSslCounter = outgoingReadSslCounter;
+            IncomingSentSslCounter = incomingSentSslCounter;
+            OutgoingSentSslCounter = outgoingSentSslCounter;
             Logger = logger;
             Token = token;
             IncomingHeaderStream = new ReadHeaderStream();

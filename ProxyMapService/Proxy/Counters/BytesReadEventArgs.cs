@@ -8,5 +8,6 @@ namespace ProxyMapService.Proxy.Counters
         public byte[]? BytesData { get; set; }
         public int StartIndex { get; set; }
         public StreamDirection Direction { get; set; }
+        public int? TunnelId {  get; set; }
     }
 }
