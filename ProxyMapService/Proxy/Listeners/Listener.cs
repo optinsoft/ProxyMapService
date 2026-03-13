@@ -1,13 +1,10 @@
-﻿using ProxyMapService.Proxy.Configurations;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading;
+﻿using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Listeners
 {
-    public class Listener(IPEndPoint incomingEndPoint, Action<TcpClient, CancellationToken> incomingClientHandler, ILogger logger) : IDisposable
+    public class Listener(System.Net.IPEndPoint incomingEndPoint, Action<TcpClient, CancellationToken> incomingClientHandler, ILogger logger) : IDisposable
     {
-        private readonly IPEndPoint _incomingEndPoint = incomingEndPoint;
+        private readonly System.Net.IPEndPoint _incomingEndPoint = incomingEndPoint;
         private readonly Action<TcpClient, CancellationToken> _incomingClientHandler = incomingClientHandler;
         private readonly ILogger _logger = logger;
         private TcpListener? _listener;

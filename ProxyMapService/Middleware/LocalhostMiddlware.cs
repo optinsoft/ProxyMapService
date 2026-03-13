@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace ProxyMapService.Middleware
+﻿namespace ProxyMapService.Middleware
 {
     public class LocalhostMiddleware
     {
@@ -13,7 +11,7 @@ namespace ProxyMapService.Middleware
         public async Task InvokeAsync(HttpContext context)
         {
             var remoteIpAddress = context.Connection.RemoteIpAddress;
-            if (remoteIpAddress == null || !IPAddress.IsLoopback(remoteIpAddress))
+            if (remoteIpAddress == null || !System.Net.IPAddress.IsLoopback(remoteIpAddress))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 await context.Response.WriteAsync("Forbidden.");

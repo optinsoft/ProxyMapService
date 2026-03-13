@@ -1,6 +1,4 @@
 ﻿using ProxyMapService.Proxy.Network;
-using System.Collections;
-using System.Net;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
@@ -31,8 +29,8 @@ namespace ProxyMapService.Proxy.Headers
 
         public static byte[] GetConnectRequestBytes(string host, int port, string? userId)
         {
-            IPEndPoint hostEndPoint = HostAddress.GetIPEndPoint(host, port);
-            byte[] portBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
+            System.Net.IPEndPoint hostEndPoint = HostAddress.GetIPEndPoint(host, port);
+            byte[] portBytes = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
             byte[] addrBytes = hostEndPoint.Address.GetAddressBytes();
             byte[] userIdBytes = Encoding.ASCII.GetBytes(userId ?? "");
             int ulen = userIdBytes.Length;
@@ -83,7 +81,7 @@ namespace ProxyMapService.Proxy.Headers
 
         private static int GetAddrPortFromArray(byte[] array, int pos)
         {
-            return (int)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(array, pos));
+            return (int)System.Net.IPAddress.NetworkToHostOrder(BitConverter.ToInt16(array, pos));
         }
     }
 }

@@ -146,7 +146,7 @@ namespace ProxyMapService.Services
             List<Task> tasks = [];
             foreach (var mapping in proxyMappings)
             {
-                tasks.Add(new ProxyMapper(mapping, _hostRules, 
+                tasks.Add(new ProxyMapper(mapping, _hostRules, _cacheRules,
                     userAgent, _sslClientOptions, _sslServerOptions, _proxyCounters,
                     _logger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }

@@ -7,6 +7,7 @@ using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -47,7 +48,7 @@ namespace ProxyMapService.Proxy.Handlers
                         context.IncomingStream.ReadTunnelId, context.IncomingStream.SentTunnelId) 
                     : null;
 
-                return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream);
+                return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream, incomingSslStream != null);
             }
             return HandleStep.Terminate;
         }
@@ -57,7 +58,7 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task<byte[]?> ReadHttpRequest(SessionContext context, Stream incomingStream)
+        private static async Task ReadHttpRequest(SessionContext context, Stream incomingStream)
         {
             var buffer = new byte[BufferSize];
             using var ms = new MemoryStream();
@@ -74,27 +75,25 @@ namespace ProxyMapService.Proxy.Handlers
                     if ((headersEnd = HttpParser.FindRequestHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
                     {
                         var headerBytes = HttpParser.GetRequestHeaderBytes(ms, headersEnd);
-                        return headerBytes;
+                        if (headerBytes != null && headerBytes.Length > 0)
+                        {
+                            context.RequestHeader = new HttpRequestHeader(headerBytes);
+                        }
+                        return;
                     }
                 }
             } while (bytesRead > 0 && !token.IsCancellationRequested);
-
-            return null;
         }
 
-        private static async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream)
+        private static async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, bool incomingSsl)
         {
-            if (context.Http == null || context.Http.HTTPVerb == "CONNECT")
+            var http = context.Http;
+            if (http == null || (incomingSsl && http.HTTPVerb == "CONNECT"))
             {
-                var headerBytes = await ReadHttpRequest(context, incomingStream);
-                if (headerBytes != null)
+                await ReadHttpRequest(context, incomingStream);
+                if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
                 {
-                    context.Http = new HttpRequestHeader(headerBytes);
-                    if (context.Http.BadRequest)
-                    {
-                        await HttpProto.HttpReplyBadRequest(incomingStream, context.Token);
-                        return HandleStep.Terminate;
-                    }
+                    http = context.RequestHeader;
                 }
                 else
                 {
@@ -103,13 +102,13 @@ namespace ProxyMapService.Proxy.Handlers
                 }
             }
 
-            if (context.Http?.HTTPVerb != "GET")
+            if (http.HTTPVerb != "GET")
             {
                 await HttpProto.HttpReplyMethodNotAllowed(incomingStream, context.Token);
                 return HandleStep.Terminate;
             }
 
-            await using var fileStream = OpenFileFromHttpPath(context.RootDir, context.Http?.HTTPTargetPath, ["index.html", "index.htm"]);
+            await using var fileStream = OpenFileFromHttpPath(context.RootDir, http.HTTPTargetPath, ["index.html", "index.htm"]);
 
             if (fileStream == null)
             {

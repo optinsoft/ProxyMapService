@@ -9,20 +9,30 @@ namespace ProxyMapService.Proxy.Headers
             Parse(this, array);
         }
 
+        public HttpResponseHeader(string[] strings)
+        {
+            Parse(this, strings);
+        }
+
+        public bool BadResponse { get; private set; }
         public string? HTTPProtocol { get; private set; }
         public string? StatusCode { get; private set; }
         public string? StatusText { get; private set; }
-        public IEnumerable<string>? ArrayList { get; private set; }
+        public string[]? Headers { get; private set; }
 
         private static void Parse(HttpResponseHeader self, byte[] array)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
+            Parse(self, strings);
+        }
 
+        private static void Parse(HttpResponseHeader self, string[] strings)
+        {
+            self.BadResponse = false;
             self.HTTPProtocol = GetHTTPProtocol(strings);
             self.StatusCode = GetStatusCode(strings);
             self.StatusText = GetStatusText(strings);
-
-            self.ArrayList = strings;
+            self.Headers = strings;
         }
 
         private static string GetHTTPProtocol(IEnumerable<string> strings)

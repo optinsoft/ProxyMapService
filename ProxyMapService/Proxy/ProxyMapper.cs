@@ -1,6 +1,4 @@
-﻿using Fare;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Caching.Memory;
 using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
@@ -8,15 +6,11 @@ using ProxyMapService.Proxy.Listeners;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
 using ProxyMapService.Proxy.Sessions;
-using System.Data;
-using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy
 {
-    public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
+    public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, List<CacheRule> cacheRules,
         string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
         ProxyCounters proxyCounters, ILogger logger, bool logStep, int maxListenerStartRetries, 
         CancellationToken stoppingToken)
@@ -80,14 +74,14 @@ namespace ProxyMapService.Proxy
 
         private async Task StartListenerAsync(int listenPort, ProxyProvider proxyProvider, ProxyAuthenticator proxyAuthenticator)
         {
-            var incomingEndPoint = new IPEndPoint(IPAddress.Loopback, listenPort);
+            var incomingEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, listenPort);
 
             UsernameParameterResolver usernameParameterResolver = new();
 
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
                 await Session.Run(client, mapping, proxyProvider,
                     proxyAuthenticator, usernameParameterResolver,
-                    hostRules, userAgent, sslClientConfig, sslServerConfig,
+                    hostRules, cacheRules, userAgent, sslClientConfig, sslServerConfig,
                     proxyCounters, logger, logStep, token);
 
             using var listener = new Listener(incomingEndPoint, incomingClientHandler, logger);

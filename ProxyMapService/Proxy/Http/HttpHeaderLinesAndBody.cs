@@ -2,7 +2,7 @@
 {
     public class HttpHeaderLinesAndBody
     {
-        public required string[] headerLines;
-        public byte[]? bodyBytes = null;
+        public required string[] HeaderLines;
+        public byte[]? BodyBytes = null;
     }
 }

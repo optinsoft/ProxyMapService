@@ -17,6 +17,8 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly HostAddress _host;
         private string[]? _requestHeaderLines;
         private string[]? _responseHeaderLines;
+        private HttpRequestHeader? _requestHeader;
+        private HttpResponseHeader? _responseHeader;
 
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
@@ -31,6 +33,7 @@ namespace ProxyMapService.Proxy.Sessions
         public IProxyAuthenticator ProxyAuthenticator { get; private set; }
         public IUsernameParameterResolver UsernameParameterResolver { get; private set; }
         public List<HostRule> HostRules { get; private set; }
+        public List<CacheRule> CacheRules { get; set; }
         public string? UserAgent { get; private set; }
         public ProxyCounters ProxyCounters { get; private set; }
         public ILogger Logger { get; private set; }
@@ -62,64 +65,38 @@ namespace ProxyMapService.Proxy.Sessions
         public string? RootDir { get; set; }
         public TunnelState RequestTunnelState { get; private set; }
         public TunnelState ResponseTunnelState { get; private set; }
-        public string[]? RequestHeaderLines { 
-            get => _requestHeaderLines; 
-            set
-            {
-                _requestHeaderLines = value;
-                if (_requestHeaderLines != null)
-                {
-                    ProxyCounters.HttpRequestHeadersLogger?.OnHttpHeader(this, _requestHeaderLines);
-                }
-            }
-        }
-        public string[]? ResponseHeaderLines { 
-            get => _responseHeaderLines;
-            set
-            {
-                _responseHeaderLines = value;
-                if (_responseHeaderLines != null)
-                {
-                    ProxyCounters.HttpResponseHeadersLogger?.OnHttpHeader(this, _responseHeaderLines);
-                }
-            }
-        }
-        public string? RequestHeader
+        public HttpRequestHeader? RequestHeader
         {
-            get => _requestHeaderLines != null ? String.Join("\r\n", _requestHeaderLines) : null;
+            get => _requestHeader;
             set
             {
-                if (value != null)
+                _requestHeader = value;
+                if (_requestHeader != null)
                 {
-                    RequestHeaderLines = value.Split(new[] { "\r\n" }, StringSplitOptions.None);
-                }
-                else
-                {
-                    RequestHeaderLines = null;
+                    ProxyCounters.HttpRequestHeadersLogger?.OnHttpHeader(this, _requestHeader.Headers);
                 }
             }
         }
-        public string? ResponseHeader
+        public HttpResponseHeader? ResponseHeader
         {
-            get => _responseHeaderLines != null ? String.Join("\r\n", _responseHeaderLines) : null;
+            get => _responseHeader;
             set
             {
-                if (value != null)
+                _responseHeader = value;
+                if (_responseHeader != null)
                 {
-                    ResponseHeaderLines = value.Split(new[] { "\r\n" }, StringSplitOptions.None);
-                }
-                else
-                {
-                    ResponseHeaderLines = null;
+                    ProxyCounters.HttpResponseHeadersLogger?.OnHttpHeader(this, _responseHeader.Headers);
                 }
             }
         }
+        public bool RequestHeaderPresent { get => _requestHeaderLines != null; }
+        public bool ResponseHeaderPresent { get => _responseHeaderLines != null; }
 
         public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
             bool ssl, X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             IUsernameParameterResolver usernameParameterResolver,
-            List<HostRule> hostRules, string? userAgent,
+            List<HostRule> hostRules, List<CacheRule> cacheRules, string? userAgent,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
@@ -134,6 +111,7 @@ namespace ProxyMapService.Proxy.Sessions
             ProxyAuthenticator = proxyAuthenticator;
             UsernameParameterResolver = usernameParameterResolver;
             HostRules = hostRules;
+            CacheRules = cacheRules;
             UserAgent = userAgent;
             SslClientConfig = sslClientConfig;
             SslServerConfig = sslServerConfig;

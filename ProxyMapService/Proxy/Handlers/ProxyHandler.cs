@@ -2,7 +2,6 @@
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
-using System.Net;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -20,7 +19,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             try
             {
-                IPEndPoint outgoingEndPoint = HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
+                System.Net.IPEndPoint outgoingEndPoint = HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
                 await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (Exception)

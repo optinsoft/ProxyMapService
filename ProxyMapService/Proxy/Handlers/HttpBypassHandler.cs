@@ -1,8 +1,7 @@
-﻿using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Headers;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
-using System.Net;
 using System.Net.Sockets;
-using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -18,7 +17,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             try
             {
-                IPEndPoint outgoingEndPoint = context.Host.GetIPEndPoint();
+                System.Net.IPEndPoint outgoingEndPoint = context.Host.GetIPEndPoint();
                 await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (SocketException ex)
@@ -56,7 +55,7 @@ namespace ProxyMapService.Proxy.Handlers
                 var httpRequestBytes = context.Http?.GetBytes(false, null, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    context.RequestHeader = Encoding.ASCII.GetString(httpRequestBytes);
+                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);
                 }
             }

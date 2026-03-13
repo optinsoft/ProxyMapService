@@ -8,11 +8,11 @@
         public static void LoadRulesList(List<CacheRule> rules, IConfigurationSection configurationSection)
         {
             rules.Clear();
-            var cacheRules = configurationSection.Get<CacheRules>();
-            if (cacheRules != null) rules.AddRange(cacheRules.Items);
             List<IConfigurationRoot> fileConfigurations = [];
+            var cacheRules = configurationSection.Get<CacheRules>();
             if (cacheRules != null)
             {
+                rules.AddRange(cacheRules.Items);
                 foreach (var file in cacheRules.Files)
                 {
                     var fileConfig = new ConfigurationBuilder()

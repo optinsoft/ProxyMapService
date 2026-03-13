@@ -181,14 +181,14 @@ namespace ProxyMapService.Proxy.Http
             var headerSpan = span.Slice(0, headerSectionLength);
             var body = span.Slice(headerSectionLength);
 
-            string headers = Encoding.ASCII.GetString(headerSpan);
+            string header = Encoding.ASCII.GetString(headerSpan);
 
-            var lines = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
+            var lines = header.Split(["\r\n"], StringSplitOptions.None);
 
             return new HttpHeaderLinesAndBody
             {
-                headerLines = lines,
-                bodyBytes = body.ToArray(),
+                HeaderLines = lines,
+                BodyBytes = body.ToArray(),
             };
         }
     }

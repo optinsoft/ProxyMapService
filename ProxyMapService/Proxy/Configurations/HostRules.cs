@@ -12,7 +12,11 @@
                 var rule = child.Get<HostRule>();
                 if (rule != null)
                 {
-                    rule.LoadCacheRules(child.GetSection("CacheRules"));
+                    bool cacheRulesExists = child.GetChildren().Any(s => s.Key == "CacheRules");
+                    if (cacheRulesExists)
+                    {
+                        rule.LoadCacheRules(child.GetSection("CacheRules"));
+                    }
                     rules.Add(rule);
                 }
             }
@@ -21,9 +25,9 @@
         public static void LoadRulesList(List<HostRule> rules, IConfigurationSection configurationSection)
         {
             rules.Clear();
+            List<IConfigurationRoot> fileConfigurations = [];
             var itemsSection = configurationSection.GetSection("Items");
             LoadRulesListItems(rules, itemsSection);
-            List<IConfigurationRoot> fileConfigurations = [];
             var filesSection = configurationSection.GetSection("Files");
             foreach(var child in filesSection.GetChildren())
             {

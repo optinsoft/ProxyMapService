@@ -54,6 +54,10 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.RootDir = hostRule.RootDir;
                 }
+                if (hostRule.HostCacheRules != null)
+                {
+                    context.CacheRules = hostRule.HostCacheRules;
+                }
             }
             if (hostAction == ActionEnum.Allow && hostRule != null) 
             {                

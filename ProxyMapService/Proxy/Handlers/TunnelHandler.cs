@@ -3,6 +3,7 @@ using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
+using ProxyMapService.Proxy.Headers;
 using System.Diagnostics;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -136,8 +137,8 @@ namespace ProxyMapService.Proxy.Handlers
                             }
                             if (!state.Response)
                             {
-                                context.RequestHeaderLines = null;
-                                context.ResponseHeaderLines = null;
+                                context.RequestHeader = null;
+                                context.ResponseHeader = null;
                             }
                             if (!readHeaders)
                             {
@@ -175,25 +176,25 @@ namespace ProxyMapService.Proxy.Handlers
                                     }
                                     if (state.Response)
                                     {
-                                        Debug.Assert(context.RequestHeaderLines != null, "!!! HTTP Request Header is null !!!");
-                                        context.ResponseHeaderLines = headerAndBody.headerLines;
+                                        Debug.Assert(context.RequestHeaderPresent, "!!! HTTP Request Header is null !!!");
+                                        context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines);
                                     }
                                     else
                                     {
-                                        Debug.Assert(context.ResponseHeaderLines == null, "!!! HTTP Response Header is not null !!!");
-                                        context.RequestHeaderLines = headerAndBody.headerLines;
+                                        Debug.Assert(!context.ResponseHeaderPresent, "!!! HTTP Response Header is not null !!!");
+                                        context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines);
                                         if (options.OverrideHost)
                                         {
-                                            if (headerAndBody.headerLines.Length > 0)
+                                            if (headerAndBody.HeaderLines.Length > 0)
                                             {
-                                                var modifiedFirstLine = HttpHeaderRewriter.OverrideHttpCommandHost(headerAndBody.headerLines[0], context.Host);
+                                                var modifiedFirstLine = HttpHeaderRewriter.OverrideHttpCommandHost(headerAndBody.HeaderLines[0], context.Host);
                                                 if (modifiedFirstLine != null)
                                                 {
-                                                    headerAndBody.headerLines[0] = modifiedFirstLine;
+                                                    headerAndBody.HeaderLines[0] = modifiedFirstLine;
                                                     headerModified = true;
                                                 }
                                             }
-                                            if (HttpHeaderRewriter.OverrideHostHeader(headerAndBody.headerLines, context.Host))
+                                            if (HttpHeaderRewriter.OverrideHostHeader(headerAndBody.HeaderLines, context.Host))
                                             {
                                                 headerModified = true;
                                             }
@@ -215,7 +216,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 }
                                 if (headerAndBody != null && headerModified)
                                 {
-                                    await SendModifiedHeadersAndBody(destination, headerAndBody.headerLines, headerAndBody.bodyBytes, token);
+                                    await SendModifiedHeadersAndBody(destination, headerAndBody.HeaderLines, headerAndBody.BodyBytes, token);
                                 }
                                 else
                                 {

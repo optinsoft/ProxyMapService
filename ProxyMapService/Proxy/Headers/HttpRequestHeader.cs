@@ -12,6 +12,11 @@ namespace ProxyMapService.Proxy.Headers
             Parse(this, array);
         }
 
+        public HttpRequestHeader(string[] strings)
+        {
+            Parse(this, strings);
+        }
+
         public bool BadRequest { get; private set; }
         public string? HTTPVerb { get; private set; }
         public string? HTTPTarget { get; private set; }
@@ -31,7 +36,11 @@ namespace ProxyMapService.Proxy.Headers
         private static void Parse(HttpRequestHeader self, byte[] array)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
+            Parse(self, strings);
+        }
 
+        private static void Parse(HttpRequestHeader self, string[] strings)
+        {
             self.BadRequest = false;
             try
             {

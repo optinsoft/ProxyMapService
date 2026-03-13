@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace ProxyMapService.Proxy.Network
+﻿namespace ProxyMapService.Proxy.Network
 {
     public class HostAddress
     {
@@ -21,7 +19,7 @@ namespace ProxyMapService.Proxy.Network
 
         public HostAddress(byte[] ipBytes, int port)
         {
-            IPAddress ipAddress = new(ipBytes);
+            System.Net.IPAddress ipAddress = new(ipBytes);
             _originalHostname = ipAddress.ToString();
             _originalPort = port;
             _hostname = _originalHostname;
@@ -88,14 +86,14 @@ namespace ProxyMapService.Proxy.Network
             }
         }
 
-        public IPEndPoint GetIPEndPoint(bool throwIfMoreThanOneIP = false)
+        public System.Net.IPEndPoint GetIPEndPoint(bool throwIfMoreThanOneIP = false)
         {
             return GetIPEndPoint(Hostname, Port, throwIfMoreThanOneIP);
         }
 
-        public static IPEndPoint GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false)
+        public static System.Net.IPEndPoint GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false)
         {
-            var addresses = Dns.GetHostAddresses(hostname);
+            var addresses = System.Net.Dns.GetHostAddresses(hostname);
             if (addresses.Length == 0)
             {
                 throw new ArgumentException(
@@ -110,7 +108,7 @@ namespace ProxyMapService.Proxy.Network
                     hostname
                 );
             }
-            return new IPEndPoint(addresses[0], port);
+            return new System.Net.IPEndPoint(addresses[0], port);
         }
     }
 }

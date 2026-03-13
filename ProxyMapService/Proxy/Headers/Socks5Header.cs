@@ -1,9 +1,6 @@
 ﻿using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Socks;
-using System.Net;
 using System.Net.Sockets;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
@@ -65,10 +62,10 @@ namespace ProxyMapService.Proxy.Headers
             return array;
         }
 
-        public static byte[] GetConnectRequestBytes(IPEndPoint hostEndPoint)
+        public static byte[] GetConnectRequestBytes(System.Net.IPEndPoint hostEndPoint)
         {
             byte[] addressBytes, portBytes;
-            portBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
+            portBytes = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
             addressBytes = hostEndPoint.Address.GetAddressBytes();
             byte[] requestBytes;
             switch (hostEndPoint.Address.AddressFamily)
@@ -100,9 +97,9 @@ namespace ProxyMapService.Proxy.Headers
         public static byte[] GetConnectRequestBytes(string host, int port)
         {
             byte[] addressBytes, portBytes;
-            portBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder((short)port));
+            portBytes = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder((short)port));
             byte[]? requestBytes = null;
-            if (IPAddress.TryParse(host, out var ip))
+            if (System.Net.IPAddress.TryParse(host, out var ip))
             {
                 addressBytes = ip.GetAddressBytes();
                 switch (ip.AddressFamily)
@@ -211,7 +208,7 @@ namespace ProxyMapService.Proxy.Headers
 
         private static int GetAddrPortFromArray(byte[] array, int pos)
         {
-            return (int)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(array, pos));
+            return (int)System.Net.IPAddress.NetworkToHostOrder(BitConverter.ToInt16(array, pos));
         }
     }
 }

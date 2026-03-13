@@ -1,7 +1,6 @@
 ﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
-using System.Net;
 using System.Text;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
@@ -27,8 +26,7 @@ namespace ProxyMapService.Proxy.Handlers
                     connectHttpCommand.Add($"User-Agent: {context.UserAgent}");
                 }
                 connectHttpCommand.Add("Proxy-Connection: Keep-Alive");
-                var connectBytes = Encoding.ASCII.GetBytes(String.Join("\r\n", [.. connectHttpCommand]));
-                http = new HttpRequestHeader(connectBytes);
+                http = new HttpRequestHeader([.. connectHttpCommand]);
             }
 
             string? requestFirstLine = null;
@@ -38,7 +36,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 try
                 {
-                    IPEndPoint hostEndPoint = context.Host.GetIPEndPoint();
+                    System.Net.IPEndPoint hostEndPoint = context.Host.GetIPEndPoint();
                     requestFirstLine = $"{http?.HTTPVerb} {hostEndPoint.Address}:{hostEndPoint.Port} {http?.HTTPProtocol}";
                 }
                 catch (Exception ex)
@@ -68,7 +66,7 @@ namespace ProxyMapService.Proxy.Handlers
                 var httpRequestBytes = http?.GetBytes(true, proxyAuthorization, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    context.RequestHeader = Encoding.ASCII.GetString(httpRequestBytes);
+                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
 
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);
 
@@ -77,7 +75,7 @@ namespace ProxyMapService.Proxy.Handlers
                     if (responseHeaderBytes != null)
                     {
                         context.RequestTunnelState.ResetReadHeaders = true;
-                        context.ResponseHeader = Encoding.ASCII.GetString(responseHeaderBytes);
+                        context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes);
                     }
 
                     if (context.Http != null)
