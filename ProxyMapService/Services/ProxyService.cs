@@ -8,6 +8,7 @@ using ProxyMapService.Proxy;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Utils;
+using System.Collections.Generic;
 
 namespace ProxyMapService.Services
 {
@@ -27,7 +28,7 @@ namespace ProxyMapService.Services
         private DateTime? _stopTime = null;
         private readonly string _serviceId = RandomStringGenerator.GenerateRandomString(6);
         private readonly List<HostRule> _hostRules = [];
-        private readonly List<IConfigurationRoot> _hostRuleFileConfigurations = [];
+        private readonly List<CacheRule> _cacheRules = [];
         private SslClientOptionsConfig _sslClientOptions = new();
         private SslServerOptionsConfig _sslServerOptions = new();
 
@@ -112,33 +113,6 @@ namespace ProxyMapService.Services
             _hostsCounter.Reset();
         }
 
-        private void LoadHostRules()
-        {
-            _hostRules.Clear();
-            var hostRules = _configuration.GetSection("HostRules").Get<HostRules>();
-            if (hostRules != null) _hostRules.AddRange(hostRules.Items);
-            _hostRuleFileConfigurations.Clear();
-            if (hostRules != null)
-            {
-                foreach (var hostRulesFile in hostRules.Files)
-                {
-                    var fileConfig = new ConfigurationBuilder()
-                        .SetBasePath(Directory.GetCurrentDirectory())
-                        .AddJsonFile(hostRulesFile.Path, optional: false)
-                        .Build();
-                    _hostRuleFileConfigurations.Add(fileConfig);
-                }
-            }
-            foreach (var fileConfig in _hostRuleFileConfigurations)
-            {
-                var addHostRules = fileConfig.GetSection("Items").Get<List<HostRule>>();
-                if (addHostRules != null)
-                {
-                    _hostRules.AddRange(addHostRules);
-                }
-            }
-        }
-
         public void StartProxyMappingTasks()
         {
             if (_started)
@@ -146,7 +120,8 @@ namespace ProxyMapService.Services
                 throw new ServiceAlreadyStartedException();
             }
 
-            LoadHostRules();
+            HostRules.LoadRulesList(_hostRules, _configuration.GetSection("HostRules"));
+            CacheRules.LoadRulesList(_cacheRules, _configuration.GetSection("CacheRules"));
 
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");

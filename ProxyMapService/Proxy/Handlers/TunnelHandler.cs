@@ -105,7 +105,7 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         private static async Task Tunnel(Stream source, Stream destination, SessionContext context,
-            IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter, TunnelState state,
+            BytesReadCounter readCounter, BytesSentCounter sentCounter, TunnelState state,
             TunnelState otherTunnelState, TunnelOptions options)
         {
             var buffer = new byte[BufferSize];
@@ -119,7 +119,7 @@ namespace ProxyMapService.Proxy.Handlers
                 bool readHeaders = state.Response ? options.ReadResponseHeaders : options.ReadRequestHeaders;
                 do
                 {
-                    if (readCounter != null && readCounter.IsLogReading)
+                    if (readCounter.IsLogReading)
                     {
                         context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...", 
                             state.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
@@ -130,7 +130,7 @@ namespace ProxyMapService.Proxy.Handlers
                         if (state.ResetReadHeaders)
                         {
                             state.ResetReadHeaders = false;
-                            if (readCounter != null && readCounter.IsLogReading)
+                            if (readCounter.IsLogReading)
                             {
                                 context.Logger.LogDebug("Tunnel {tunnelId}: Reset reading headers", state.TunnelId);
                             }
@@ -146,7 +146,7 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                         if (!otherTunnelState.ResetReadHeaders)
                         {
-                            if (readCounter != null && readCounter.IsLogReading)
+                            if (readCounter.IsLogReading)
                             {
                                 context.Logger.LogDebug("Tunnel {tunnelId}: Resetting other tunnel ({otherTunnelId}) reading headers", 
                                     state.TunnelId, otherTunnelState.TunnelId);
@@ -155,7 +155,7 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                         if (readHeaders)
                         {
-                            if (readCounter != null && readCounter.IsLogReading)
+                            if (readCounter.IsLogReading)
                             {
                                 context.Logger.LogDebug("Tunnel {tunnelId}: Reading headers from {direction}...", 
                                     state.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
@@ -168,20 +168,20 @@ namespace ProxyMapService.Proxy.Handlers
                                 var headerAndBody = HttpParser.GetHeaderLinesAndBody(ms, state.Response, headersEnd);
                                 if (headerAndBody != null)
                                 {
-                                    if (readCounter != null && readCounter.IsLogReading)
+                                    if (readCounter.IsLogReading)
                                     {
                                         context.Logger.LogDebug("Tunnel {tunnelId}: Headers read from {direction}", 
                                             state.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                                     }
                                     if (state.Response)
                                     {
+                                        Debug.Assert(context.RequestHeaderLines != null, "!!! HTTP Request Header is null !!!");
                                         context.ResponseHeaderLines = headerAndBody.headerLines;
-                                        Debug.Assert(context.RequestHeaderLines != null, "!!! HTTP Request is null !!!");
                                     }
                                     else
                                     {
+                                        Debug.Assert(context.ResponseHeaderLines == null, "!!! HTTP Response Header is not null !!!");
                                         context.RequestHeaderLines = headerAndBody.headerLines;
-                                        Debug.Assert(context.ResponseHeaderLines == null, "!!! HTTP Response is not null !!!");
                                         if (options.OverrideHost)
                                         {
                                             if (headerAndBody.headerLines.Length > 0)
@@ -202,13 +202,13 @@ namespace ProxyMapService.Proxy.Handlers
                                 }
                                 else
                                 {
-                                    if (readCounter != null && readCounter.IsLogReading)
+                                    if (readCounter.IsLogReading)
                                     {
                                         context.Logger.LogDebug("Tunnel {tunnelId}: Body read from {direction}", 
                                             state.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                                     }
                                 }
-                                if (sentCounter != null && sentCounter.IsLogSending)
+                                if (sentCounter.IsLogSending)
                                 {
                                     context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", 
                                         state.TunnelId, StreamDirectionName.GetName(sentCounter.Direction));
@@ -227,12 +227,12 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                         else
                         {
-                            if (readCounter != null && readCounter.IsLogReading)
+                            if (readCounter.IsLogReading)
                             {
                                 context.Logger.LogDebug("Tunnel {tunnelId}: Body read from {direction}", 
                                     state.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                             }
-                            if (sentCounter != null && sentCounter.IsLogSending)
+                            if (sentCounter.IsLogSending)
                             {
                                 context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...", 
                                     state.TunnelId, StreamDirectionName.GetName(sentCounter.Direction));

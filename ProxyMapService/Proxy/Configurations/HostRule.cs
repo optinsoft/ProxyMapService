@@ -11,6 +11,8 @@ namespace ProxyMapService.Proxy.Configurations
         private string? _certificatePassword = null;
         private X509Certificate2? _serverCertificate = null;
         private bool _certificateinitialized = false;
+        private List<CacheRule>? _cacheRules = null;
+
         public string? HostName { get; set; }
         public int? HostPort { get; set; }
         public string? Pattern 
@@ -69,6 +71,12 @@ namespace ProxyMapService.Proxy.Configurations
         }
         public ProxyServer? ProxyServer { get; set; }
         public string? RootDir { get; set; }
+
+        public void LoadCacheRules(IConfigurationSection configurationSection)
+        {
+            _cacheRules = [];
+            CacheRules.LoadRulesList(_cacheRules, configurationSection);
+        }
     }
 
     public enum ActionEnum
