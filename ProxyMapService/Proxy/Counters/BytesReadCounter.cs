@@ -80,7 +80,7 @@ namespace ProxyMapService.Proxy.Counters
             }
         }
 
-        public void OnBytesRead(SessionContext context, int bytesRead, byte[]? bytesData, int startIndex, int? tunnelId)
+        public void OnBytesRead(SessionContext context, int bytesRead, byte[]? bytesData, int startIndex, long tunnelId)
         {
             lock (_lock)
             {

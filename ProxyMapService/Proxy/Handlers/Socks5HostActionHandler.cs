@@ -13,7 +13,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.Socks5?.Host == null || context.Socks5.Host.Hostname.Length == 0)
             {
-                context.SessionsCounter?.OnNoHost(context);
+                context.ProxyCounters.SessionsCounter?.OnNoHost(context);
                 await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.HostUnreachable);
                 return HandleStep.Terminate;
             }
@@ -32,7 +32,7 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Socks5File;
                 default:
                     //ActionEnum.Deny
-                    context.SessionsCounter?.OnHostRejected(context);
+                    context.ProxyCounters.SessionsCounter?.OnHostRejected(context);
                     await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.ConnectionNotAllowed);
                     return HandleStep.Terminate;
             }

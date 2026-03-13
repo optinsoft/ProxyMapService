@@ -16,16 +16,8 @@ namespace ProxyMapService.Services
         private readonly string _serviceInfo = $"Service created at {DateTime.Now}";
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
-        private readonly SessionsCounter _sessionsCounter = new();
+        private readonly ProxyCounters _proxyCounters = new();
         private readonly HostsCounter _hostsCounter = new();
-        private readonly BytesReadCounter _outgoingReadCounter = new(StreamDirection.Upstream);
-        private readonly BytesSentCounter _outgoingSentCounter = new(StreamDirection.Upstream);
-        private readonly BytesReadCounter _incomingReadCounter = new(StreamDirection.Downstream);
-        private readonly BytesSentCounter _incomingSentCounter = new(StreamDirection.Downstream);
-        private readonly BytesReadCounter _incomingReadSslCounter = new(StreamDirection.Downstream);
-        private readonly BytesReadCounter _outgoingReadSslCounter = new(StreamDirection.Upstream);
-        private readonly BytesSentCounter _incomingSentSslCounter = new(StreamDirection.Downstream);
-        private readonly BytesSentCounter _outgoingSentSslCounter = new(StreamDirection.Upstream);
         private readonly BytesLogger? _bytesLogger = null;
         private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;
@@ -57,46 +49,56 @@ namespace ProxyMapService.Services
             var HostStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("Enabled") ?? false;
             if (HostStatsEnabled)
             {
-                _sessionsCounter.HostProxifiedHandler += _hostsCounter.OnHostConnected;
-                _sessionsCounter.HostBypassedHandler += _hostsCounter.OnHostConnected;
+                _proxyCounters.SessionsCounter.HostProxifiedHandler += _hostsCounter.OnHostConnected;
+                _proxyCounters.SessionsCounter.HostBypassedHandler += _hostsCounter.OnHostConnected;
                 var HostTrafficStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("TrafficStats") ?? false;
                 if (HostTrafficStatsEnabled)
                 {
-                    _outgoingReadCounter.BytesReadHandler += _hostsCounter.OnBytesRead;
-                    _outgoingSentCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
+                    _proxyCounters.OutgoingReadCounter.BytesReadHandler += _hostsCounter.OnBytesRead;
+                    _proxyCounters.OutgoingSentCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
                 }
             }
             var LogReading = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogReading") ?? false;
             if (LogReading)
             {
-                _incomingReadCounter.LogReading = true;
-                _outgoingReadCounter.LogReading = true;
+                _proxyCounters.IncomingReadCounter.LogReading = true;
+                _proxyCounters.OutgoingReadCounter.LogReading = true;
             }
             var LogSending = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSending") ?? false;
             if (LogSending)
             {
-                _incomingSentCounter.LogSending = true;
-                _outgoingSentCounter.LogSending = true;
+                _proxyCounters.IncomingSentCounter.LogSending = true;
+                _proxyCounters.OutgoingSentCounter.LogSending = true;
             }
             var LogTrafficData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogTrafficData") ?? false;
             if (LogTrafficData)
             {
-                _outgoingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                _outgoingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
-                _incomingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                _incomingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                _proxyCounters.OutgoingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
+                _proxyCounters.OutgoingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                _proxyCounters.IncomingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
+                _proxyCounters.IncomingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
             }
             var LogSslDecodedData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSslDecodedData") ?? false;
             if (LogSslDecodedData)
             {
-                _incomingReadSslCounter.BytesReadHandler += _bytesLogger.LogSslBytesDecoded;
-                _outgoingReadSslCounter.BytesReadHandler += _bytesLogger.LogSslBytesDecoded;
+                _proxyCounters.IncomingReadSslCounter.BytesReadHandler += _bytesLogger.LogSslBytesDecoded;
+                _proxyCounters.OutgoingReadSslCounter.BytesReadHandler += _bytesLogger.LogSslBytesDecoded;
             }
             var LogSslEncodedData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSslEncodedData") ?? false;
             if (LogSslEncodedData)
             {
-                _incomingSentSslCounter.BytesSentHandler += _bytesLogger.LogSslBytesEncoded;
-                _outgoingSentSslCounter.BytesSentHandler += _bytesLogger.LogSslBytesEncoded;
+                _proxyCounters.IncomingSentSslCounter.BytesSentHandler += _bytesLogger.LogSslBytesEncoded;
+                _proxyCounters.OutgoingSentSslCounter.BytesSentHandler += _bytesLogger.LogSslBytesEncoded;
+            }
+            var LogHttpRequestHeaders = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogHttpRequestHeaders") ?? false;
+            if (LogHttpRequestHeaders)
+            {
+                _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += _bytesLogger.LogHttpHeaders;
+            }
+            var LogHttpResponseHeaders = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogHttpResponseHeaders") ?? false;
+            if (LogHttpResponseHeaders)
+            {
+                _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += _bytesLogger.LogHttpHeaders;
             }
             _logger.LogInformation(
                 "[ProxyService.{}] Service is created at {}.",
@@ -106,16 +108,8 @@ namespace ProxyMapService.Services
 
         public void ResetStats()
         {
-            _sessionsCounter.Reset();
+            _proxyCounters.ResetStats();
             _hostsCounter.Reset();
-            _outgoingReadCounter.Reset();
-            _outgoingSentCounter.Reset();
-            _incomingReadCounter.Reset();
-            _incomingSentCounter.Reset();
-            _incomingReadSslCounter.Reset();
-            _outgoingReadSslCounter.Reset();
-            _incomingSentSslCounter.Reset();
-            _outgoingSentSslCounter.Reset();
         }
 
         private void LoadHostRules()
@@ -178,11 +172,7 @@ namespace ProxyMapService.Services
             foreach (var mapping in proxyMappings)
             {
                 tasks.Add(new ProxyMapper(mapping, _hostRules, 
-                    userAgent, _sslClientOptions, _sslServerOptions,
-                    _sessionsCounter, _outgoingReadCounter, _outgoingSentCounter, 
-                    _incomingReadCounter, _incomingSentCounter,
-                    _incomingReadSslCounter, _outgoingReadSslCounter,
-                    _incomingSentSslCounter, _outgoingSentSslCounter,
+                    userAgent, _sslClientOptions, _sslServerOptions, _proxyCounters,
                     _logger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;
@@ -240,107 +230,107 @@ namespace ProxyMapService.Services
 
         public int GetSessionsCount()
         {
-            return _sessionsCounter.Count;
+            return _proxyCounters.SessionsCounter.Count;
         }
 
         public int GetAuthenticationNotRequired()
         {
-            return _sessionsCounter.AuthenticationNotRequired;
+            return _proxyCounters.SessionsCounter.AuthenticationNotRequired;
         }
         
         public int GetAuthenticationRequired()
         {
-            return _sessionsCounter.AuthenticationRequired;
+            return _proxyCounters.SessionsCounter.AuthenticationRequired;
         }
         
         public int GetAuthenticated()
         {
-            return _sessionsCounter.Authenticated;
+            return _proxyCounters.SessionsCounter.Authenticated;
         }
         
         public int GetAuthenticationInvalid()
         {
-            return _sessionsCounter.AuthenticationInvalid;
+            return _proxyCounters.SessionsCounter.AuthenticationInvalid;
         }
 
         public int GetHttpRejected()
         {
-            return _sessionsCounter.HttpRejected;
+            return _proxyCounters.SessionsCounter.HttpRejected;
         }
 
         public int GetProxyConnected()
         {
-            return _sessionsCounter.ProxyConnected;
+            return _proxyCounters.SessionsCounter.ProxyConnected;
         }
         
         public int GetProxyFailed()
         {
-            return _sessionsCounter.ProxyFailed;
+            return _proxyCounters.SessionsCounter.ProxyFailed;
         }
 
         public int GetBypassConnected()
         {
-            return _sessionsCounter.BypassConnected;
+            return _proxyCounters.SessionsCounter.BypassConnected;
         }
 
         public int GetBypassFailed()
         {
-            return _sessionsCounter.BypassFailed;
+            return _proxyCounters.SessionsCounter.BypassFailed;
         }
 
         public int GetHeaderFailed()
         {
-            return _sessionsCounter.HeaderFailed;
+            return _proxyCounters.SessionsCounter.HeaderFailed;
         }
 
         public int GetNoHost()
         {
-            return _sessionsCounter.NoHost;
+            return _proxyCounters.SessionsCounter.NoHost;
         }
 
         public int GetHostRejected()
         {
-            return _sessionsCounter.HostRejected;
+            return _proxyCounters.SessionsCounter.HostRejected;
         }
 
         public int GetHostProxified()
         {
-            return _sessionsCounter.HostProxified;
+            return _proxyCounters.SessionsCounter.HostProxified;
         }
 
         public int GetHostBypassed()
         {
-            return _sessionsCounter.HostBypassed;
+            return _proxyCounters.SessionsCounter.HostBypassed;
         }
 
         public long GetTotalBytesRead()
         {
-            return _outgoingReadCounter.TotalBytesRead;
+            return _proxyCounters.OutgoingReadCounter.TotalBytesRead;
         }
 
         public long GetTotalBytesSent()
         {
-            return _outgoingSentCounter.TotalBytesSent;
+            return _proxyCounters.OutgoingSentCounter.TotalBytesSent;
         }
 
         public long GetProxyBytesRead()
         {
-            return _outgoingReadCounter.ProxyBytesRead;
+            return _proxyCounters.OutgoingReadCounter.ProxyBytesRead;
         }
 
         public long GetProxyBytesSent()
         {
-            return _outgoingSentCounter.ProxyBytesSent;
+            return _proxyCounters.OutgoingSentCounter.ProxyBytesSent;
         }
 
         public long GetBypassBytesRead()
         {
-            return _outgoingReadCounter.BypassBytesRead;
+            return _proxyCounters.OutgoingReadCounter.BypassBytesRead;
         }
 
         public long GetBypassBytesSent()
         {
-            return _outgoingSentCounter.BypassBytesSent;
+            return _proxyCounters.OutgoingSentCounter.BypassBytesSent;
         }
 
         public IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats()

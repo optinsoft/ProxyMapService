@@ -103,6 +103,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
                                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                                 {
+                                    context.RequestHeader = Encoding.ASCII.GetString(httpRequestBytes);
                                     await HttpProto.SendHttpRequest(context, httpRequestBytes);
                                 }
                             }

@@ -10,6 +10,6 @@ namespace ProxyMapService.Proxy.Counters
         long BypassBytesSent { get; }
         bool IsLogSending {  get; }
         void Reset();
-        void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex, int? tunnelId);
+        void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex, long tunnelId);
     }
 }

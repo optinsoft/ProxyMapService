@@ -4,13 +4,13 @@ namespace ProxyMapService.Proxy.Counters
 {
     public class CountingStream(Stream stream, SessionContext context, 
         IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter,
-        int? readTunnelId = null, int? sentTunnelId = null) : Stream
+        long readTunnelId, long sentTunnelId) : Stream
     {
         private bool _readCountPaused = false;
         private bool _sentCountPaused = false;
 
-        public int? ReadTunnelId { get; set; } = readTunnelId;
-        public int? SentTunnelId { get; set; } = sentTunnelId;
+        public long ReadTunnelId { get; set; } = readTunnelId;
+        public long SentTunnelId { get; set; } = sentTunnelId;
 
         public virtual void OnBytesRead(int bytesRead, byte[]? bytesData, int startIndex)
         {

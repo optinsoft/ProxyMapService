@@ -1,6 +1,4 @@
-﻿using ProxyMapService.Proxy.Sessions;
-
-namespace ProxyMapService.Proxy.Counters
+﻿namespace ProxyMapService.Proxy.Counters
 {
     public class BytesReadEventArgs: EventArgs
     {
@@ -8,6 +6,6 @@ namespace ProxyMapService.Proxy.Counters
         public byte[]? BytesData { get; set; }
         public int StartIndex { get; set; }
         public StreamDirection Direction { get; set; }
-        public int? TunnelId {  get; set; }
+        public long TunnelId {  get; set; }
     }
 }

@@ -14,7 +14,9 @@ namespace ProxyMapService.Proxy.Sessions
 {
     public class SessionContext : IDisposable
     {
-        private HostAddress _host;
+        private readonly HostAddress _host;
+        private string[]? _requestHeaderLines;
+        private string[]? _responseHeaderLines;
 
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
@@ -30,15 +32,7 @@ namespace ProxyMapService.Proxy.Sessions
         public IUsernameParameterResolver UsernameParameterResolver { get; private set; }
         public List<HostRule> HostRules { get; private set; }
         public string? UserAgent { get; private set; }
-        public ISessionsCounter? SessionsCounter { get; private set; }
-        public IBytesReadCounter? OutgoingReadCounter { get; private set; }
-        public IBytesSentCounter? OutgoingSentCounter { get; private set; }
-        public IBytesReadCounter? IncomingReadCounter { get; private set; }
-        public IBytesSentCounter? IncomingSentCounter { get; private set; }
-        public IBytesReadCounter? IncomingReadSslCounter { get; private set; }
-        public IBytesReadCounter? OutgoingReadSslCounter { get; private set; }
-        public IBytesSentCounter? IncomingSentSslCounter { get; private set; }
-        public IBytesSentCounter? OutgoingSentSslCounter { get; private set; }
+        public ProxyCounters ProxyCounters { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
 
@@ -66,6 +60,60 @@ namespace ProxyMapService.Proxy.Sessions
         public string? SessionId { get; set; }
         public int SessionTime { get; set; }
         public string? RootDir { get; set; }
+        public TunnelState RequestTunnelState { get; private set; }
+        public TunnelState ResponseTunnelState { get; private set; }
+        public string[]? RequestHeaderLines { 
+            get => _requestHeaderLines; 
+            set
+            {
+                _requestHeaderLines = value;
+                if (_requestHeaderLines != null)
+                {
+                    ProxyCounters.HttpRequestHeadersLogger?.OnHttpHeader(this, _requestHeaderLines);
+                }
+            }
+        }
+        public string[]? ResponseHeaderLines { 
+            get => _responseHeaderLines;
+            set
+            {
+                _responseHeaderLines = value;
+                if (_responseHeaderLines != null)
+                {
+                    ProxyCounters.HttpResponseHeadersLogger?.OnHttpHeader(this, _responseHeaderLines);
+                }
+            }
+        }
+        public string? RequestHeader
+        {
+            get => _requestHeaderLines != null ? String.Join("\r\n", _requestHeaderLines) : null;
+            set
+            {
+                if (value != null)
+                {
+                    RequestHeaderLines = value.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                }
+                else
+                {
+                    RequestHeaderLines = null;
+                }
+            }
+        }
+        public string? ResponseHeader
+        {
+            get => _responseHeaderLines != null ? String.Join("\r\n", _responseHeaderLines) : null;
+            set
+            {
+                if (value != null)
+                {
+                    ResponseHeaderLines = value.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                }
+                else
+                {
+                    ResponseHeaderLines = null;
+                }
+            }
+        }
 
         public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
             bool ssl, X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
@@ -73,12 +121,7 @@ namespace ProxyMapService.Proxy.Sessions
             IUsernameParameterResolver usernameParameterResolver,
             List<HostRule> hostRules, string? userAgent,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
-            ISessionsCounter? sessionsCounter, 
-            IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
-            IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
-            IBytesReadCounter? incomingReadSslCounter, IBytesReadCounter? outgoingReadSslCounter,
-            IBytesSentCounter? incomingSentSslCounter, IBytesSentCounter? outgoingSentSslCounter,
-            ILogger logger, CancellationToken token)
+            ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
             IncomingClient = incomingClient;
             OutgoingClient = new TcpClient();
@@ -94,30 +137,34 @@ namespace ProxyMapService.Proxy.Sessions
             UserAgent = userAgent;
             SslClientConfig = sslClientConfig;
             SslServerConfig = sslServerConfig;
-            SessionsCounter = sessionsCounter;
-            OutgoingReadCounter = outgoingReadCounter;
-            OutgoingSentCounter = outgoingSentCounter;
-            IncomingReadCounter = incomingReadCounter;
-            IncomingSentCounter = incomingSentCounter;
-            IncomingReadSslCounter = incomingReadSslCounter;
-            OutgoingReadSslCounter = outgoingReadSslCounter;
-            IncomingSentSslCounter = incomingSentSslCounter;
-            OutgoingSentSslCounter = outgoingSentSslCounter;
+            ProxyCounters = proxyCounters;
             Logger = logger;
             Token = token;
             IncomingHeaderStream = new ReadHeaderStream();
             OutgoingHeaderStream = new ReadHeaderStream();
             _host = new HostAddress("", 0);
+            RequestTunnelState = new TunnelState
+            {
+                Response = false
+            };
+            ResponseTunnelState = new TunnelState
+            {
+                Response = true
+            };
         }
 
         public void CreateIncomingClientStream()
         {
-            IncomingStream = new CountingStream(IncomingClient.GetStream(), this, IncomingReadCounter, IncomingSentCounter);
+            IncomingStream = new CountingStream(IncomingClient.GetStream(), this, 
+                ProxyCounters.IncomingReadCounter, ProxyCounters.IncomingSentCounter,
+                RequestTunnelState.TunnelId, ResponseTunnelState.TunnelId);
         }
 
         public void CreateOutgoingClientStream()
         {
-            OutgoingStream = new CountingStream(OutgoingClient.GetStream(), this, OutgoingReadCounter, OutgoingSentCounter);
+            OutgoingStream = new CountingStream(OutgoingClient.GetStream(), this, 
+                ProxyCounters.OutgoingReadCounter, ProxyCounters.OutgoingSentCounter,
+                ResponseTunnelState.TunnelId, RequestTunnelState.TunnelId);
         }
 
         public void Dispose()

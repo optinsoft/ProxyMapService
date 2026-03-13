@@ -14,6 +14,16 @@ namespace ProxyMapService.Proxy.Http
         private static readonly byte[][] HttpMethodPrefixBytes =
             HttpMethods.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
 
+        private static readonly string[] HttpVersions =
+        {
+            "HTTP/1.0",
+            "HTTP/1.1",
+            "HTTP/2"
+        };
+
+        private static readonly byte[][] HttpVersionPrefixBytes =
+            HttpVersions.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
+
         public static bool StartsWithHttpMethod(ReadOnlySpan<byte> span, bool partially)
         {
             foreach (var method in HttpMethodPrefixBytes)
@@ -32,19 +42,50 @@ namespace ProxyMapService.Proxy.Http
             return false;
         }
 
-        public static int FindHeadersEnd(MemoryStream ms, ref int searchStart)
+        public static bool StartsWithHttpVersion(ReadOnlySpan<byte> span, bool partially)
+        {
+            foreach (var version in HttpVersionPrefixBytes)
+            {
+                var versionSpan = version.AsSpan();
+
+                int compareLength = partially ? Math.Min(span.Length, versionSpan.Length) : versionSpan.Length;
+
+                if (compareLength <= span.Length && span.Slice(0, compareLength)
+                        .SequenceEqual(versionSpan.Slice(0, compareLength)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public static int FindHeadersEnd(MemoryStream ms, bool response, ref int searchStart)
         {
             var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
 
             if (searchStart < 0)
                 return -1; // Searching was terminated
 
-            // Validate the beginning of the HTTP request
-            if (!StartsWithHttpMethod(span, true))
+            if (response)
             {
-                // ATTENTION!!! Terminate searching
-                searchStart = -1;
-                return -1;
+                // Validate the beginning of the HTTP response
+                if (!StartsWithHttpVersion(span, true))
+                {
+                    // ATTENTION!!! Terminate searching
+                    searchStart = -1;
+                    return -1;
+                }
+            }
+            else
+            {
+                // Validate the beginning of the HTTP request
+                if (!StartsWithHttpMethod(span, true))
+                {
+                    // ATTENTION!!! Terminate searching
+                    searchStart = -1;
+                    return -1;
+                }
             }
 
             int index = span.Slice(searchStart).IndexOf("\r\n\r\n"u8);
@@ -60,7 +101,17 @@ namespace ProxyMapService.Proxy.Http
             return index;
         }
 
-        public static byte[]? GetHeaderBytes(MemoryStream ms, int headersEnd)
+        public static int FindRequestHeadersEnd(MemoryStream ms, ref int searchStart)
+        {
+            return FindHeadersEnd(ms, false, ref searchStart);
+        }
+
+        public static int FindResponseHeadersEnd(MemoryStream ms, ref int searchStart)
+        {
+            return FindHeadersEnd(ms, true, ref searchStart);
+        }
+
+        public static byte[]? GetHeaderBytes(MemoryStream ms, bool response, int headersEnd)
         {
             var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
 
@@ -72,16 +123,35 @@ namespace ProxyMapService.Proxy.Http
             if (!span.Slice(headersEnd, 4).SequenceEqual("\r\n\r\n"u8))
                 return null;
 
-            // Validate the beginning of the HTTP request
-            if (!StartsWithHttpMethod(span, false))
-                return null;
+            if (response)
+            {
+                // Validate the beginning of the HTTP response
+                if (!StartsWithHttpVersion(span, false))
+                    return null;
+            }
+            else
+            {
+                // Validate the beginning of the HTTP request
+                if (!StartsWithHttpMethod(span, false))
+                    return null;
+            }
 
             int headerSectionLength = headersEnd + 4; // include \r\n\r\n
 
             return span.Slice(0, headerSectionLength).ToArray();
         }
 
-        public static HttpHeaderLinesAndBody? GetHeaderLinesAndBody(MemoryStream ms, int headersEnd)
+        public static byte[]? GetRequestHeaderBytes(MemoryStream ms, int headersEnd)
+        {
+            return GetHeaderBytes(ms, false, headersEnd);
+        }
+
+        public static byte[]? GetResponseHeaderBytes(MemoryStream ms, int headersEnd)
+        {
+            return GetHeaderBytes(ms, true, headersEnd);
+        }
+
+        public static HttpHeaderLinesAndBody? GetHeaderLinesAndBody(MemoryStream ms, bool response, int headersEnd)
         {
             var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
 
@@ -93,9 +163,18 @@ namespace ProxyMapService.Proxy.Http
             if (!span.Slice(headersEnd, 4).SequenceEqual("\r\n\r\n"u8))
                 return null;
 
-            // Validate the beginning of the HTTP request
-            if (!StartsWithHttpMethod(span, false))
-                return null;
+            if (response)
+            {
+                // Validate the beginning of the HTTP response
+                if (!StartsWithHttpVersion(span, false))
+                    return null;
+            }
+            else
+            {
+                // Validate the beginning of the HTTP request
+                if (!StartsWithHttpMethod(span, false))
+                    return null;
+            }
 
             int headerSectionLength = headersEnd + 4; // include \r\n\r\n
 

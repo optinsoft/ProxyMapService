@@ -22,7 +22,7 @@ namespace ProxyMapService.Proxy.Handlers
                             context.Http = new HttpRequestHeader(requestHeaderBytes);
                             if (context.Http.BadRequest)
                             {
-                                context.SessionsCounter?.OnHeaderFailed(context);
+                                context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
                                 await HttpProto.HttpReplyBadRequest(context);
                                 return HandleStep.Terminate;
                             }
@@ -42,10 +42,10 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (Exception)
             {
-                context.SessionsCounter?.OnHeaderFailed(context);
+                context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
                 throw;
             }
-            context.SessionsCounter?.OnHeaderFailed(context);
+            context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
             return HandleStep.Terminate;
         }
 

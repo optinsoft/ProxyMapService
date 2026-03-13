@@ -42,11 +42,7 @@ namespace ProxyMapService.Proxy.Sessions
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
-            ISessionsCounter? sessionsCounter, IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter, 
-            IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
-            IBytesReadCounter? incomingReadSslCounter, IBytesReadCounter? outgoingReadSslCounter,
-            IBytesSentCounter? incomingSentSslCounter, IBytesSentCounter? outgoingSentSslCounter,
-            ILogger logger, bool logStep, CancellationToken token)
+            ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
         {
             X509Certificate2? serverCertificate, caCertificate;
             try
@@ -64,12 +60,8 @@ namespace ProxyMapService.Proxy.Sessions
                 mapping.Listen.Ssl, serverCertificate, caCertificate,
                 proxyProvider, proxyAuthenticator, usernameParameterResolver, 
                 hostRules, userAgent, sslClientConfig, sslServerConfig,
-                sessionsCounter, outgoingReadCounter, outgoingSentCounter,
-                incomingReadCounter, incomingSentCounter, 
-                incomingReadSslCounter, outgoingReadSslCounter,
-                incomingSentSslCounter, outgoingSentSslCounter,
-                logger, token);
-            sessionsCounter?.OnSessionStarted(context);
+                proxyCounters, logger, token);
+            proxyCounters.SessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;
             do
             {

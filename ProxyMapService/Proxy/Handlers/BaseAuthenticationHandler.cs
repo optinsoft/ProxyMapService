@@ -48,23 +48,23 @@ namespace ProxyMapService.Proxy.Handlers
         protected static void OnAuthenticationNotRequired(SessionContext context)
         {
             PopulateContext(context);
-            context.SessionsCounter?.OnAuthenticationNotRequired(context);
+            context.ProxyCounters.SessionsCounter?.OnAuthenticationNotRequired(context);
         }
 
         protected static void OnAuthenticated(SessionContext context)
         {
             PopulateContext(context);
-            context.SessionsCounter?.OnAuthenticated(context);
+            context.ProxyCounters.SessionsCounter?.OnAuthenticated(context);
         }
 
         protected static void OnAuthenticationRequired(SessionContext context)
         {
-            context.SessionsCounter?.OnAuthenticationRequired(context);
+            context.ProxyCounters.SessionsCounter?.OnAuthenticationRequired(context);
         }
 
         protected static void OnAuthenticationInvalid(SessionContext context)
         {
-            context.SessionsCounter?.OnAuthenticationInvalid(context);
+            context.ProxyCounters.SessionsCounter?.OnAuthenticationInvalid(context);
         }
     }
 }

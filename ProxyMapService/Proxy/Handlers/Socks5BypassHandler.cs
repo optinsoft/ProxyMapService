@@ -14,7 +14,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             context.Bypassed = true;
 
-            context.SessionsCounter?.OnHostBypassed(context);
+            context.ProxyCounters.SessionsCounter?.OnHostBypassed(context);
 
             try
             {
@@ -23,7 +23,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (SocketException ex)
             {
-                context.SessionsCounter?.OnBypassFailed(context);
+                context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
                 Socks5Status status = ex.SocketErrorCode switch
                 {
                     SocketError.ConnectionRefused => Socks5Status.ConnectionRefused,
@@ -41,12 +41,12 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (Exception)
             {
-                context.SessionsCounter?.OnBypassFailed(context);
+                context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
                 await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
                 throw;
             }
 
-            context.SessionsCounter?.OnBypassConnected(context);
+            context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 
             context.CreateOutgoingClientStream();
 

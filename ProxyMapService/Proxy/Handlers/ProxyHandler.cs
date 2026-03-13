@@ -14,7 +14,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             context.Proxified = true;
 
-            context.SessionsCounter?.OnHostProxified(context);
+            context.ProxyCounters.SessionsCounter?.OnHostProxified(context);
 
             context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
 
@@ -25,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (Exception)
             {
-                context.SessionsCounter?.OnProxyFailed(context);
+                context.ProxyCounters.SessionsCounter?.OnProxyFailed(context);
                 if (context.Http != null)
                 {
                     await HttpProto.HttpReplyBadGateway(context);
@@ -41,7 +41,7 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            context.SessionsCounter?.OnProxyConnected(context);
+            context.ProxyCounters.SessionsCounter?.OnProxyConnected(context);
 
             context.CreateOutgoingClientStream();
 

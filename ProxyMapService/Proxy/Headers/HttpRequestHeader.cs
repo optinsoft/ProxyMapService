@@ -21,11 +21,11 @@ namespace ProxyMapService.Proxy.Headers
         public HostAddress? Host { get; private set; }
         public long? ContentLength { get; private set; }
         public string? ProxyAuthorization { get; private set; }
-        public IEnumerable<string>? ArrayList { get; private set; }
+        public string[]? Headers { get; private set; }
 
         public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {
-            return GetBytes(ArrayList, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
+            return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
         }
 
         private static void Parse(HttpRequestHeader self, byte[] array)
@@ -43,7 +43,7 @@ namespace ProxyMapService.Proxy.Headers
                 self.Host = GetHostAddress(strings);
                 self.ContentLength = GetContentLength(strings);
                 self.ProxyAuthorization = GetProxyAuthorization(strings);
-                self.ArrayList = strings;
+                self.Headers = strings;
             }
             catch (UriFormatException)
             {
@@ -51,17 +51,17 @@ namespace ProxyMapService.Proxy.Headers
             }
         }
 
-        private static byte[] GetBytes(IEnumerable<string>? arrayList, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
+        private static byte[] GetBytes(string[]? headers, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {
             var builder = new StringBuilder();
 
-            if (arrayList != null)
+            if (headers != null)
             {
                 var enumerable = keepProxyHeaders && (customProxyAuthorization == null) 
-                    ? arrayList 
+                    ? headers
                     : (keepProxyHeaders 
-                        ? arrayList.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase))
-                        : arrayList.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase)
+                        ? headers.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase))
+                        : headers.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase)
                                                   && !@string.StartsWith("Proxy-Connection:", StringComparison.OrdinalIgnoreCase)));
                 if (customFirstLine != null)
                 {

@@ -42,7 +42,9 @@ namespace ProxyMapService.Proxy.Handlers
 
                 using CountingStream? incomingSslCountingStream = 
                     incomingSslStream != null 
-                    ? new CountingStream(incomingSslStream, context, context.IncomingReadSslCounter, context.IncomingSentSslCounter) 
+                    ? new CountingStream(incomingSslStream, context, 
+                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSentSslCounter,
+                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SentTunnelId) 
                     : null;
 
                 return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream);
@@ -69,9 +71,9 @@ namespace ProxyMapService.Proxy.Handlers
                 if (bytesRead > 0)
                 {
                     ms.Write(buffer, 0, bytesRead);
-                    if ((headersEnd = HttpParser.FindHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
+                    if ((headersEnd = HttpParser.FindRequestHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
                     {
-                        var headerBytes = HttpParser.GetHeaderBytes(ms, headersEnd);
+                        var headerBytes = HttpParser.GetRequestHeaderBytes(ms, headersEnd);
                         return headerBytes;
                     }
                 }

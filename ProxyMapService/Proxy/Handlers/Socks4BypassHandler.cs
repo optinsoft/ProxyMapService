@@ -15,7 +15,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             context.Bypassed = true;
 
-            context.SessionsCounter?.OnHostBypassed(context);
+            context.ProxyCounters.SessionsCounter?.OnHostBypassed(context);
 
             try
             {
@@ -24,12 +24,12 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (Exception)
             {
-                context.SessionsCounter?.OnBypassFailed(context);
+                context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
                 await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                 throw;
             }
 
-            context.SessionsCounter?.OnBypassConnected(context);
+            context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 
             context.CreateOutgoingClientStream();
 

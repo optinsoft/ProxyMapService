@@ -18,12 +18,8 @@ namespace ProxyMapService.Proxy
 {
     public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
         string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
-        ISessionsCounter? sessionsCounter,
-        IBytesReadCounter? outgoingReadCounter, IBytesSentCounter? outgoingSentCounter,
-        IBytesReadCounter? incomingReadCounter, IBytesSentCounter? incomingSentCounter,
-        IBytesReadCounter? incomingReadSslCounter, IBytesReadCounter? outgoingReadSslCounter,
-        IBytesSentCounter? incomingSentSslCounter, IBytesSentCounter? outgoingSentSslCounter,
-        ILogger logger, bool logStep, int maxListenerStartRetries, CancellationToken stoppingToken)
+        ProxyCounters proxyCounters, ILogger logger, bool logStep, int maxListenerStartRetries, 
+        CancellationToken stoppingToken)
     {
         private readonly List<ProxyServer> _proxyServers = [];
         private readonly List<IConfigurationRoot> _proxyServerFileConfigurations = [];
@@ -92,11 +88,7 @@ namespace ProxyMapService.Proxy
                 await Session.Run(client, mapping, proxyProvider,
                     proxyAuthenticator, usernameParameterResolver,
                     hostRules, userAgent, sslClientConfig, sslServerConfig,
-                    sessionsCounter, outgoingReadCounter, outgoingSentCounter,
-                    incomingReadCounter, incomingSentCounter,
-                    incomingReadSslCounter, outgoingReadSslCounter,
-                    incomingSentSslCounter, outgoingSentSslCounter,
-                    logger, logStep, token);
+                    proxyCounters, logger, logStep, token);
 
             using var listener = new Listener(incomingEndPoint, incomingClientHandler, logger);
             await listener.Start(maxListenerStartRetries, stoppingToken);
