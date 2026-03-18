@@ -1,6 +1,8 @@
 ﻿// Ignore Spelling: Proxified
 
+using Microsoft.Extensions.Caching.Memory;
 using ProxyMapService.Proxy.Authenticator;
+using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
@@ -15,10 +17,9 @@ namespace ProxyMapService.Proxy.Sessions
     public class SessionContext : IDisposable
     {
         private readonly HostAddress _host;
-        private string[]? _requestHeaderLines;
-        private string[]? _responseHeaderLines;
         private HttpRequestHeader? _requestHeader;
         private HttpResponseHeader? _responseHeader;
+        private CacheRule? _requestCacheRule;
 
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
@@ -34,6 +35,7 @@ namespace ProxyMapService.Proxy.Sessions
         public IUsernameParameterResolver UsernameParameterResolver { get; private set; }
         public List<HostRule> HostRules { get; private set; }
         public List<CacheRule> CacheRules { get; set; }
+        public CacheManager CacheManager { get; private set; }
         public string? UserAgent { get; private set; }
         public ProxyCounters ProxyCounters { get; private set; }
         public ILogger Logger { get; private set; }
@@ -73,7 +75,12 @@ namespace ProxyMapService.Proxy.Sessions
                 _requestHeader = value;
                 if (_requestHeader != null)
                 {
+                    _requestCacheRule = CacheRule.FindRule(_requestHeader.HTTPTargetPath, CacheRules);
                     ProxyCounters.HttpRequestHeadersLogger?.OnHttpHeader(this, _requestHeader.Headers);
+                }
+                else
+                {
+                    _requestCacheRule = null;
                 }
             }
         }
@@ -89,14 +96,15 @@ namespace ProxyMapService.Proxy.Sessions
                 }
             }
         }
-        public bool RequestHeaderPresent { get => _requestHeaderLines != null; }
-        public bool ResponseHeaderPresent { get => _responseHeaderLines != null; }
+        public bool UseCache { get => _requestCacheRule != null; }
+        public CacheEntry? ResponseCacheEntry { get; set; }
+        public FileStream? ResponseCacheFileStream { get; set; }
 
         public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
             bool ssl, X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
-            IUsernameParameterResolver usernameParameterResolver,
-            List<HostRule> hostRules, List<CacheRule> cacheRules, string? userAgent,
+            IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
+            List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
@@ -112,6 +120,7 @@ namespace ProxyMapService.Proxy.Sessions
             UsernameParameterResolver = usernameParameterResolver;
             HostRules = hostRules;
             CacheRules = cacheRules;
+            CacheManager = cacheManager;
             UserAgent = userAgent;
             SslClientConfig = sslClientConfig;
             SslServerConfig = sslServerConfig;
@@ -145,6 +154,54 @@ namespace ProxyMapService.Proxy.Sessions
                 ResponseTunnelState.TunnelId, RequestTunnelState.TunnelId);
         }
 
+        public void CreateResponseCacheFileStream()
+        {
+            if (ResponseCacheEntry != null)
+            {
+                DisposeResponseCacheFileStream();
+                ResponseCacheFileStream = new FileStream(
+                    ResponseCacheEntry.FilePath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    64 * 1024,
+                    useAsync: true);
+            }
+        }
+
+        public void DisposeIncomingClientStream()
+        {
+            if (IncomingStream != null)
+            {
+                using (IncomingStream)
+                {
+                }
+                IncomingStream = null;
+            }
+        }
+
+        public void DisposeOutgoingClientStream()
+        {
+            if (OutgoingStream != null)
+            {
+                using (OutgoingStream)
+                {
+                }
+                OutgoingStream = null;
+            }
+        }
+
+        public void DisposeResponseCacheFileStream()
+        {
+            if (ResponseCacheFileStream != null)
+            {
+                using (ResponseCacheFileStream)
+                {
+                }
+                ResponseCacheFileStream = null;
+            }
+        }
+
         public void Dispose()
         {
             Dispose(true);
@@ -155,23 +212,12 @@ namespace ProxyMapService.Proxy.Sessions
         {
             if (disposing)
             {
-                if (IncomingStream != null)
-                {
-                    using (IncomingStream)
-                    {
-                    }
-                    IncomingStream = null;
-                }
-                if (OutgoingStream != null)
-                {
-                    using (OutgoingStream)
-                    {
-                    }
-                    OutgoingStream = null;
-                }
+                DisposeIncomingClientStream();
+                DisposeOutgoingClientStream();
                 OutgoingClient.Dispose();
                 IncomingHeaderStream.Dispose();
                 OutgoingHeaderStream.Dispose();
+                DisposeResponseCacheFileStream();
             }
         }
     }

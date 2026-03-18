@@ -24,7 +24,6 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            //return HandleStep.Tunnel;
             return HandleStep.Socks5ConnectRequested;
         }
 

@@ -155,6 +155,22 @@ namespace ProxyMapService.Proxy.Proto
             await fileStream.CopyToAsync(incomingStream, token);
         }
 
+        public static async Task HttpReplyFileStream(SessionContext context, FileStream fileStream)
+        {
+            await HttpReplyFileStream(context.IncomingStream, context.Token, fileStream);
+        }
+
+        public static async Task HttpReplyCacheFileStream(Stream? incomingStream, CancellationToken token, FileStream fileStream)
+        {
+            if (incomingStream == null) return;
+            await fileStream.CopyToAsync(incomingStream, token);
+        }
+
+        public static async Task HttpReplyCacheFileStream(SessionContext context, FileStream fileStream)
+        {
+            await HttpReplyCacheFileStream(context.IncomingStream, context.Token, fileStream);
+        }
+
         public static async Task SendHttpRequest(Stream? outgoingStream, CancellationToken token, byte[] requestBytes)
         {
             if (outgoingStream == null) return;

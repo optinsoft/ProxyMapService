@@ -1,7 +1,5 @@
-﻿using Fare;
-using ProxyMapService.Proxy.Configurations;
+﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
-using System.Collections.Specialized;
 
 namespace ProxyMapService.Proxy.Authenticator
 {

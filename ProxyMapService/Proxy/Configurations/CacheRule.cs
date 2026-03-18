@@ -24,5 +24,21 @@ namespace ProxyMapService.Proxy.Configurations
             }
         }
         public Regex? PatternRegEx { get => _patternRegEx; }
+
+        public static CacheRule? FindRule(string? url, List<CacheRule>? rules)
+        {
+            if (url == null || rules == null)
+            {
+                return null;
+            }
+            foreach (var rule in rules)
+            {
+                if (rule.PatternRegEx != null && rule.PatternRegEx.Match(url).Success)
+                {
+                    return rule;
+                }
+            }
+            return null;
+        }
     }
 }

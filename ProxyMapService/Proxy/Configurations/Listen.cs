@@ -1,6 +1,4 @@
-﻿using System.Security.Cryptography.X509Certificates;
-
-namespace ProxyMapService.Proxy.Configurations
+﻿namespace ProxyMapService.Proxy.Configurations
 {
     public class Listen
     {

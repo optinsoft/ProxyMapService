@@ -1,6 +1,8 @@
-﻿using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
+using System;
 using System.Text;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
@@ -68,6 +70,22 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
 
+                    using FileStream? cacheFileStream = await GetCacheFileStream(context);
+                    if (cacheFileStream != null)
+                    {
+                        context.RequestTunnelState.ResetReadHeaders = true;
+                        if (context.Socks4 != null)
+                        {
+                            await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestGranted);
+                        }
+                        if (context.Socks5 != null)
+                        {
+                            await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
+                        }
+                        await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
+                        return HandleStep.Tunnel;
+                    }
+
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);
 
                     var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
@@ -76,6 +94,14 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         context.RequestTunnelState.ResetReadHeaders = true;
                         context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes);
+                        if (CreateResponseCacheFileStream(context))
+                        {
+                            if (context.ResponseCacheFileStream != null)
+                            {
+                                await context.ResponseCacheFileStream.WriteAsync(responseHeaderBytes.AsMemory(0, responseHeaderBytes.Length));
+                                await HandleEndOfResponseCacheFileStream(context);
+                            }
+                        }
                     }
 
                     if (context.Http != null)

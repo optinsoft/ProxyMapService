@@ -3,7 +3,7 @@ using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class BaseProxyHandler
+    public class BaseProxyHandler : BaseResponseCacheHandler
     {
         private static string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList)
         {

@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using ProxyMapService.Proxy.Network;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 
 namespace ProxyMapService.Proxy.Configurations
@@ -77,6 +78,29 @@ namespace ProxyMapService.Proxy.Configurations
         {
             _hostCacheRules = [];
             CacheRules.LoadRulesList(_hostCacheRules, configurationSection);
+        }
+
+        public static HostRule? FindRule(HostAddress host, List<HostRule>? rules)
+        {
+            if (rules == null)
+            {
+                return null;
+            }
+            foreach (var rule in rules)
+            {
+                if (rule.HostPort == null || rule.HostPort == host.Port)
+                {
+                    if (rule.PatternRegEx != null && rule.PatternRegEx.Match(host.Hostname).Success)
+                    {
+                        return rule;
+                    }
+                    else if (rule.HostName != null && rule.HostName.Equals(host.Hostname, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return rule;
+                    }
+                }
+            }
+            return null;
         }
     }
 

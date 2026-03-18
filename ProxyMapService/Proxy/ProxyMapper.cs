@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using ProxyMapService.Proxy.Authenticator;
+using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Listeners;
@@ -10,8 +11,9 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy
 {
-    public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, List<CacheRule> cacheRules,
-        string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
+    public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
+        List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
+        SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
         ProxyCounters proxyCounters, ILogger logger, bool logStep, int maxListenerStartRetries, 
         CancellationToken stoppingToken)
     {
@@ -81,7 +83,8 @@ namespace ProxyMapService.Proxy
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
                 await Session.Run(client, mapping, proxyProvider,
                     proxyAuthenticator, usernameParameterResolver,
-                    hostRules, cacheRules, userAgent, sslClientConfig, sslServerConfig,
+                    hostRules, cacheRules, cacheManager, userAgent, 
+                    sslClientConfig, sslServerConfig,
                     proxyCounters, logger, logStep, token);
 
             using var listener = new Listener(incomingEndPoint, incomingClientHandler, logger);

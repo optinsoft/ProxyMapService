@@ -1,6 +1,5 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
-using System.Data;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -8,24 +7,8 @@ namespace ProxyMapService.Proxy.Handlers
     {
         protected static void GetContextHostAction(SessionContext context)
         {
-            HostRule? hostRule = null;
-            ActionEnum hostAction = ActionEnum.Allow;
-            foreach (var rule in context.HostRules)
-            {
-                if (rule.HostPort == null || rule.HostPort == context.Host.Port)
-                {
-                    if (rule.PatternRegEx != null && rule.PatternRegEx.Match(context.Host.Hostname).Success)
-                    {
-                        hostAction = rule.Action;
-                        hostRule = rule;
-                    }
-                    else if (rule.HostName != null && rule.HostName.Equals(context.Host.Hostname, StringComparison.OrdinalIgnoreCase))
-                    {
-                        hostAction = rule.Action;
-                        hostRule = rule;
-                    }
-                }
-            }
+            HostRule? hostRule = HostRule.FindRule(context.Host, context.HostRules);
+            ActionEnum hostAction = hostRule?.Action ?? ActionEnum.Allow;
             context.HostAction = hostAction;
             if (hostAction != ActionEnum.Deny && hostRule != null)
             {

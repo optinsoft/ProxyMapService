@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Headers;
+﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
@@ -71,7 +72,16 @@ namespace ProxyMapService.Proxy.Handlers
                             if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                             {
                                 context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
-                                await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                                using FileStream? cacheFileStream = await GetCacheFileStream(context);
+                                if (cacheFileStream != null)
+                                {
+                                    context.RequestTunnelState.ResetReadHeaders = true;
+                                    await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
+                                }
+                                else
+                                {
+                                    await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                                }
                             }
                         }
                     }

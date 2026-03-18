@@ -5,10 +5,10 @@ using ProxyMapService.Exceptions;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Models;
 using ProxyMapService.Proxy;
+using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Utils;
-using System.Collections.Generic;
 
 namespace ProxyMapService.Services
 {
@@ -29,6 +29,8 @@ namespace ProxyMapService.Services
         private readonly string _serviceId = RandomStringGenerator.GenerateRandomString(6);
         private readonly List<HostRule> _hostRules = [];
         private readonly List<CacheRule> _cacheRules = [];
+        private CacheRepository? _cacheRepository;
+        private CacheManager? _cacheManager;
         private SslClientOptionsConfig _sslClientOptions = new();
         private SslServerOptionsConfig _sslServerOptions = new();
 
@@ -123,6 +125,17 @@ namespace ProxyMapService.Services
             HostRules.LoadRulesList(_hostRules, _configuration.GetSection("HostRules"));
             CacheRules.LoadRulesList(_cacheRules, _configuration.GetSection("CacheRules"));
 
+            var cacheConfig = _configuration.GetSection("Cache").Get<CacheConfig>();
+            cacheConfig ??= new CacheConfig();
+            _cacheRepository = new CacheRepository(cacheConfig.DbPath);
+            _cacheManager = new CacheManager(cacheConfig.Enabled, cacheConfig.CacheDir, _cacheRepository);
+            if (_cacheManager.Enabled)
+            {
+                _cacheManager.InitAsync().ConfigureAwait(false)
+                    .GetAwaiter()
+                    .GetResult();
+            }
+
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
             _sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
@@ -146,14 +159,14 @@ namespace ProxyMapService.Services
             List<Task> tasks = [];
             foreach (var mapping in proxyMappings)
             {
-                tasks.Add(new ProxyMapper(mapping, _hostRules, _cacheRules,
+                tasks.Add(new ProxyMapper(mapping, _hostRules, _cacheRules, _cacheManager,
                     userAgent, _sslClientOptions, _sslServerOptions, _proxyCounters,
                     _logger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;
             _startTime = DateTime.Now;
-            Task allTasks = Task.WhenAll(tasks);
-            allTasks.ContinueWith(
+            Task proxyMappingTasks = Task.WhenAll(tasks);
+            proxyMappingTasks.ContinueWith(
                 t =>
                 {
                     _started = false;

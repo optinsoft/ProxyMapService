@@ -6,18 +6,24 @@ namespace ProxyMapService.Proxy.Headers
     {
         public HttpResponseHeader(byte[] array)
         {
+            HeaderLength = array.Length;
             Parse(this, array);
         }
 
-        public HttpResponseHeader(string[] strings)
+        public HttpResponseHeader(string[] strings, int headerLength)
         {
+            HeaderLength = headerLength;
             Parse(this, strings);
         }
 
+        public int HeaderLength { get; private set; }
         public bool BadResponse { get; private set; }
         public string? HTTPProtocol { get; private set; }
         public string? StatusCode { get; private set; }
         public string? StatusText { get; private set; }
+        public long? ContentLength { get; private set; }
+        public string? ContentType { get; private set; }
+        public string? ETag { get; private set; }
         public string[]? Headers { get; private set; }
 
         private static void Parse(HttpResponseHeader self, byte[] array)
@@ -32,6 +38,9 @@ namespace ProxyMapService.Proxy.Headers
             self.HTTPProtocol = GetHTTPProtocol(strings);
             self.StatusCode = GetStatusCode(strings);
             self.StatusText = GetStatusText(strings);
+            self.ContentLength = GetContentLength(strings);
+            self.ContentType = GetHeaderValue(strings, "content-type:");
+            self.ETag = GetHeaderValue(strings, "etag");
             self.Headers = strings;
         }
 
@@ -54,6 +63,23 @@ namespace ProxyMapService.Proxy.Headers
             var split2 = split1[1].TrimStart().Split(' ', 2);
             if (split2.Length < 2) return null;
             return split2[1].Trim();
+        }
+        
+        private static long GetContentLength(IEnumerable<string> strings)
+        {
+            const string key = "content-length:";
+            return Convert.ToInt64(strings
+                .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                ?.Substring(key.Length)
+                .TrimStart());
+        }
+
+        private static string? GetHeaderValue(IEnumerable<string> strings, string key)
+        {
+            return strings
+                .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                ?.Substring(key.Length)
+                .TrimStart();
         }
     }
 }

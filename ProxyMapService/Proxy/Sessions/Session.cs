@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Authenticator;
+using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
@@ -41,7 +42,8 @@ namespace ProxyMapService.Proxy.Sessions
 
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
-            List<CacheRule> cacheRules, string? userAgent, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
+            List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
+            SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
         {
             X509Certificate2? serverCertificate, caCertificate;
@@ -59,7 +61,8 @@ namespace ProxyMapService.Proxy.Sessions
             using var context = new SessionContext(incomingClient, mapping, 
                 mapping.Listen.Ssl, serverCertificate, caCertificate,
                 proxyProvider, proxyAuthenticator, usernameParameterResolver, 
-                hostRules, cacheRules, userAgent, sslClientConfig, sslServerConfig,
+                hostRules, cacheRules, cacheManager, userAgent, 
+                sslClientConfig, sslServerConfig,
                 proxyCounters, logger, token);
             proxyCounters.SessionsCounter?.OnSessionStarted(context);
             var step = HandleStep.Initialize;

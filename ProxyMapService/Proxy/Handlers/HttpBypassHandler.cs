@@ -5,7 +5,7 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class HttpBypassHandler : IHandler
+    public class HttpBypassHandler: BaseResponseCacheHandler, IHandler
     {
         private static readonly HttpBypassHandler Self = new();
 
@@ -56,6 +56,13 @@ namespace ProxyMapService.Proxy.Handlers
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
+                    using FileStream? cacheFileStream = await GetCacheFileStream(context);
+                    if (cacheFileStream != null)
+                    {
+                        context.RequestTunnelState.ResetReadHeaders = true;
+                        await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
+                        return HandleStep.Tunnel;
+                    }
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);
                 }
             }
