@@ -75,7 +75,7 @@ namespace ProxyMapService.Proxy.Sessions
                 _requestHeader = value;
                 if (_requestHeader != null)
                 {
-                    _requestCacheRule = CacheRule.FindRule(_requestHeader.HTTPTargetPath, CacheRules);
+                    _requestCacheRule = CacheRule.FindRule(_requestHeader.HTTPTargetPath, _requestHeader.Accept, CacheRules);
                     ProxyCounters.HttpRequestHeadersLogger?.OnHttpHeader(this, _requestHeader.Headers);
                 }
                 else

@@ -27,6 +27,10 @@ namespace ProxyMapService.Proxy.Cache
                     host TEXT,
                     url TEXT,
                     etag TEXT,
+                    cache_control TEXT,
+                    date TEXT,
+                    expires TEXT,
+                    last_modified TEXT,
                     header_length INTEGER,
                     content_length INTEGER,
                     content_type TEXT,
@@ -47,15 +51,19 @@ namespace ProxyMapService.Proxy.Cache
             cmd.CommandText =
                 """
                 INSERT OR REPLACE INTO cache_entries
-                (key,host,url,etag,header_length,content_length,content_type,created_at,last_access)
+                (key,host,url,etag,cache_control,date,expires,last_modified,header_length,content_length,content_type,created_at,last_access)
                 VALUES
-                ($key,$host,$url,$etag,$hlen,$len,$type,$created,$access)
+                ($key,$host,$url,$etag,$cache_control,$date,$expires,$last_modified,$hlen,$len,$type,$created,$access)
                 """;
 
             cmd.Parameters.AddWithValue("$key", entry.Key);
             cmd.Parameters.AddWithValue("$host", entry.Host);
             cmd.Parameters.AddWithValue("$url", entry.Url);
             cmd.Parameters.AddWithValue("$etag", entry.ETag ?? "");
+            cmd.Parameters.AddWithValue("$cache_control", entry.CacheControl ?? "");
+            cmd.Parameters.AddWithValue("$date", entry.Date ?? "");
+            cmd.Parameters.AddWithValue("$expires", entry.Expires ?? "");
+            cmd.Parameters.AddWithValue("$last_modified", entry.LastModified ?? "");
             cmd.Parameters.AddWithValue("$hlen", entry.HeaderLength);
             cmd.Parameters.AddWithValue("$len", entry.ContentLength);
             cmd.Parameters.AddWithValue("$type", entry.ContentType ?? "");
@@ -73,7 +81,7 @@ namespace ProxyMapService.Proxy.Cache
             var cmd = conn.CreateCommand();
             cmd.CommandText =
                 """
-                SELECT key,host,url,etag,header_length,content_length,content_type,created_at,last_access 
+                SELECT key,host,url,etag,cache_control,date,expires,last_modified,header_length,content_length,content_type,created_at,last_access 
                 FROM cache_entries 
                 WHERE key=$key                
                 """;
@@ -92,12 +100,16 @@ namespace ProxyMapService.Proxy.Cache
                 Host = reader.GetString(1),
                 Url = reader.GetString(2),
                 ETag = reader.GetString(3),
+                CacheControl = reader.GetString(4),
+                Date = reader.GetString(5),
+                Expires = reader.GetString(6),
+                LastModified = reader.GetString(7),
                 FilePath = filePath,
-                HeaderLength = reader.GetInt32(4),
-                ContentLength = reader.GetInt64(5),
-                ContentType = reader.GetString(6),
-                CreatedAt = reader.GetDateTime(7),
-                LastAccess = reader.GetDateTime(8)
+                HeaderLength = reader.GetInt32(8),
+                ContentLength = reader.GetInt64(9),
+                ContentType = reader.GetString(10),
+                CreatedAt = reader.GetDateTime(11),
+                LastAccess = reader.GetDateTime(12)
             };
         }
 

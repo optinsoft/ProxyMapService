@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using Microsoft.AspNetCore.Http.Headers;
+using ProxyMapService.Proxy.Headers;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
@@ -68,7 +69,7 @@ namespace ProxyMapService.Proxy.Cache
             return dbEntry;
         }
 
-        public CacheEntry? CreateCacheEntry(string host, string url, int headerLength, long contentLength, string? contentType, string? etag)
+        public CacheEntry? CreateCacheEntry(string host, string url, HttpResponseHeader responseHeader)
         {
             if (!_enabled)
                 return null;
@@ -84,11 +85,15 @@ namespace ProxyMapService.Proxy.Cache
                 Key = key,
                 Host = host,
                 Url = url,
-                ETag = etag,
+                ETag = responseHeader.ETag,
+                CacheControl = responseHeader.CacheControl,
+                Date = responseHeader.Date,
+                Expires = responseHeader.Expires,
+                LastModified = responseHeader.LastModified,
                 FilePath = filePath,
-                HeaderLength = headerLength,
-                ContentLength = contentLength,
-                ContentType = contentType,
+                HeaderLength = responseHeader.HeaderLength,
+                ContentLength = responseHeader.ContentLength ?? 0,
+                ContentType = responseHeader.ContentType,
                 CreatedAt = DateTime.UtcNow,
                 LastAccess = DateTime.UtcNow
             };

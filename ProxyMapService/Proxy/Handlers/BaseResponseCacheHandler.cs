@@ -72,16 +72,12 @@ namespace ProxyMapService.Proxy.Handlers
             if (context.ResponseHeader?.StatusCode != "200")
                 return false;
 
-            int headerLength = context.ResponseHeader.HeaderLength;
-            long contentLength = context.ResponseHeader.ContentLength ?? -1;
-            var contentType = context.ResponseHeader.ContentType;
-            var etag = context.ResponseHeader.ETag;
-            if (contentLength < 0)
+            if (context.ResponseHeader.ContentLength  == null || context.ResponseHeader.ContentLength < 0)
                 return false;
 
             Debug.Assert(context.ResponseCacheEntry == null, "!!! Response cache entry is not null !!!");
             context.ResponseCacheEntry = context.CacheManager.CreateCacheEntry(
-                $"{hostname}:{port}", requestUrl, headerLength, contentLength, contentType, etag);
+                $"{hostname}:{port}", requestUrl, context.ResponseHeader);
             if (context.ResponseCacheEntry == null)
                 return false;
 

@@ -6,6 +6,10 @@
         public string Host { get; set; } = default!;
         public string Url { get; set; } = default!;
         public string? ETag { get; set; }
+        public string? CacheControl { get; set; }
+        public string? Date { get; set; }
+        public string? Expires { get; set; }
+        public string? LastModified { get; set; }
         public string FilePath { get; set; } = default!;
         public int HeaderLength { get; set; }
         public long ContentLength { get; set; }

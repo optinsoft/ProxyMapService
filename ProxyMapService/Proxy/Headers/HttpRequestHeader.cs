@@ -26,6 +26,7 @@ namespace ProxyMapService.Proxy.Headers
         public HostAddress? Host { get; private set; }
         public long? ContentLength { get; private set; }
         public string? ProxyAuthorization { get; private set; }
+        public string? Accept { get; private set; }
         public string[]? Headers { get; private set; }
 
         public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
@@ -51,7 +52,8 @@ namespace ProxyMapService.Proxy.Headers
                 self.HTTPProtocol = GetHTTPProtocol(strings);
                 self.Host = GetHostAddress(strings);
                 self.ContentLength = GetContentLength(strings);
-                self.ProxyAuthorization = GetProxyAuthorization(strings);
+                self.ProxyAuthorization = GetBasicProxyAuthorization(strings);
+                self.Accept = GetHeaderValue(strings, "accept:");
                 self.Headers = strings;
             }
             catch (UriFormatException)
@@ -193,7 +195,7 @@ namespace ProxyMapService.Proxy.Headers
             return split2[1].Trim();
         }
 
-        private static string? GetProxyAuthorization(IEnumerable<string> strings)
+        private static string? GetBasicProxyAuthorization(IEnumerable<string> strings)
         {
             const string key = "Proxy-Authorization: Basic";
 
@@ -201,6 +203,14 @@ namespace ProxyMapService.Proxy.Headers
                 .FirstOrDefault(@string => @string.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .Trim();
+        }
+        
+        private static string? GetHeaderValue(IEnumerable<string> strings, string key)
+        {
+            return strings
+                .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                ?.Substring(key.Length)
+                .TrimStart();
         }
     }
 }

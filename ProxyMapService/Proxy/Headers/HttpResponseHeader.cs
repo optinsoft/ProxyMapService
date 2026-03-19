@@ -24,6 +24,10 @@ namespace ProxyMapService.Proxy.Headers
         public long? ContentLength { get; private set; }
         public string? ContentType { get; private set; }
         public string? ETag { get; private set; }
+        public string? CacheControl { get; private set; }
+        public string? Date {  get; private set; }
+        public string? Expires { get; private set; }
+        public string? LastModified { get; private set; }
         public string[]? Headers { get; private set; }
 
         private static void Parse(HttpResponseHeader self, byte[] array)
@@ -40,7 +44,11 @@ namespace ProxyMapService.Proxy.Headers
             self.StatusText = GetStatusText(strings);
             self.ContentLength = GetContentLength(strings);
             self.ContentType = GetHeaderValue(strings, "content-type:");
-            self.ETag = GetHeaderValue(strings, "etag");
+            self.ETag = GetHeaderValue(strings, "etag:");
+            self.CacheControl = GetHeaderValue(strings, "cache-control:");
+            self.Date = GetHeaderValue(strings, "date:");
+            self.Expires = GetHeaderValue(strings, "expires:");
+            self.LastModified = GetHeaderValue(strings, "last-modified:");
             self.Headers = strings;
         }
 
