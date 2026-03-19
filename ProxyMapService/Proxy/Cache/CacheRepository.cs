@@ -24,6 +24,7 @@ namespace ProxyMapService.Proxy.Cache
                 CREATE TABLE IF NOT EXISTS cache_entries
                 (
                     key TEXT PRIMARY KEY,
+                    host TEXT,
                     url TEXT,
                     etag TEXT,
                     header_length INTEGER,
@@ -46,12 +47,13 @@ namespace ProxyMapService.Proxy.Cache
             cmd.CommandText =
                 """
                 INSERT OR REPLACE INTO cache_entries
-                (key,url,etag,header_length,content_length,content_type,created_at,last_access)
+                (key,host,url,etag,header_length,content_length,content_type,created_at,last_access)
                 VALUES
-                ($key,$url,$etag,$hlen,$len,$type,$created,$access)
+                ($key,$host,$url,$etag,$hlen,$len,$type,$created,$access)
                 """;
 
             cmd.Parameters.AddWithValue("$key", entry.Key);
+            cmd.Parameters.AddWithValue("$host", entry.Host);
             cmd.Parameters.AddWithValue("$url", entry.Url);
             cmd.Parameters.AddWithValue("$etag", entry.ETag ?? "");
             cmd.Parameters.AddWithValue("$hlen", entry.HeaderLength);
@@ -71,7 +73,7 @@ namespace ProxyMapService.Proxy.Cache
             var cmd = conn.CreateCommand();
             cmd.CommandText =
                 """
-                SELECT key,url,etag,header_length,content_length,content_type,created_at,last_access 
+                SELECT key,host,url,etag,header_length,content_length,content_type,created_at,last_access 
                 FROM cache_entries 
                 WHERE key=$key                
                 """;
@@ -87,14 +89,15 @@ namespace ProxyMapService.Proxy.Cache
             return new CacheEntry
             {
                 Key = dbKey,
-                Url = reader.GetString(1),
-                ETag = reader.GetString(2),
+                Host = reader.GetString(1),
+                Url = reader.GetString(2),
+                ETag = reader.GetString(3),
                 FilePath = filePath,
-                HeaderLength = reader.GetInt32(3),
-                ContentLength = reader.GetInt64(4),
-                ContentType = reader.GetString(5),
-                CreatedAt = reader.GetDateTime(6),
-                LastAccess = reader.GetDateTime(7)
+                HeaderLength = reader.GetInt32(4),
+                ContentLength = reader.GetInt64(5),
+                ContentType = reader.GetString(6),
+                CreatedAt = reader.GetDateTime(7),
+                LastAccess = reader.GetDateTime(8)
             };
         }
 

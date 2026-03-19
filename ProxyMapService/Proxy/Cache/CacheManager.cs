@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using Microsoft.Extensions.Hosting;
+using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -37,14 +38,14 @@ namespace ProxyMapService.Proxy.Cache
             await _repo.InitAsync();
         }
 
-        public async Task<CacheEntry?> GetAsync(string url)
+        public async Task<CacheEntry?> GetAsync(string host, string url)
         {
             if (!_enabled) 
                 return null;
 
-            var key = Hash(url);
+            var key = Hash($"{host}{url}");
 
-            var filePath = BuildFilePath(key, false);
+            var filePath = BuildFilePath(key, createDir: false);
             if (filePath == null)
                 return null;
 
@@ -67,20 +68,21 @@ namespace ProxyMapService.Proxy.Cache
             return dbEntry;
         }
 
-        public CacheEntry? CreateCacheEntry(string url, int headerLength, long contentLength, string? contentType, string? etag)
+        public CacheEntry? CreateCacheEntry(string host, string url, int headerLength, long contentLength, string? contentType, string? etag)
         {
             if (!_enabled)
                 return null;
 
-            var key = Hash(url);
+            var key = Hash($"{host}{url}");
 
-            var filePath = BuildFilePath(key, true);
+            var filePath = BuildFilePath(key, createDir: true);
             if (filePath == null)
                 return null;
 
             var entry = new CacheEntry
             {
                 Key = key,
+                Host = host,
                 Url = url,
                 ETag = etag,
                 FilePath = filePath,

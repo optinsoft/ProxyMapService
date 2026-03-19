@@ -3,6 +3,7 @@
     public class CacheEntry
     {
         public string Key { get; set; } = default!;
+        public string Host { get; set; } = default!;
         public string Url { get; set; } = default!;
         public string? ETag { get; set; }
         public string FilePath { get; set; } = default!;
