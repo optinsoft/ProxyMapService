@@ -20,6 +20,7 @@ namespace ProxyMapService.Proxy.Counters
         int HostProxified { get; }
         int HostBypassed { get; }
         int Socks5Failures { get; }
+        int CacheResponses { get; }
         void Reset();
         void OnSessionStarted(SessionContext context);
         void OnAuthenticationNotRequired(SessionContext context);
@@ -37,5 +38,6 @@ namespace ProxyMapService.Proxy.Counters
         void OnHostProxified(SessionContext context);
         void OnHostBypassed(SessionContext context);
         void OnSocks5Failure(SessionContext context);
+        void OnCacheResponse(SessionContext context);
     }
 }

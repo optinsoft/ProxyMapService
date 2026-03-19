@@ -35,6 +35,8 @@ namespace ProxyMapService.Interfaces
         long GetProxyBytesSent();
         long GetBypassBytesRead();
         long GetBypassBytesSent();
+        int GetCacheResponses();
+        long GetCacheBytesSent();
         IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats();
     }
 }

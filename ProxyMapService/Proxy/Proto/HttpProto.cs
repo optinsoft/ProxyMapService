@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Sessions;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Proto
@@ -17,7 +18,7 @@ namespace ProxyMapService.Proxy.Proto
             await HttpReplyConnectionEstablished(context.IncomingStream, context.Token);
         }
 
-        public static async Task HttpReplyError(Stream? incomingStream, CancellationToken token, string httpStatusLine, List<string>? customHeaders = null, string? errorMessage = null)
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, List<string>? customHeaders, string? errorMessage, CancellationToken token)
         {
             if (incomingStream == null) return;
             List<string> headers = [
@@ -45,39 +46,49 @@ namespace ProxyMapService.Proxy.Proto
             await incomingStream.WriteAsync(bytes, token);
         }
 
-        public static async Task HttpReplyError(Stream? incomingStream, CancellationToken token, string httpStatusLine, string? errorMessage)
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, List<string>? customHeaders, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, httpStatusLine, null, errorMessage);
+            await HttpReplyError(incomingStream, httpStatusLine, customHeaders, null, token);
+        }
+
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, string? errorMessage, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, httpStatusLine, null, errorMessage, token);
+        }
+
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, CancellationToken token)
+        {
+            await HttpReplyError(incomingStream, httpStatusLine, null, null, token);
         }
 
         public static async Task HttpReplyError(SessionContext context, string httpStatusLine, string? errorMessage = null)
         {
-            await HttpReplyError(context.IncomingStream, context.Token, httpStatusLine, errorMessage);
+            await HttpReplyError(context.IncomingStream, httpStatusLine, null, errorMessage, context.Token);
         }
 
-        public static async Task HttpReplyBadGateway(Stream? incomingStream, CancellationToken token, string? errorMessage = null)
+        public static async Task HttpReplyBadGateway(Stream? incomingStream, string? errorMessage, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 502 Bad Gateway", errorMessage);
+            await HttpReplyError(incomingStream, "HTTP/1.1 502 Bad Gateway", null, errorMessage, token);
         }
 
         public static async Task HttpReplyBadGateway(SessionContext context, string? errorMessage = null)
         {
-            await HttpReplyBadGateway(context.IncomingStream, context.Token, errorMessage);
+            await HttpReplyBadGateway(context.IncomingStream, errorMessage, context.Token);
         }
 
-        public static async Task HttpReplyGatewayTimeout(Stream? incomingStream, CancellationToken token, string? errorMessage = null)
+        public static async Task HttpReplyGatewayTimeout(Stream? incomingStream, string? errorMessage, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 504 Gateway Timeout", errorMessage);
+            await HttpReplyError(incomingStream, "HTTP/1.1 504 Gateway Timeout", null, errorMessage, token);
         }
 
-        public static async Task HttpReplyGatewayTimeout(SessionContext context, string? errorMessage = null)
+        public static async Task HttpReplyGatewayTimeout(SessionContext context, string? errorMessage)
         {
-            await HttpReplyGatewayTimeout(context.IncomingStream, context.Token, errorMessage);
+            await HttpReplyGatewayTimeout(context.IncomingStream, errorMessage, context.Token);
         }
 
         public static async Task HttpReplyProxyAuthenticationRequired(Stream? incomingStream, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 407 Proxy Authentication Required", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""]);
+            await HttpReplyError(incomingStream, "HTTP/1.1 407 Proxy Authentication Required", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""], token);
         }
 
         public static async Task HttpReplyProxyAuthenticationRequired(SessionContext context)
@@ -87,7 +98,7 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task HttpReplyProxyUnauthorized(Stream? incomingStream, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 401 Unauthorized", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""]);
+            await HttpReplyError(incomingStream, "HTTP/1.1 401 Unauthorized", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""], token);
         }
 
         public static async Task HttpReplyProxyUnauthorized(SessionContext context)
@@ -97,7 +108,7 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task HttpReplyBadRequest(Stream? incomingStream, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 400 Bad Request");
+            await HttpReplyError(incomingStream, "HTTP/1.1 400 Bad Request", token);
         }
 
         public static async Task HttpReplyBadRequest(SessionContext context)
@@ -107,7 +118,7 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task HttpReplyForbidden(Stream? incomingStream, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 403 Forbidden");
+            await HttpReplyError(incomingStream, "HTTP/1.1 403 Forbidden", token);
         }
 
         public static async Task HttpReplyForbidden(SessionContext context)
@@ -117,7 +128,7 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task HttpReplyNotFound(Stream? incomingStream, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 404 Not Found");
+            await HttpReplyError(incomingStream, "HTTP/1.1 404 Not Found", token);
         }
 
         public static async Task HttpReplyNotFound(SessionContext context)
@@ -127,7 +138,7 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task HttpReplyMethodNotAllowed(Stream? incomingStream, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, token, "HTTP/1.1 405 Method Not Allowed");
+            await HttpReplyError(incomingStream, "HTTP/1.1 405 Method Not Allowed", token);
         }
         
         public static async Task HttpReplyMethodNotAllowed(SessionContext context)
@@ -135,7 +146,7 @@ namespace ProxyMapService.Proxy.Proto
             await HttpReplyMethodNotAllowed(context.IncomingStream, context.Token);
         }
 
-        public static async Task HttpReplyFileStream(Stream? incomingStream, CancellationToken token, FileStream fileStream)
+        public static async Task HttpReplyFileStream(Stream? incomingStream, FileStream fileStream, CancellationToken token)
         {
             if (incomingStream == null) return;
 
@@ -157,21 +168,31 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task HttpReplyFileStream(SessionContext context, FileStream fileStream)
         {
-            await HttpReplyFileStream(context.IncomingStream, context.Token, fileStream);
+            await HttpReplyFileStream(context.IncomingStream, fileStream, context.Token);
         }
 
-        public static async Task HttpReplyCacheFileStream(Stream? incomingStream, CancellationToken token, FileStream fileStream)
+        public static async Task HttpReplyCacheFileStream(Stream? incomingStream, FileStream fileStream, 
+            BytesSentCounter incomingSentCounter, CancellationToken token)
         {
             if (incomingStream == null) return;
-            await fileStream.CopyToAsync(incomingStream, token);
+            var oldCached = incomingSentCounter.Cached;
+            incomingSentCounter.Cached = true;
+            try
+            {
+                await fileStream.CopyToAsync(incomingStream, token);
+            }
+            finally
+            {
+                incomingSentCounter.Cached = oldCached;
+            }
         }
 
         public static async Task HttpReplyCacheFileStream(SessionContext context, FileStream fileStream)
         {
-            await HttpReplyCacheFileStream(context.IncomingStream, context.Token, fileStream);
+            await HttpReplyCacheFileStream(context.IncomingStream, fileStream, context.ProxyCounters.IncomingSentCounter, context.Token);
         }
 
-        public static async Task SendHttpRequest(Stream? outgoingStream, CancellationToken token, byte[] requestBytes)
+        public static async Task SendHttpRequest(Stream? outgoingStream, byte[] requestBytes, CancellationToken token)
         {
             if (outgoingStream == null) return;
             await outgoingStream.WriteAsync(requestBytes, token);
@@ -179,7 +200,7 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task SendHttpRequest(SessionContext context, byte[] requestBytes)
         {
-            await SendHttpRequest(context.OutgoingStream, context.Token, requestBytes);
+            await SendHttpRequest(context.OutgoingStream, requestBytes, context.Token);
         }
 
         private static string GetContentType(string extension)

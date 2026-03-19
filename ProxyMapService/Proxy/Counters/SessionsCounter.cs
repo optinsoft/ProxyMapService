@@ -23,6 +23,7 @@ namespace ProxyMapService.Proxy.Counters
         public int HostProxified { get; private set; }
         public int HostBypassed { get; private set; }
         public int Socks5Failures { get; private set; }
+        public int CacheResponses { get; private set; }
 
         public void Reset()
         {
@@ -44,6 +45,7 @@ namespace ProxyMapService.Proxy.Counters
                 HostProxified = 0;
                 HostBypassed = 0;
                 Socks5Failures = 0;
+                CacheResponses = 0;
             }
         }
 
@@ -191,6 +193,15 @@ namespace ProxyMapService.Proxy.Counters
             Socks5FailureHandler?.Invoke(context, EventArgs.Empty);
         }
 
+        public void OnCacheResponse(SessionContext context)
+        {
+            lock (_lock)
+            {
+                CacheResponses += 1;
+            }
+            CacheResponseHandler?.Invoke(context, EventArgs.Empty);
+        }
+
         public event EventHandler? SessionStartedHandler;
         public event EventHandler? AuthenticationNotRequiredHandler;
         public event EventHandler? AuthenticationRequiredHandler;
@@ -207,5 +218,6 @@ namespace ProxyMapService.Proxy.Counters
         public event EventHandler? HostProxifiedHandler;
         public event EventHandler? HostBypassedHandler;
         public event EventHandler? Socks5FailureHandler;
+        public event EventHandler? CacheResponseHandler;
     }
 }

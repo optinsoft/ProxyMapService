@@ -74,6 +74,7 @@ namespace ProxyMapService.Proxy.Handlers
                     if (cacheFileStream != null)
                     {
                         context.RequestTunnelState.ResetReadHeaders = true;
+                        context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
                         if (context.Socks4 != null)
                         {
                             await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestGranted);

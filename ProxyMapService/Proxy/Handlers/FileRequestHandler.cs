@@ -7,7 +7,6 @@ using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -116,7 +115,7 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            await HttpProto.HttpReplyFileStream(incomingStream, context.Token, fileStream);
+            await HttpProto.HttpReplyFileStream(incomingStream, fileStream, context.Token);
 
             return HandleStep.Terminate;
         }

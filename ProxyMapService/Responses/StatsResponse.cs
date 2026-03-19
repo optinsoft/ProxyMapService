@@ -29,6 +29,9 @@
         public long? proxyBytesSent { get; set; }
         public long? bypassBytesRead { get; set; }
         public long? bypassBytesSent { get; set; }
+        public int? cacheResponses {  get; set; }
+        public long? cacheBytesSent {  get; set; }
+
 #pragma warning restore IDE1006 // Naming Styles
     }
 }

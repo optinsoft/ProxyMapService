@@ -76,6 +76,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 if (cacheFileStream != null)
                                 {
                                     context.RequestTunnelState.ResetReadHeaders = true;
+                                    context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
                                     await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
                                 }
                                 else

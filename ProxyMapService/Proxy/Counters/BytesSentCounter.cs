@@ -7,9 +7,11 @@ namespace ProxyMapService.Proxy.Counters
         private bool _logSending;
         private readonly StreamDirection _direction = direction;
         private readonly object _lock = new();
-        private long _total;
-        private long _proxified;
-        private long _bypassed;
+        private long _totalBytes;
+        private long _proxifiedBytes;
+        private long _bypassedBytes;
+        private long _cachedBytes;
+        private bool _cached;
 
         public bool LogSending { get => _logSending; set => _logSending = value; }
 
@@ -21,7 +23,7 @@ namespace ProxyMapService.Proxy.Counters
             {
                 lock (_lock)
                 {
-                    return _total;
+                    return _totalBytes;
                 }
 
             }
@@ -29,7 +31,7 @@ namespace ProxyMapService.Proxy.Counters
             {
                 lock (_lock)
                 {
-                    _total = value;
+                    _totalBytes = value;
                 }
             }
         }
@@ -40,14 +42,14 @@ namespace ProxyMapService.Proxy.Counters
             {
                 lock (_lock)
                 {
-                    return _proxified;
+                    return _proxifiedBytes;
                 }
             }
             private set
             {
                 lock (_lock)
                 {
-                    _proxified = value;
+                    _proxifiedBytes = value;
                 }
             }
         }
@@ -58,27 +60,55 @@ namespace ProxyMapService.Proxy.Counters
             {
                 lock (_lock)
                 {
-                    return _bypassed;
+                    return _bypassedBytes;
                 }
             }
             private set
             {
                 lock (_lock)
                 {
-                    _bypassed = value;
+                    _bypassedBytes = value;
+                }
+            }
+        }
+
+        public long CacheBytesSent
+        {
+            get
+            {
+                lock (_lock)
+                { 
+                    return _cachedBytes; 
+                }
+            }
+            private set
+            {
+                lock ( _lock)
+                {
+                    _cachedBytes = value;
                 }
             }
         }
 
         public bool IsLogSending { get => _logSending; }
 
+        public bool Cached
+        {
+            get => _cached;
+            set
+            {
+                _cached = value;
+            }
+        }
+
         public void Reset()
         {
             lock (_lock)
             {
-                _total = 0;
-                _proxified = 0;
-                _bypassed = 0;
+                _totalBytes = 0;
+                _proxifiedBytes = 0;
+                _bypassedBytes = 0;
+                _cachedBytes = 0;
             }
         }
 
@@ -86,14 +116,18 @@ namespace ProxyMapService.Proxy.Counters
         {
             lock (_lock)
             {
-                _total += bytesSent;
+                _totalBytes += bytesSent;
                 if (context.Proxified)
                 {
-                    _proxified += (long)bytesSent;
+                    _proxifiedBytes += (long)bytesSent;
                 }
                 if (context.Bypassed)
                 {
-                    _bypassed += (long)bytesSent;
+                    _bypassedBytes += (long)bytesSent;
+                }
+                if (_cached)
+                {
+                    _cachedBytes += (long)bytesSent;
                 }
             }
             BytesSentHandler?.Invoke(context, new()

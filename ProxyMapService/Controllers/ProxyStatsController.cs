@@ -42,7 +42,9 @@ namespace ProxyMapService.Controllers
                 proxyBytesRead = service.GetProxyBytesRead(),
                 proxyBytesSent = service.GetProxyBytesSent(),
                 bypassBytesRead = service.GetBypassBytesRead(),
-                bypassBytesSent = service.GetBypassBytesSent()
+                bypassBytesSent = service.GetBypassBytesSent(),
+                cacheResponses = service.GetCacheResponses(),
+                cacheBytesSent = service.GetCacheBytesSent()
             });
         }
 

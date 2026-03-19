@@ -321,6 +321,16 @@ namespace ProxyMapService.Services
             return _proxyCounters.OutgoingSentCounter.BypassBytesSent;
         }
 
+        public int GetCacheResponses()
+        {
+            return _proxyCounters.SessionsCounter.CacheResponses;
+        }
+        
+        public long GetCacheBytesSent()
+        {
+            return _proxyCounters.IncomingSentCounter.CacheBytesSent;
+        }
+
         public IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats()
         {
             if (_hostsCounter == null)

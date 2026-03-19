@@ -1,10 +1,4 @@
-﻿using Fare;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.Http.Headers;
-using Microsoft.Extensions.Caching.Memory;
-using Newtonsoft.Json.Linq;
-using ProxyMapService.Proxy.Cache;
-using ProxyMapService.Proxy.Configurations;
+﻿using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Headers;
@@ -12,7 +6,6 @@ using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
-using System;
 using System.Diagnostics;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -247,7 +240,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 if (requestCacheEntry != null)
                                 {
                                     state.ResetReadHeaders = true;
-                                    await ReplyCacheFile(requestCacheEntry, source, token);
+                                    await ReplyCacheFile(requestCacheEntry, source, context);
                                 }
                                 else
                                 {
@@ -316,12 +309,13 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        private static async Task ReplyCacheFile(CacheEntry cacheEntry, Stream incomingStream, CancellationToken token)
+        private static async Task ReplyCacheFile(CacheEntry cacheEntry, Stream incomingStream, SessionContext context)
         {
             using var cacheFileStream = GetCacheEntryFileStream(cacheEntry);
             if (cacheFileStream != null)
             {
-                await HttpProto.HttpReplyCacheFileStream(incomingStream, token, cacheFileStream);
+                context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
+                await HttpProto.HttpReplyCacheFileStream(incomingStream, cacheFileStream, context.ProxyCounters.IncomingSentCounter, context.Token);
             }
         }
     }
