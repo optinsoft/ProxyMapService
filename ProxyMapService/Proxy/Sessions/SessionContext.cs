@@ -19,7 +19,7 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly HostAddress _host;
         private HttpRequestHeader? _requestHeader;
         private HttpResponseHeader? _responseHeader;
-        private CacheRule? _requestCacheRule;
+        private List<CacheRule> _requestCacheRules;
 
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
@@ -75,12 +75,12 @@ namespace ProxyMapService.Proxy.Sessions
                 _requestHeader = value;
                 if (_requestHeader != null)
                 {
-                    _requestCacheRule = CacheRule.FindRule(_requestHeader.HTTPTargetPath, _requestHeader.Accept, CacheRules);
+                    _requestCacheRules = CacheRule.FindRules(_requestHeader.HTTPTargetPath, _requestHeader.Accept, CacheRules);
                     ProxyCounters.HttpRequestHeadersLogger?.OnHttpHeader(this, _requestHeader.Headers);
                 }
                 else
                 {
-                    _requestCacheRule = null;
+                    _requestCacheRules = [];
                 }
             }
         }
@@ -96,9 +96,9 @@ namespace ProxyMapService.Proxy.Sessions
                 }
             }
         }
-        public bool UseCache { get => _requestCacheRule != null; }
         public CacheEntry? ResponseCacheEntry { get; set; }
         public FileStream? ResponseCacheFileStream { get; set; }
+        public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
 
         public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
             bool ssl, X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
@@ -138,6 +138,7 @@ namespace ProxyMapService.Proxy.Sessions
             {
                 Response = true
             };
+            _requestCacheRules = [];
         }
 
         public void CreateIncomingClientStream()

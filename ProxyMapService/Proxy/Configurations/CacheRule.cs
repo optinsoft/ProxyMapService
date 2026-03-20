@@ -8,6 +8,8 @@ namespace ProxyMapService.Proxy.Configurations
         private string? _pattern;
         private Regex? _acceptPatternRegEx = null;
         private string? _acceptPattern;
+        private Regex? _contentTypePatternRegEx = null;
+        private string? _contentTypePattern;
 
         public string? Pattern
         {
@@ -26,6 +28,7 @@ namespace ProxyMapService.Proxy.Configurations
             }
         }
         public Regex? PatternRegEx { get => _patternRegEx; }
+        
         public string? AcceptPattern
         {
             get => _acceptPattern;
@@ -44,11 +47,30 @@ namespace ProxyMapService.Proxy.Configurations
         }
         public Regex? AcceptPatternRegEx { get => _acceptPatternRegEx; }
 
-        public static CacheRule? FindRule(string? url, string? accept, List<CacheRule>? rules)
+        public string? ContentTypePattern
         {
+            get => _contentTypePattern;
+            set
+            {
+                _contentTypePattern = value;
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    _contentTypePatternRegEx = null;
+                }
+                else
+                {
+                    _contentTypePatternRegEx = new Regex(value, RegexOptions.Compiled);
+                }
+            }
+        }
+        public Regex? ContentTypePatternRegEx { get => _contentTypePatternRegEx; }
+
+        public static List<CacheRule> FindRules(string? url, string? accept, List<CacheRule>? rules)
+        {
+            List<CacheRule> result = [];
             if (url == null || rules == null)
             {
-                return null;
+                return result;
             }
             foreach (var rule in rules)
             {
@@ -66,10 +88,34 @@ namespace ProxyMapService.Proxy.Configurations
                 }
                 if (matched)
                 {
-                    return rule;
+                    result.Add(rule);
                 }
             }
-            return null;
+            return result;
+        }
+
+        public static bool CacheContentType(string? contentType, List<CacheRule>? rules)
+        {
+            if (rules == null || rules.Count == 0)
+            {
+                return false;
+            }
+            bool result = true;
+            foreach (var rule in rules)
+            {
+                if (rule.ContentTypePatternRegEx != null)
+                {
+                    if (rule.ContentTypePatternRegEx.Match(contentType ?? "").Success)
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        result = false;
+                    }
+                }
+            }
+            return result;
         }
     }
 }

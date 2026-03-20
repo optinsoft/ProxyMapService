@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Cache;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
 using System.Diagnostics;
 
@@ -8,7 +9,7 @@ namespace ProxyMapService.Proxy.Handlers
     {
         protected static async Task<CacheEntry?> GetCacheEntry(SessionContext context)
         {
-            if (!context.UseCache)
+            if (context.RequestCacheRules.Count == 0)
                 return null;
 
             if (context.RequestHeader?.HTTPVerb != "GET")
@@ -56,7 +57,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         protected static bool CreateResponseCacheFileStream(SessionContext context)
         {
-            if (!context.UseCache)
+            if (context.RequestCacheRules.Count == 0)
                 return false;
 
             if (context.RequestHeader?.HTTPVerb != "GET")
@@ -73,6 +74,9 @@ namespace ProxyMapService.Proxy.Handlers
                 return false;
 
             if (context.ResponseHeader.ContentLength  == null || context.ResponseHeader.ContentLength < 0)
+                return false;
+
+            if (!CacheRule.CacheContentType(context.ResponseHeader.ContentType, context.CacheRules))
                 return false;
 
             Debug.Assert(context.ResponseCacheEntry == null, "!!! Response cache entry is not null !!!");
