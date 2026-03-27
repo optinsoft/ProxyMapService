@@ -132,6 +132,15 @@ namespace ProxyMapService.Proxy.Handlers
                             }
                             return HandleStep.Tunnel;
                         }
+                        if (context.Socks4 != null)
+                        {
+                            await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
+                        }
+                        if (context.Socks5 != null)
+                        {
+                            await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.ConnectionNotAllowed);
+                        }
+                        return HandleStep.Terminate;
                     }
                 }
             }

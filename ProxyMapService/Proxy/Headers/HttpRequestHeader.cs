@@ -126,21 +126,21 @@ namespace ProxyMapService.Proxy.Headers
             return Encoding.ASCII.GetBytes(header);
         }
 
-        private static HostAddress GetHostAddress(IEnumerable<string> strings)
+        private static HostAddress? GetHostAddress(IEnumerable<string> strings)
         {
             const string key = "host:";
 
             var split = strings
-                .Single(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
-                .Substring(key.Length)
+                .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                ?.Substring(key.Length)
                 .TrimStart()
                 .Split(':');
 
-            return split.Length switch
+            return split?.Length switch
             {
                 1 => new HostAddress(split[0], 80),
                 2 => new HostAddress(split[0], int.Parse(split[1])),
-                _ => throw new FormatException(string.Join(":", split)),
+                _ => null //throw new FormatException(string.Join(":", split)),
             };
         }
 
