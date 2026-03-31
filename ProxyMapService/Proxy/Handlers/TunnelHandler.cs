@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Cache;
+﻿using Microsoft.Extensions.Logging;
+using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Headers;
@@ -294,7 +295,15 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (ObjectDisposedException)
             {
-                //context.Logger.LogError("ObjectDisposedException: {ErrorMessage}", ex.Message);
+                //context.Logger.LogError(""{ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+            }
+            catch (IOException)
+            {
+                //context.Logger.LogError(""{ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("{ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
             }
         }
 

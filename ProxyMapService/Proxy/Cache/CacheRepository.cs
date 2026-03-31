@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using System.Linq.Expressions;
 
 namespace ProxyMapService.Proxy.Cache
 {
@@ -10,7 +11,7 @@ namespace ProxyMapService.Proxy.Cache
 
         public CacheRepository(string dbPath)
         {
-            _connectionString = $"Data Source={dbPath}";
+            _connectionString = $"Data Source={dbPath};Default Timeout=5";
         }
 
         public async Task InitAsync()
@@ -81,10 +82,14 @@ namespace ProxyMapService.Proxy.Cache
             var cmd = conn.CreateCommand();
             cmd.CommandText =
                 """
-                SELECT key,host,url,etag,cache_control,date,expires,last_modified,header_length,content_length,content_type,created_at,last_access 
-                FROM cache_entries 
-                WHERE key=$key                
+                UPDATE cache_entries
+                SET last_access=$access
+                WHERE key=$key
+                RETURNING key,host,url,etag,cache_control,date,expires,last_modified,
+                          header_length,content_length,content_type,created_at,last_access
                 """;
+
+            cmd.Parameters.AddWithValue("$access", DateTime.UtcNow);
             cmd.Parameters.AddWithValue("$key", key);
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -92,7 +97,7 @@ namespace ProxyMapService.Proxy.Cache
             if (!await reader.ReadAsync())
                 return null;
 
-            var dbKey = reader.GetString(0);            
+            var dbKey = reader.GetString(0);
 
             return new CacheEntry
             {
