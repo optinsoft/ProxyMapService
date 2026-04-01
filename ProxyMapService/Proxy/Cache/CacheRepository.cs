@@ -1,11 +1,11 @@
 ﻿using Microsoft.Data.Sqlite;
-using System.Linq.Expressions;
 
 namespace ProxyMapService.Proxy.Cache
 {
     public class CacheRepository
     {
         private readonly string _connectionString;
+        private readonly SemaphoreSlim _dbWriteLock = new(1, 1);
 
         public string ConnectionString { get => _connectionString; }
 
@@ -71,7 +71,15 @@ namespace ProxyMapService.Proxy.Cache
             cmd.Parameters.AddWithValue("$created", entry.CreatedAt);
             cmd.Parameters.AddWithValue("$access", entry.LastAccess);
 
-            await cmd.ExecuteNonQueryAsync();
+            await _dbWriteLock.WaitAsync();
+            try
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                _dbWriteLock.Release();
+            }
         }
 
         public async Task<CacheEntry?> GetAsync(string key, string filePath)
@@ -82,11 +90,10 @@ namespace ProxyMapService.Proxy.Cache
             var cmd = conn.CreateCommand();
             cmd.CommandText =
                 """
-                UPDATE cache_entries
-                SET last_access=$access
-                WHERE key=$key
-                RETURNING key,host,url,etag,cache_control,date,expires,last_modified,
+                SELECT key,host,url,etag,cache_control,date,expires,last_modified,
                           header_length,content_length,content_type,created_at,last_access
+                FROM cache_entries
+                WHERE key=$key
                 """;
 
             cmd.Parameters.AddWithValue("$access", DateTime.UtcNow);
@@ -118,7 +125,7 @@ namespace ProxyMapService.Proxy.Cache
             };
         }
 
-        public async Task UpdateAccessAsync(string key)
+        public async Task UpdateAccessAsync(string key, DateTime access)
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
@@ -127,10 +134,18 @@ namespace ProxyMapService.Proxy.Cache
             cmd.CommandText =
                 "UPDATE cache_entries SET last_access=$access WHERE key=$key";
 
-            cmd.Parameters.AddWithValue("$access", DateTime.UtcNow);
+            cmd.Parameters.AddWithValue("$access", access);
             cmd.Parameters.AddWithValue("$key", key);
 
-            await cmd.ExecuteNonQueryAsync();
+            await _dbWriteLock.WaitAsync();
+            try
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                _dbWriteLock.Release();
+            }
         }
 
         public async Task DeleteAsync(string key)
@@ -142,7 +157,15 @@ namespace ProxyMapService.Proxy.Cache
             cmd.CommandText = "DELETE FROM cache_entries WHERE key=$key";
             cmd.Parameters.AddWithValue("$key", key);
 
-            await cmd.ExecuteNonQueryAsync();
+            await _dbWriteLock.WaitAsync();
+            try
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
+            finally
+            {
+                _dbWriteLock.Release();
+            }
         }
     }
 }

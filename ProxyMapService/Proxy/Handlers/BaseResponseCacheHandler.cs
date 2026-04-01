@@ -22,7 +22,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (requestUrl == null)
                 return null;
 
-            return await context.CacheManager.GetAsync($"{hostname}:{port}", requestUrl);
+            return await context.CacheManager.GetAsync($"{hostname}:{port}", requestUrl, context.RequestCacheRules);
         }
 
         protected static async Task<FileStream?> GetCacheFileStream(SessionContext context)
@@ -76,12 +76,13 @@ namespace ProxyMapService.Proxy.Handlers
             if (context.ResponseHeader.ContentLength  == null || context.ResponseHeader.ContentLength < 0)
                 return false;
 
-            if (!CacheRule.CacheContentType(context.ResponseHeader.ContentType, context.CacheRules))
+            var cacheRule = CacheRule.FindCacheContentTypeRule(context.ResponseHeader.ContentType, context.RequestCacheRules);
+            if (cacheRule == null)
                 return false;
 
             Debug.Assert(context.ResponseCacheEntry == null, "!!! Response cache entry is not null !!!");
             context.ResponseCacheEntry = context.CacheManager.CreateCacheEntry(
-                $"{hostname}:{port}", requestUrl, context.ResponseHeader);
+                $"{hostname}:{port}", requestUrl, context.ResponseHeader, cacheRule);
             if (context.ResponseCacheEntry == null)
                 return false;
 

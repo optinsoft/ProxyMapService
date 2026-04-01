@@ -65,6 +65,9 @@ namespace ProxyMapService.Proxy.Configurations
         }
         public Regex? ContentTypePatternRegEx { get => _contentTypePatternRegEx; }
 
+        public int MaxAge { get; set; }
+        public bool IgnoreCacheControl {  get; set; }
+
         public static List<CacheRule> FindRules(string? url, string? accept, List<CacheRule>? rules)
         {
             List<CacheRule> result = [];
@@ -94,25 +97,25 @@ namespace ProxyMapService.Proxy.Configurations
             return result;
         }
 
-        public static bool CacheContentType(string? contentType, List<CacheRule>? rules)
+        public static CacheRule? FindCacheContentTypeRule(string? contentType, List<CacheRule>? rules)
         {
             if (rules == null || rules.Count == 0)
             {
-                return false;
+                return null;
             }
-            bool result = true;
+            CacheRule? result = null;
             foreach (var rule in rules)
             {
                 if (rule.ContentTypePatternRegEx != null)
                 {
                     if (rule.ContentTypePatternRegEx.Match(contentType ?? "").Success)
                     {
-                        return true;
+                        return rule;
                     }
-                    else
-                    {
-                        result = false;
-                    }
+                }
+                else
+                {
+                    result ??= rule;
                 }
             }
             return result;

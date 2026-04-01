@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.Headers;
+﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Headers;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
@@ -39,7 +39,7 @@ namespace ProxyMapService.Proxy.Cache
             await _repo.InitAsync();
         }
 
-        public async Task<CacheEntry?> GetAsync(string host, string url)
+        public async Task<CacheEntry?> GetAsync(string host, string url, List<CacheRule> rules)
         {
             if (!_enabled) 
                 return null;
@@ -55,21 +55,57 @@ namespace ProxyMapService.Proxy.Cache
 
             if (_memoryIndex.TryGetValue(key, out var entry))
             {
-                entry.LastAccess = DateTime.UtcNow;
-                await _repo.UpdateAccessAsync(key);
-
-                return entry;
+                var rule = CacheRule.FindCacheContentTypeRule(entry.ContentType, rules);
+                if (rule != null)
+                {
+                    if (!UseCacheEntry(entry, rule))
+                        return null;
+                    entry.LastAccess = DateTime.UtcNow;
+                    await _repo.UpdateAccessAsync(key, entry.LastAccess);
+                    return entry;
+                }
             }
 
             var dbEntry = await _repo.GetAsync(key, filePath);
-
             if (dbEntry != null)
+            {
+                var rule = CacheRule.FindCacheContentTypeRule(dbEntry.ContentType, rules);
+                if (rule == null)
+                    return null;
+                if (!UseCacheEntry(dbEntry, rule))
+                    return null;
+                dbEntry.LastAccess = DateTime.UtcNow;
                 _memoryIndex[key] = dbEntry;
+                await _repo.UpdateAccessAsync(key, dbEntry.LastAccess);
+            }
 
             return dbEntry;
         }
 
-        public CacheEntry? CreateCacheEntry(string host, string url, HttpResponseHeader responseHeader)
+        private static bool UseCacheEntry(CacheEntry entry, CacheRule rule)
+        {
+            if (rule.MaxAge > 0)
+            {
+                var expiresAt = entry.CreatedAt.AddSeconds(rule.MaxAge);
+                if (expiresAt <= DateTime.UtcNow)
+                {
+                    return false;
+                }
+            }
+
+            if (rule.IgnoreCacheControl)
+            {
+                return true;
+            }
+
+            var decision = CachePolicyEvaluator.Evaluate(entry, DateTimeOffset.UtcNow);
+            
+            var result = (decision.Decision == CacheDecision.UseCache);
+
+            return result;
+        }   
+  
+        public CacheEntry? CreateCacheEntry(string host, string url, HttpResponseHeader responseHeader, CacheRule rule)
         {
             if (!_enabled)
                 return null;
@@ -97,6 +133,12 @@ namespace ProxyMapService.Proxy.Cache
                 CreatedAt = DateTime.UtcNow,
                 LastAccess = DateTime.UtcNow
             };
+
+            if (!UseCacheEntry(entry, rule))
+            {
+                return null;
+            }
+
             return entry;
         }
 
