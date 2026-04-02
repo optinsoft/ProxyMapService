@@ -49,12 +49,21 @@ namespace ProxyMapService.Proxy.Sessions
             X509Certificate2? serverCertificate, caCertificate;
             try
             {
-                serverCertificate = sslServerConfig.ServerCertificate;
-                caCertificate = sslServerConfig.CACertificate;
+                serverCertificate = sslServerConfig.ServerCertificate.Certificate;
             }
             catch (Exception ex)
             {
-                logger.LogError("Error: {ErrorMessage}", ex.Message);
+                logger.LogError("Server Certificate Error: {ErrorMessage}", ex.Message);
+                incomingClient.Close();
+                return;
+            }
+            try
+            {
+                caCertificate = sslServerConfig.CACertificate.Certificate;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("CA Certificate Error: {ErrorMessage}", ex.Message);
                 incomingClient.Close();
                 return;
             }

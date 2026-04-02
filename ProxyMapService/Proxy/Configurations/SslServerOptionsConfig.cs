@@ -4,86 +4,13 @@ namespace ProxyMapService.Proxy.Configurations
 {
     public class SslServerOptionsConfig
     {
-        private string? _certificatePath = null;
-        private string? _certificatePassword = null;
-        private X509Certificate2? _serverCertificate = null;
-        private bool _certificateinitialized = false;
-        private string? _caCertificatePath = null;
-        private string? _caCertificatePassword = null;
-        private X509Certificate2? _caCertificate = null;
-        private bool _caCertificateinitialized = false;
+        private SslCertificateConfig _serverCertificate = new();
+        private SslCertificateConfig _caCertificate = new();
+
         public string EnabledSslProtocols { get; set; } = "Tls12,Tls13";
         public bool ClientCertificateRequired { get; set; } = false;
         public bool CheckCertificateRevocation { get; set; } = true;
-        public string? CertificatePath
-        {
-            get => _certificatePath;
-            set
-            {
-                _certificatePath = value;
-                _certificateinitialized = false;
-            }
-        }
-        public string? CertificatePassword
-        {
-            get => _certificatePassword;
-            set
-            {
-                _certificatePassword = value;
-                _certificateinitialized = false;
-            }
-        }
-        public X509Certificate2? ServerCertificate
-        {
-            get
-            {
-                if (!_certificateinitialized)
-                {
-                    if (_certificatePath != null)
-                    {
-                        _serverCertificate = new X509Certificate2(
-                            _certificatePath,
-                            _certificatePassword);
-                    }
-                    _certificateinitialized = true;
-                }
-                return _serverCertificate;
-            }
-        }
-        public string? CACertificatePath
-        {
-            get => _caCertificatePath;
-            set
-            {
-                _caCertificatePath = value;
-                _caCertificateinitialized = false;
-            }
-        }
-        public string? CACertificatePassword
-        {
-            get => _caCertificatePassword;
-            set
-            {
-                _caCertificatePassword = value;
-                _caCertificateinitialized = false;
-            }
-        }
-        public X509Certificate2? CACertificate
-        {
-            get
-            {
-                if (!_caCertificateinitialized)
-                {
-                    if (_caCertificatePath != null)
-                    {
-                        _caCertificate = new X509Certificate2(
-                            _caCertificatePath,
-                            _caCertificatePassword);
-                    }
-                    _caCertificateinitialized = true;
-                }
-                return _caCertificate;
-            }
-        }
+        public SslCertificateConfig ServerCertificate { get => _serverCertificate; }
+        public SslCertificateConfig CACertificate {  get =>  _caCertificate; }        
     }
 }
