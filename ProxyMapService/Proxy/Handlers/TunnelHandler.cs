@@ -34,7 +34,6 @@ namespace ProxyMapService.Proxy.Handlers
                 using SslStream? outgoingSslStream = context.UpstreamSsl ? new(context.OutgoingStream) : null;
 
                 string subjectName = $"CN=*.{context.Host.OriginalHostname}";
-                X509Certificate2? serverCertificate = context.ServerCertificate;
 
                 if (outgoingSslStream != null)
                 {
@@ -51,6 +50,7 @@ namespace ProxyMapService.Proxy.Handlers
 
                 if (incomingSslStream != null)
                 {
+                    X509Certificate2? serverCertificate = context.ServerCertificate;
                     if (serverCertificate == null)
                     {
                         if (context.CACertificate != null)
@@ -68,14 +68,14 @@ namespace ProxyMapService.Proxy.Handlers
                 using CountingStream? incomingSslCountingStream =
                     incomingSslStream != null
                     ? new CountingStream(incomingSslStream, context,
-                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSentSslCounter,
-                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SentTunnelId)
+                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
+                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
                     : null;
                 using CountingStream? outgoingSslCountingStream =
                     outgoingSslStream != null
                     ? new CountingStream(outgoingSslStream, context,
-                        context.ProxyCounters.OutgoingReadSslCounter, context.ProxyCounters.OutgoingSentSslCounter,
-                        context.OutgoingStream.ReadTunnelId, context.OutgoingStream.SentTunnelId)
+                        context.ProxyCounters.OutgoingReadSslCounter, context.ProxyCounters.OutgoingSendSslCounter,
+                        context.OutgoingStream.ReadTunnelId, context.OutgoingStream.SendTunnelId)
                     : null;
 
                 await TwoWayTunnel(context,
@@ -91,7 +91,7 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task TwoWayTunnel(SessionContext context, Stream incomingStream, Stream outgoingStream)
+        private static async Task TwoWayTunnel(SessionContext context, CountingStream incomingStream, CountingStream outgoingStream)
         {
             var tunnelOptions = new TunnelOptions
             {
@@ -100,16 +100,16 @@ namespace ProxyMapService.Proxy.Handlers
                 ReadResponseHeaders = true
             };
             var requestTunnelTask = Tunnel(incomingStream, outgoingStream, context,
-                context.ProxyCounters.IncomingReadCounter, context.ProxyCounters.OutgoingSentCounter,
+                context.ProxyCounters.IncomingReadCounter, context.ProxyCounters.OutgoingSendCounter,
                 context.RequestTunnelState, context.ResponseTunnelState, tunnelOptions);
             var responseTunnelTask = Tunnel(outgoingStream, incomingStream, context,
-                context.ProxyCounters.OutgoingReadCounter, context.ProxyCounters.IncomingSentCounter,
+                context.ProxyCounters.OutgoingReadCounter, context.ProxyCounters.IncomingSendCounter,
                 context.ResponseTunnelState, context.RequestTunnelState, tunnelOptions);
             await Task.WhenAny(requestTunnelTask, responseTunnelTask);
         }
 
-        private static async Task Tunnel(Stream source, Stream destination, SessionContext context,
-            BytesReadCounter readCounter, BytesSentCounter sentCounter, TunnelState state,
+        private static async Task Tunnel(CountingStream source, CountingStream destination, SessionContext context,
+            BytesReadCounter readCounter, BytesSendCounter sendCounter, TunnelState state,
             TunnelState otherTunnelState, TunnelOptions options)
         {
             var buffer = new byte[BufferSize];
@@ -245,10 +245,10 @@ namespace ProxyMapService.Proxy.Handlers
                                 }
                                 else
                                 {
-                                    if (sentCounter.IsLogSending)
+                                    if (sendCounter.IsLogSending)
                                     {
                                         context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...",
-                                            state.TunnelId, StreamDirectionName.GetName(sentCounter.Direction));
+                                            state.TunnelId, StreamDirectionName.GetName(sendCounter.Direction));
                                     }
                                     if (headerAndBody != null && headerModified)
                                     {
@@ -283,10 +283,10 @@ namespace ProxyMapService.Proxy.Handlers
                                     context.DisposeResponseCacheFileStream();
                                 }
                             }
-                            if (sentCounter.IsLogSending)
+                            if (sendCounter.IsLogSending)
                             {
                                 context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...",
-                                    state.TunnelId, StreamDirectionName.GetName(sentCounter.Direction));
+                                    state.TunnelId, StreamDirectionName.GetName(sendCounter.Direction));
                             }
                             await destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
                         }
@@ -318,13 +318,13 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        private static async Task ReplyCacheFile(CacheEntry cacheEntry, Stream incomingStream, SessionContext context)
+        private static async Task ReplyCacheFile(CacheEntry cacheEntry, CountingStream incomingStream, SessionContext context)
         {
             using var cacheFileStream = GetCacheEntryFileStream(cacheEntry);
             if (cacheFileStream != null)
             {
                 context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                await HttpProto.HttpReplyCacheFileStream(incomingStream, cacheFileStream, context.ProxyCounters.IncomingSentCounter, context.Token);
+                await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheFileStream);
             }
         }
     }

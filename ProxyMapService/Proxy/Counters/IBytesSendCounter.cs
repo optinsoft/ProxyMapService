@@ -2,7 +2,7 @@
 
 namespace ProxyMapService.Proxy.Counters
 {
-    public interface IBytesSentCounter
+    public interface IBytesSendCounter
     {
         StreamDirection Direction { get; }
         long TotalBytesSent { get; }
@@ -10,8 +10,8 @@ namespace ProxyMapService.Proxy.Counters
         long BypassBytesSent { get; }
         long CacheBytesSent { get; }
         bool IsLogSending {  get; }
-        bool Cached { get; set; }
         void Reset();
+        void OnBytesSend(SessionContext context, int bytesSend, byte[]? bytesData, int startIndex, long tunnelId);
         void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex, long tunnelId);
     }
 }

@@ -99,6 +99,7 @@ namespace ProxyMapService.Proxy.Sessions
         public CacheEntry? ResponseCacheEntry { get; set; }
         public FileStream? ResponseCacheFileStream { get; set; }
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
+        public bool CachedReply { get; set; }
 
         public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
             bool ssl, X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
@@ -144,14 +145,14 @@ namespace ProxyMapService.Proxy.Sessions
         public void CreateIncomingClientStream()
         {
             IncomingStream = new CountingStream(IncomingClient.GetStream(), this, 
-                ProxyCounters.IncomingReadCounter, ProxyCounters.IncomingSentCounter,
+                ProxyCounters.IncomingReadCounter, ProxyCounters.IncomingSendCounter,
                 RequestTunnelState.TunnelId, ResponseTunnelState.TunnelId);
         }
 
         public void CreateOutgoingClientStream()
         {
             OutgoingStream = new CountingStream(OutgoingClient.GetStream(), this, 
-                ProxyCounters.OutgoingReadCounter, ProxyCounters.OutgoingSentCounter,
+                ProxyCounters.OutgoingReadCounter, ProxyCounters.OutgoingSendCounter,
                 ResponseTunnelState.TunnelId, RequestTunnelState.TunnelId);
         }
 

@@ -10,8 +10,6 @@ namespace ProxyMapService.Proxy.Counters
         private long _totalBytes;
         private long _proxifiedBytes;
         private long _bypassedBytes;
-        private long _cachedBytes;
-        private bool _cached;
 
         public bool LogReading { get => _logReading; set => _logReading = value; }
 
@@ -70,33 +68,7 @@ namespace ProxyMapService.Proxy.Counters
             }
         }
 
-        public long CachedBytesRead
-        {
-            get 
-            {
-                lock (_lock)
-                {
-                    return _cachedBytes;
-                }
-            }
-            private set
-            {
-                lock (_lock)
-                {
-                    _cachedBytes = value;
-                }
-            }
-        }
-
         public bool IsLogReading => _logReading;
-
-        public bool Cached {
-            get => _cached; 
-            set
-            {
-                _cached = value;
-            }
-        }
 
         public void Reset()
         {
@@ -105,7 +77,6 @@ namespace ProxyMapService.Proxy.Counters
                 _totalBytes = 0;
                 _proxifiedBytes = 0;
                 _bypassedBytes = 0;
-                _cachedBytes = 0;
             }
         }
 
@@ -121,10 +92,6 @@ namespace ProxyMapService.Proxy.Counters
                 if (context.Bypassed)
                 {
                     _bypassedBytes += (long)bytesRead;
-                }
-                if (_cached)
-                {
-                    _cachedBytes += (long)bytesRead;
                 }
             }
             BytesReadHandler?.Invoke(context, new()

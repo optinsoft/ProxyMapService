@@ -1,8 +1,8 @@
 ﻿namespace ProxyMapService.Proxy.Counters
 {
-    public class BytesSentEventArgs
+    public class BytesSendEventArgs: EventArgs
     {
-        public int BytesSent { get; set; }
+        public int BytesSend { get; set; }
         public byte[]? BytesData { get; set; }
         public int StartIndex { get; set; }
         public StreamDirection Direction { get; set; }

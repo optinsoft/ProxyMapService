@@ -171,25 +171,25 @@ namespace ProxyMapService.Proxy.Proto
             await HttpReplyFileStream(context.IncomingStream, fileStream, context.Token);
         }
 
-        public static async Task HttpReplyCacheFileStream(Stream? incomingStream, FileStream fileStream, 
-            BytesSentCounter incomingSentCounter, CancellationToken token)
+        public static async Task HttpReplyCacheFileStream(SessionContext context, CountingStream? incomingStream,
+            FileStream fileStream)
         {
             if (incomingStream == null) return;
-            var oldCached = incomingSentCounter.Cached;
-            incomingSentCounter.Cached = true;
+            var oldCached = context.CachedReply;
+            context.CachedReply = true;
             try
             {
-                await fileStream.CopyToAsync(incomingStream, token);
+                await fileStream.CopyToAsync(incomingStream, context.Token);
             }
             finally
             {
-                incomingSentCounter.Cached = oldCached;
+                context.CachedReply = oldCached;
             }
         }
 
         public static async Task HttpReplyCacheFileStream(SessionContext context, FileStream fileStream)
         {
-            await HttpReplyCacheFileStream(context.IncomingStream, fileStream, context.ProxyCounters.IncomingSentCounter, context.Token);
+            await HttpReplyCacheFileStream(context, context.IncomingStream, fileStream);
         }
 
         public static async Task SendHttpRequest(Stream? outgoingStream, byte[] requestBytes, CancellationToken token)

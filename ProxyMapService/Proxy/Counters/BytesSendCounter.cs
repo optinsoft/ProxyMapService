@@ -2,7 +2,7 @@
 
 namespace ProxyMapService.Proxy.Counters
 {
-    public class BytesSentCounter(StreamDirection direction) : IBytesSentCounter
+    public class BytesSendCounter(StreamDirection direction) : IBytesSendCounter
     {
         private bool _logSending;
         private readonly StreamDirection _direction = direction;
@@ -11,7 +11,6 @@ namespace ProxyMapService.Proxy.Counters
         private long _proxifiedBytes;
         private long _bypassedBytes;
         private long _cachedBytes;
-        private bool _cached;
 
         public bool LogSending { get => _logSending; set => _logSending = value; }
 
@@ -92,15 +91,6 @@ namespace ProxyMapService.Proxy.Counters
 
         public bool IsLogSending { get => _logSending; }
 
-        public bool Cached
-        {
-            get => _cached;
-            set
-            {
-                _cached = value;
-            }
-        }
-
         public void Reset()
         {
             lock (_lock)
@@ -110,6 +100,18 @@ namespace ProxyMapService.Proxy.Counters
                 _bypassedBytes = 0;
                 _cachedBytes = 0;
             }
+        }
+
+        public void OnBytesSend(SessionContext context, int bytesSend, byte[]? bytesData, int startIndex, long tunnelId)
+        {
+            BytesSendHandler?.Invoke(context, new()
+            {
+                BytesSend = bytesSend,
+                BytesData = bytesData,
+                StartIndex = startIndex,
+                Direction = Direction,
+                TunnelId = tunnelId
+            });
         }
 
         public void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex, long tunnelId)
@@ -125,7 +127,7 @@ namespace ProxyMapService.Proxy.Counters
                 {
                     _bypassedBytes += (long)bytesSent;
                 }
-                if (_cached)
+                if (context.CachedReply)
                 {
                     _cachedBytes += (long)bytesSent;
                 }
@@ -140,6 +142,7 @@ namespace ProxyMapService.Proxy.Counters
             });
         }
 
+        public event EventHandler<BytesSendEventArgs>? BytesSendHandler;
         public event EventHandler<BytesSentEventArgs>? BytesSentHandler;
     }
 }

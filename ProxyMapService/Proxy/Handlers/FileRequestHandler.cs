@@ -43,8 +43,8 @@ namespace ProxyMapService.Proxy.Handlers
                 using CountingStream? incomingSslCountingStream = 
                     incomingSslStream != null 
                     ? new CountingStream(incomingSslStream, context, 
-                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSentSslCounter,
-                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SentTunnelId) 
+                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
+                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId) 
                     : null;
 
                 return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream, incomingSslStream != null);

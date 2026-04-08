@@ -3,29 +3,34 @@
 namespace ProxyMapService.Proxy.Counters
 {
     public class CountingStream(Stream stream, SessionContext context, 
-        IBytesReadCounter? readCounter, IBytesSentCounter? sentCounter,
-        long readTunnelId, long sentTunnelId) : Stream
+        IBytesReadCounter? readCounter, IBytesSendCounter? sendCounter,
+        long readTunnelId, long sendTunnelId) : Stream
     {
         private bool _readCountPaused = false;
-        private bool _sentCountPaused = false;
+        private bool _sendCountPaused = false;
 
         public long ReadTunnelId { get; set; } = readTunnelId;
-        public long SentTunnelId { get; set; } = sentTunnelId;
+        public long SendTunnelId { get; set; } = sendTunnelId;
 
         public virtual void OnBytesRead(int bytesRead, byte[]? bytesData, int startIndex)
         {
             readCounter?.OnBytesRead(context, bytesRead, bytesData, startIndex, ReadTunnelId);
         }
 
+        public virtual void OnBytesSend(int bytesSent, byte[]? bytesData, int startIndex)
+        {
+            sendCounter?.OnBytesSend(context, bytesSent, bytesData, startIndex, SendTunnelId);
+        }
+
         public virtual void OnBytesSent(int bytesSent, byte[]? bytesData, int startIndex)
         {
-            sentCounter?.OnBytesSent(context, bytesSent, bytesData, startIndex, SentTunnelId);
+            sendCounter?.OnBytesSent(context, bytesSent, bytesData, startIndex, SendTunnelId);
         }
 
         public void PauseReadCount() { _readCountPaused = true; }
-        public void PauseSentCount() { _sentCountPaused = true; }
+        public void PauseSendCount() { _sendCountPaused = true; }
         public void ResumeReadCount() { _readCountPaused = false; }
-        public void ResumeSentCount() { _sentCountPaused = false; }
+        public void ResumeSendCount() { _sendCountPaused = false; }
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
@@ -39,10 +44,14 @@ namespace ProxyMapService.Proxy.Counters
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            await stream.WriteAsync(buffer, cancellationToken);
-            if (!_sentCountPaused)
+            if (!_sendCountPaused)
             {
-                sentCounter?.OnBytesSent(context, buffer.Length, buffer.ToArray(), 0, SentTunnelId);
+                sendCounter?.OnBytesSend(context, buffer.Length, buffer.ToArray(), 0, SendTunnelId);
+            }
+            await stream.WriteAsync(buffer, cancellationToken);
+            if (!_sendCountPaused)
+            {
+                sendCounter?.OnBytesSent(context, buffer.Length, buffer.ToArray(), 0, SendTunnelId);
             }
         }
 

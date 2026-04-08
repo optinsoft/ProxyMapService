@@ -58,7 +58,7 @@ namespace ProxyMapService.Services
                 if (HostTrafficStatsEnabled)
                 {
                     _proxyCounters.OutgoingReadCounter.BytesReadHandler += _hostsCounter.OnBytesRead;
-                    _proxyCounters.OutgoingSentCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
+                    _proxyCounters.OutgoingSendCounter.BytesSentHandler += _hostsCounter.OnBytesSent;
                 }
             }
             var LogReading = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogReading") ?? false;
@@ -70,16 +70,16 @@ namespace ProxyMapService.Services
             var LogSending = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSending") ?? false;
             if (LogSending)
             {
-                _proxyCounters.IncomingSentCounter.LogSending = true;
-                _proxyCounters.OutgoingSentCounter.LogSending = true;
+                _proxyCounters.IncomingSendCounter.LogSending = true;
+                _proxyCounters.OutgoingSendCounter.LogSending = true;
             }
             var LogTrafficData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogTrafficData") ?? false;
             if (LogTrafficData)
             {
                 _proxyCounters.OutgoingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                _proxyCounters.OutgoingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                _proxyCounters.OutgoingSendCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
                 _proxyCounters.IncomingReadCounter.BytesReadHandler += _bytesLogger.LogBytesRead;
-                _proxyCounters.IncomingSentCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
+                _proxyCounters.IncomingSendCounter.BytesSentHandler += _bytesLogger.LogBytesSent;
             }
             var LogSslDecodedData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSslDecodedData") ?? false;
             if (LogSslDecodedData)
@@ -90,8 +90,8 @@ namespace ProxyMapService.Services
             var LogSslEncodedData = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogSslEncodedData") ?? false;
             if (LogSslEncodedData)
             {
-                _proxyCounters.IncomingSentSslCounter.BytesSentHandler += _bytesLogger.LogSslBytesEncoded;
-                _proxyCounters.OutgoingSentSslCounter.BytesSentHandler += _bytesLogger.LogSslBytesEncoded;
+                _proxyCounters.IncomingSendSslCounter.BytesSendHandler += _bytesLogger.LogSslBytesEncoded;
+                _proxyCounters.OutgoingSendSslCounter.BytesSendHandler += _bytesLogger.LogSslBytesEncoded;
             }
             var LogHttpRequestHeaders = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogHttpRequestHeaders") ?? false;
             if (LogHttpRequestHeaders)
@@ -298,7 +298,7 @@ namespace ProxyMapService.Services
 
         public long GetTotalBytesSent()
         {
-            return _proxyCounters.OutgoingSentCounter.TotalBytesSent;
+            return _proxyCounters.OutgoingSendCounter.TotalBytesSent;
         }
 
         public long GetProxyBytesRead()
@@ -308,7 +308,7 @@ namespace ProxyMapService.Services
 
         public long GetProxyBytesSent()
         {
-            return _proxyCounters.OutgoingSentCounter.ProxyBytesSent;
+            return _proxyCounters.OutgoingSendCounter.ProxyBytesSent;
         }
 
         public long GetBypassBytesRead()
@@ -318,7 +318,7 @@ namespace ProxyMapService.Services
 
         public long GetBypassBytesSent()
         {
-            return _proxyCounters.OutgoingSentCounter.BypassBytesSent;
+            return _proxyCounters.OutgoingSendCounter.BypassBytesSent;
         }
 
         public int GetCacheResponses()
@@ -328,7 +328,7 @@ namespace ProxyMapService.Services
         
         public long GetCacheBytesSent()
         {
-            return _proxyCounters.IncomingSentCounter.CacheBytesSent;
+            return _proxyCounters.IncomingSendCounter.CacheBytesSent;
         }
 
         public IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats()

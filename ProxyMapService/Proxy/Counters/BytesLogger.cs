@@ -60,9 +60,9 @@ namespace ProxyMapService.Proxy.Counters
                 logData);
         }
 
-        public void LogSslBytesEncoded(object? sender, BytesSentEventArgs e)
+        public void LogSslBytesEncoded(object? sender, BytesSendEventArgs e)
         {
-            var bytesSent = e.BytesSent;
+            var bytesSent = e.BytesSend;
             var bytesData = e.BytesData;
             var startIndex = e.StartIndex;
             var direction = e.Direction;
