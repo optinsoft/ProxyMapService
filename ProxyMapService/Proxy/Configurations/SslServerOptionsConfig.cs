@@ -11,6 +11,6 @@ namespace ProxyMapService.Proxy.Configurations
         public bool ClientCertificateRequired { get; set; } = false;
         public bool CheckCertificateRevocation { get; set; } = true;
         public SslCertificateConfig ServerCertificate { get => _serverCertificate; }
-        public SslCertificateConfig CACertificate {  get =>  _caCertificate; }        
+        public SslCertificateConfig CACertificate {  get => _caCertificate; }        
     }
 }
