@@ -6,12 +6,12 @@ namespace ProxyMapService.Proxy.Handlers
     {
         private static void ResolveSessionId(SessionContext context)
         {
-            context.UsernameParameterResolver.ResolveParameterValue(context.Mapping.Authentication.UsernameParameters.SessionId, context);
+            context.UsernameParameterResolver.ResolveParameterValue(context, context.Mapping.Authentication.UsernameParameters.SessionId);
         }
 
         private static void ResolveSessionTime(SessionContext context)
         {
-            context.UsernameParameterResolver.ResolveParameterValue(context.Mapping.Authentication.UsernameParameters.SessionTime, context);
+            context.UsernameParameterResolver.ResolveParameterValue(context, context.Mapping.Authentication.UsernameParameters.SessionTime);
         }
 
         private static void ResolveAuthenticationUserParameters(SessionContext context)
@@ -22,7 +22,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (!p.SessionTime) // Skip already resolved SessionTime
                 {
-                    context.UsernameParameterResolver.ResolveParameterValue(p, context);
+                    context.UsernameParameterResolver.ResolveParameterValue(context, p);
                 }
             }
         }

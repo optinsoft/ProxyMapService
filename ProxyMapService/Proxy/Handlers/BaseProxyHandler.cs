@@ -12,7 +12,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 foreach (var p in parameterList)
                 {
-                    string? value = context.UsernameParameterResolver.ResolveParameterValue(p, context);
+                    string? value = context.UsernameParameterResolver.ResolveParameterValue(context, p);
                     if (!String.IsNullOrEmpty(value))
                     {
                         if (p.Name != "account")

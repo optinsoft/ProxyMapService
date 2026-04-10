@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Services;
@@ -63,7 +62,10 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-app.UseMiddleware<LocalhostMiddleware>();
+if (builder.Configuration.GetValue<bool>("Security:AllowOnlyLocalhost"))
+{
+    app.UseMiddleware<LocalhostMiddleware>();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

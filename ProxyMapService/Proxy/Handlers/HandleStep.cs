@@ -26,6 +26,8 @@
         Proxy,
         Tunnel,
         HandleFileRequest,
+        GetSession,
+        ResetSession,
         Terminate,
     }
 }

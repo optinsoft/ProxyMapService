@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using ProxyMapService.Proxy.Cache;
+﻿using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Headers;

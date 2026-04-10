@@ -5,7 +5,11 @@ namespace ProxyMapService.Proxy.Resolvers
 {
     public interface IUsernameParameterResolver
     {
+        string CurrentSessionId { get; }
+        DateTime? CurrentSessionExpiresAt {  get; }
+        bool CurrentSessionExpired { get; }
         string GenerateSessionId(SessionContext context, string pattern);
-        string? ResolveParameterValue(UsernameParameter? parameter, SessionContext context);
+        void ResetSessionId();
+        string? ResolveParameterValue(SessionContext context, UsernameParameter? parameter);
     }
 }

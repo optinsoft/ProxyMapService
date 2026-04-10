@@ -1,5 +1,4 @@
 ﻿using Fare;
-using Newtonsoft.Json.Linq;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
 
@@ -11,28 +10,68 @@ namespace ProxyMapService.Proxy.Resolvers
         private DateTime? _currentSessionExpiresAt = null;
         private readonly object _lock = new();
 
-        private static string GenerateValue(string pattern)
+        public string CurrentSessionId
         {
-            var xeger = new Xeger(pattern);
-            return xeger.Generate();
+            get
+            {
+                string id;
+                lock (_lock)
+                {
+                    id = _currentSessionId;
+                }
+                return id;
+            }
+        }
+
+        public DateTime? CurrentSessionExpiresAt
+        {
+            get
+            {
+                DateTime? expiresAt;
+                lock (_lock)
+                {
+                    expiresAt = _currentSessionExpiresAt;
+                }
+                return expiresAt;
+            }
+        }
+
+        public bool CurrentSessionExpired
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return (_currentSessionExpiresAt != null && DateTime.Now >= _currentSessionExpiresAt);
+                }
+            }
         }
 
         public string GenerateSessionId(SessionContext context, string pattern)
         {
-            var newSessionId = GenerateValue(pattern);
+            var newId = GenerateValue(pattern);
             lock (_lock)
             {
                 if (_currentSessionExpiresAt != null && DateTime.Now < _currentSessionExpiresAt)
                 {
                     return _currentSessionId;
                 }
-                _currentSessionId = newSessionId;
+                _currentSessionId = newId;
                 _currentSessionExpiresAt = DateTime.Now.AddMinutes(context.SessionTime); // context.SessionTime must be set (resolved) before generating session
             }
-            return newSessionId;
+            return newId;
         }
 
-        public string? ResolveParameterValue(UsernameParameter? parameter, SessionContext context)
+        public void ResetSessionId()
+        {
+            lock (_lock)
+            {
+                _currentSessionId = string.Empty;
+                _currentSessionExpiresAt = null;
+            }
+        }
+
+        public string? ResolveParameterValue(SessionContext context, UsernameParameter? parameter)
         {
             if (parameter == null)
             {
@@ -82,6 +121,12 @@ namespace ProxyMapService.Proxy.Resolvers
                 }
             }
             return value;
+        }
+
+        private static string GenerateValue(string pattern)
+        {
+            var xeger = new Xeger(pattern);
+            return xeger.Generate();
         }
     }
 }

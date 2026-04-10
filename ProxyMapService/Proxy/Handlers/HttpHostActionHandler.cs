@@ -10,6 +10,18 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
+            if (context.Http?.HTTPVerb == "GET" && context.Http?.HTTPTargetHost == null)
+            {
+                if (context.Http?.HTTPTargetPath == "/session/")
+                {
+                    return HandleStep.GetSession;
+                }
+                if (context.Http?.HTTPTargetPath == "/session/reset")
+                {
+                    return HandleStep.ResetSession;
+                }
+            }
+
             if (context.Mapping.Listen.RejectHttpProxy && context.Http?.HTTPVerb != "CONNECT")
             {
                 context.ProxyCounters.SessionsCounter?.OnHttpRejected(context);

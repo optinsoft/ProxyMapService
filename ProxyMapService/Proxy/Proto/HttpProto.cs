@@ -1,6 +1,7 @@
 ﻿using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
+using System.Text.Json;
 
 namespace ProxyMapService.Proxy.Proto
 {
@@ -146,6 +147,59 @@ namespace ProxyMapService.Proxy.Proto
             await HttpReplyMethodNotAllowed(context.IncomingStream, context.Token);
         }
 
+        public static async Task HttpReplyText(Stream? incomingStream, string text, CancellationToken token)
+        {
+            if (incomingStream == null) return;
+
+            byte[] textBytes = Encoding.UTF8.GetBytes(text);
+
+            List<string> headers = [
+                "HTTP/1.1 200 OK",
+                $"Date: {DateTime.UtcNow:R}",
+                "Connection: close",
+                $"Content-Length: {textBytes.Length}",
+                "Content-Type: text/plain; charset=utf-8"
+            ];
+
+            var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
+            var headerBytes = Encoding.ASCII.GetBytes(headerText);
+
+            await incomingStream.WriteAsync(headerBytes, token);
+            await incomingStream.WriteAsync(textBytes, token);
+        }
+
+        public static async Task HttpReplyJson(Stream? incomingStream, object data, JsonSerializerOptions serializerOptions, CancellationToken token)
+        {
+            if (incomingStream == null) return;
+
+            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(data, serializerOptions);
+
+            List<string> headers = [
+                "HTTP/1.1 200 OK",
+                $"Date: {DateTime.UtcNow:R}",
+                "Connection: close",
+                $"Content-Length: {jsonBytes.Length}",
+                "Content-Type: application/json; charset=utf-8"
+            ];
+
+            var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
+            var headerBytes = Encoding.ASCII.GetBytes(headerText);
+
+            await incomingStream.WriteAsync(headerBytes, token);
+            await incomingStream.WriteAsync(jsonBytes, token);
+        }
+
+        private static readonly JsonSerializerOptions SnakeCaseOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            WriteIndented = false
+        };
+
+        public static async Task HttpReplyJson(Stream? incomingStream, object data, CancellationToken token)
+        {
+            await HttpReplyJson(incomingStream, data, SnakeCaseOptions, token);
+        }
+
         public static async Task HttpReplyFileStream(Stream? incomingStream, FileStream fileStream, CancellationToken token)
         {
             if (incomingStream == null) return;
@@ -155,10 +209,12 @@ namespace ProxyMapService.Proxy.Proto
 
             List<string> headers = [
                 "HTTP/1.1 200 OK",
+                $"Date: {DateTime.UtcNow:R}",
                 "Connection: close",
                 $"Content-Length: {fileInfo.Length}",
                 $"Content-Type: {contentType}"
             ];
+
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
 
