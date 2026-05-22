@@ -16,7 +16,7 @@ namespace ProxyMapService.Proxy.Counters
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesRead + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesRead - i * 16, 16))
             ));
-            _logger.LogInformation("{arrows}{tunnel} read {count} byte(s) from the {direction}:\r\n{data}", 
+            _logger.LogDebug("{arrows}{tunnel} read {count} byte(s) from the {direction}:\r\n{data}", 
                 StreamDirectionArrows.GetReadArrows(direction), 
                 tunnel,
                 bytesRead, 
@@ -34,7 +34,7 @@ namespace ProxyMapService.Proxy.Counters
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesSent + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesSent - i * 16, 16))
             ));
-            _logger.LogInformation("{arrows}{tunnel} sent {count} byte(s) to the {direction}:\r\n{data}", 
+            _logger.LogDebug("{arrows}{tunnel} sent {count} byte(s) to the {direction}:\r\n{data}", 
                 StreamDirectionArrows.GetSentArrows(direction),
                 tunnel,
                 bytesSent, 
@@ -52,7 +52,7 @@ namespace ProxyMapService.Proxy.Counters
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesRead + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesRead - i * 16, 16))
             ));
-            _logger.LogInformation("{arrows}{tunnel} decoded {count} byte(s) from the {direction}:\r\n{data}", 
+            _logger.LogDebug("{arrows}{tunnel} decoded {count} byte(s) from the {direction}:\r\n{data}", 
                 StreamDirectionArrows.GetReadArrows(direction),
                 tunnel,
                 bytesRead, 
@@ -70,7 +70,7 @@ namespace ProxyMapService.Proxy.Counters
             var logData = bytesData == null ? "null" : String.Join("\r\n", Enumerable.Range(0, (bytesSent + 15) / 16).Select(i =>
                 FormatLogData(bytesData, startIndex + i * 16, Math.Min(bytesSent - i * 16, 16))
             ));
-            _logger.LogInformation("{arrows}{tunnel} encoded {count} byte(s) to the {direction}:\r\n{data}", 
+            _logger.LogDebug("{arrows}{tunnel} encoded {count} byte(s) to the {direction}:\r\n{data}", 
                 StreamDirectionArrows.GetSentArrows(direction),
                 tunnel,
                 bytesSent, 
@@ -82,7 +82,7 @@ namespace ProxyMapService.Proxy.Counters
         {
             var headers = e.Headers;
             var logHeaders = headers == null ? "null" : String.Join("\r\n", headers);
-            _logger.LogInformation("\r\n{headers}",
+            _logger.LogDebug("\r\n{headers}",
                 logHeaders);
         }
 
