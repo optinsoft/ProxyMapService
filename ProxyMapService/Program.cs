@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
-using ProxyMapService.Services;
-using System.Text;
 using ProxyMapService.Middleware;
+using ProxyMapService.Services;
+using ProxyMapService.WebLogging;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,9 +26,15 @@ var jwtAuthEnabled = jwtAuthConfig.GetValue<bool>("Enabled");
 
 var AllowAllCors = "AllowAllCors";
 
+var allowedOrigins = builder.Configuration
+    .GetSection("CorsSettings:AllowedOrigins")
+    .Get<string[]>();
+
 Console.OutputEncoding = Encoding.UTF8;
 
 // Add services to the container.
+
+builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IProxyService, ProxyService>();
 builder.Services.AddHostedService<ProxyBackgroundService>();
@@ -33,9 +42,17 @@ builder.Services.AddHostedService<ProxyBackgroundService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: AllowAllCors,
-        builder => builder.AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader());
+        builder =>
+        {
+            if (allowedOrigins != null && allowedOrigins.Length > 0)
+            {
+                builder.WithOrigins(allowedOrigins);
+            }
+            builder
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
+        });
 });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
@@ -54,6 +71,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
         };
     }
 });
+
+builder.Services.Configure<WebSocketLoggerOptions>(builder.Configuration.GetSection("Logging:WebSocket"));
+
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, WebSocketLoggerProvider>());
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -82,5 +104,7 @@ app.UseAuthorization();
 app.MapGet("/", () => "Hello World!");
 
 app.MapControllers();
+
+app.MapHub<LogHub>("/EventLog");
 
 app.Run();
