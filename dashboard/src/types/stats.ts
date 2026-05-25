@@ -1,0 +1,30 @@
+export interface ProxyStatsData {
+  serviceInfo: string;
+  started: boolean;
+  startTime: string;
+  stopTime: string | null;
+  currentTime: string;
+  sessionsCount: number;
+  authenticationNotRequired: number;
+  authenticationRequired: number;
+  authenticated: number;
+  authenticationInvalid: number;
+  httpRejected: number;
+  headerFailed: number;
+  noHost: number;
+  hostRejected: number;
+  hostProxified: number;
+  hostBypassed: number;
+  proxyConnected: number;
+  proxyFailed: number;
+  bypassConnected: number;
+  bypassFailed: number;
+  totalBytesRead: number;
+  totalBytesSent: number;
+  proxyBytesRead: number;
+  proxyBytesSent: number;
+  bypassBytesRead: number;
+  bypassBytesSent: number;
+  cacheResponses: number;
+  cacheBytesSent: number;
+}

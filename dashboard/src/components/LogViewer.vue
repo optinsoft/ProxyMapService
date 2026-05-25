@@ -179,4 +179,12 @@ const clearLogs = (): void => {
 .category { color: #569cd6; margin-right: 5px; }
 .message { color: #e3e3e3; }
 .exception { color: #f44336; padding-left: 20px; font-size: 12px; margin-top: 2px; }
+.text-gray-400 { color: #9e9e9e; }
+.text-green-400 { color: #4caf50; }
+.text-yellow-400 { color: #ffeb3b; }
+.text-red-500 { color: #f44336; font-weight: bold; }
+.text-red-100 { color: #ffebee; }
+.bg-red-800 { background-color: #c62828; border-radius: 2px; }
+.px-1 { padding-left: 4px; padding-right: 4px; }
+.font-bold { font-weight: bold; }
 </style>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import LoginForm from './components/LoginForm.vue'
+import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
 
 const currentToken = ref<string>(localStorage.getItem('TOKEN_ID') || '')
@@ -18,7 +19,7 @@ const onLogout = (): void => {
 <template>
   <header class="app-header">
     <div class="header-container">
-      <h1 class="logo">ProxyService Dashboard</h1>
+      <h1 class="logo">ProxyMap Dashboard</h1>
       <div v-if="currentToken" class="user-menu">
         <button @click="onLogout" class="btn-logout">Log out</button>
       </div>    
@@ -26,11 +27,23 @@ const onLogout = (): void => {
   </header>
 
   <main class="app-content">
-    <LogViewer v-if="currentToken" :token="currentToken" />
-    <div v-else class="unauthorized-placeholder">
-      <LoginForm @login-success="onLoginSuccess" @logout="onLogout" />
-      <p>Please log in to access the real-time event log.</p>
+    <LoginForm v-if="!currentToken" @login-success="onLoginSuccess" />
+
+    <div v-if="currentToken" class="dashboard-layout">
+      <section class="dashboard-section">
+        <div class="section-title">ProxyMapService Performance Metrics</div>
+        <ProxyStats :token="currentToken" />
+      </section>
+      <section class="dashboard-section">
+        <LogViewer :token="currentToken" />
+      </section>
     </div>
+
+    <div v-else class="unauthorized-placeholder">
+      <div class="placeholder-icon">🔒</div>
+      <h4>Authentication Required</h4>
+      <p>Please log in above to access the real-time telemetry metrics and event log.</p>
+    </div>    
   </main>
 </template>
 
