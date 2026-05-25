@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { isTokenExpired } from '../utils/jwt'
 
 const emit = defineEmits<{
   (e: 'login-success', token: string): void
@@ -11,7 +12,8 @@ const password = ref<string>('')
 const errorMessage = ref<string>('')
 const isLoading = ref<boolean>(false)
 
-const isAuthenticated = ref<boolean>(!!localStorage.getItem('TOKEN_ID'))
+const savedToken = localStorage.getItem('TOKEN_ID')
+const isAuthenticated = ref<boolean>(!!savedToken && !isTokenExpired(savedToken))
 
 const handleLogin = async (): Promise<void> => {
   errorMessage.value = ''

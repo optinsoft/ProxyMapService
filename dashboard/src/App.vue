@@ -1,19 +1,52 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import LoginForm from './components/LoginForm.vue'
 import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
+import { isTokenExpired } from './utils/jwt'
 
-const currentToken = ref<string>(localStorage.getItem('TOKEN_ID') || '')
-
-const onLoginSuccess = (token: string): void => {
-  currentToken.value = token
-}
+const currentToken = ref<string>('')
+let expiryCheckTimer: ReturnType<typeof setInterval> | null = null
 
 const onLogout = (): void => {
   localStorage.removeItem('TOKEN_ID')
   currentToken.value = ''
+  if (expiryCheckTimer) {
+    clearInterval(expiryCheckTimer)
+    expiryCheckTimer = null
+  }  
 }
+
+const onLoginSuccess = (token: string): void => {
+  currentToken.value = token
+  startExpiryCheck()
+}
+
+const startExpiryCheck = () => {
+  if (expiryCheckTimer) clearInterval(expiryCheckTimer)
+
+  expiryCheckTimer = setInterval(() => {
+    if (isTokenExpired(currentToken.value)) {
+      console.warn('JWT Token has expired. Logging out automatically.')
+      onLogout()
+    }
+  }, 30000)
+}
+
+onMounted(() => {
+  const savedToken = localStorage.getItem('TOKEN_ID')
+  
+  if (savedToken && !isTokenExpired(savedToken)) {
+    currentToken.value = savedToken
+    startExpiryCheck()
+  } else {
+    onLogout()
+  }
+})
+
+onUnmounted(() => {
+  if (expiryCheckTimer) clearInterval(expiryCheckTimer)
+})
 </script>
 
 <template>
