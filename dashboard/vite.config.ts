@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
   const login_password: string = env.LOGIN_PASSWORD || 'test';
 
   return {
+    base: '/ProxyMapDashboard/', 
     plugins: [
       vue(),
       vueDevTools(),
