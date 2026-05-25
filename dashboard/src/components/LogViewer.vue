@@ -142,7 +142,7 @@ const clearLogs = (): void => {
 .log-viewer {
   display: flex;
   flex-direction: column;
-  height: 85vh;
+  height: 60vh;
   font-family: 'Courier New', Courier, monospace;
   background-color: #1e1e1e;
   color: #d4d4d4;
