@@ -119,6 +119,6 @@ app.MapGet("/", () => "Hello World!");
 
 app.MapControllers();
 
-app.MapHub<LogHub>("/EventLog");
+app.MapHub<LogHub>("/updates");
 
 app.Run();

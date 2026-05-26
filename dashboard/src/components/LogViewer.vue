@@ -45,7 +45,7 @@ const startSignalR = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
 
   connection = new signalR.HubConnectionBuilder()
-    .withUrl(`${baseUrl}/EventLog`, {
+    .withUrl(`${baseUrl}/updates`, {
       accessTokenFactory: () => props.token
     }) 
     .withAutomaticReconnect()                
