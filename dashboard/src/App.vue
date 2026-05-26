@@ -1,12 +1,60 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import * as signalR from '@microsoft/signalr'
 import LoginForm from './components/LoginForm.vue'
 import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
 import { isTokenExpired } from './utils/jwt'
+import type { LogEntry } from './types/log'
+
+const logs = ref<LogEntry[]>([])
+const isConnected = ref<boolean>(false)
 
 const currentToken = ref<string>('')
 let expiryCheckTimer: ReturnType<typeof setInterval> | null = null
+
+let connection: signalR.HubConnection | null = null
+
+const startSignalR = () => {
+  if (connection) {
+    connection.stop()
+    isConnected.value = false
+  }
+
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
+
+  connection = new signalR.HubConnectionBuilder()
+    .withUrl(`${baseUrl}/updates`, {
+      accessTokenFactory: () => currentToken.value
+    }) 
+    .withAutomaticReconnect()                
+    .configureLogging(signalR.LogLevel.Information)
+    .build()
+
+  connection.on('EventLog', (logEntry: LogEntry) => {
+    logs.value.push(logEntry)    
+    if (logs.value.length > 500) {
+      logs.value.shift()
+    }    
+    // scrollToBottom()
+  })
+
+  connection.start()
+    .then(() => {
+      isConnected.value = true
+      console.log('SignalR Connected.')
+    })
+    .catch(err => console.error('SignalR Connection Error: ', err))
+}
+
+watch(currentToken, (newToken) => {
+  if (newToken) {
+    startSignalR()
+  } else if (connection) {
+    connection.stop()
+    isConnected.value = false
+  }
+}, { immediate: true })
 
 const onLogout = (): void => {
   localStorage.removeItem('TOKEN_ID')
@@ -33,6 +81,10 @@ const startExpiryCheck = () => {
   }, 30000)
 }
 
+const clearLogs = (): void => {
+  logs.value = []
+}
+
 onMounted(() => {
   const savedToken = localStorage.getItem('TOKEN_ID')
   
@@ -46,6 +98,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (expiryCheckTimer) clearInterval(expiryCheckTimer)
+  if (connection) connection.stop()
 })
 </script>
 
@@ -68,7 +121,7 @@ onUnmounted(() => {
         <ProxyStats :token="currentToken" />
       </section>
       <section class="dashboard-section">
-        <LogViewer :token="currentToken" />
+        <LogViewer :logs="logs" :isConnected="isConnected" @clear-logs="clearLogs" />
       </section>
     </div>
 

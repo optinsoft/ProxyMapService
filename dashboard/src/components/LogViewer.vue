@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import * as signalR from '@microsoft/signalr'
 import type { LogEntry } from '../types/log'
 
 const props = defineProps<{
-  token: string
+  logs: LogEntry[],
+  isConnected: boolean
 }>()
 
-const logs = ref<LogEntry[]>([])
-const isConnected = ref<boolean>(false)
+const emit = defineEmits<{
+  (e: 'clear-logs'): void
+}>()
+
 const filterLevel = ref<string>('All')
 const logsContainer = ref<HTMLDivElement | null>(null)
-
-let connection: signalR.HubConnection | null = null
 
 const getLogClass = (level: LogEntry['level']): string => {
   switch (level) {
@@ -36,62 +36,14 @@ const scrollToBottom = async (): Promise<void> => {
   }
 }
 
-const startSignalR = () => {
-  if (connection) {
-    connection.stop()
-    isConnected.value = false
-  }
+watch(() => props.logs, () => {
+  scrollToBottom()
+}, { deep: true })
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
-
-  connection = new signalR.HubConnectionBuilder()
-    .withUrl(`${baseUrl}/updates`, {
-      accessTokenFactory: () => props.token
-    }) 
-    .withAutomaticReconnect()                
-    .configureLogging(signalR.LogLevel.Information)
-    .build()
-
-  connection.on('EventLog', (logEntry: LogEntry) => {
-    logs.value.push(logEntry)    
-    if (logs.value.length > 500) {
-      logs.value.shift()
-    }    
-    scrollToBottom()
-  })
-
-  connection.start()
-    .then(() => {
-      isConnected.value = true
-      console.log('SignalR Connected.')
-    })
-    .catch(err => console.error('SignalR Connection Error: ', err))
+const handleClear = (): void => {
+  emit('clear-logs')
 }
 
-watch(() => props.token, (newToken) => {
-  if (newToken) {
-    startSignalR()
-  } else if (connection) {
-    connection.stop()
-    isConnected.value = false
-  }
-})
-
-onMounted(() => {
-  if (props.token) {
-    startSignalR()
-  }
-})
-
-onUnmounted(() => {
-  if (connection) {
-    connection.stop()
-  }
-})
-
-const clearLogs = (): void => {
-  logs.value = []
-}
 </script>
 
 <template>
@@ -110,7 +62,7 @@ const clearLogs = (): void => {
           <option value="Warning">Warning</option>
           <option value="Error">Error</option>
         </select>
-        <button @click="clearLogs">Clear</button>
+        <button @click="handleClear">Clear</button>
       </div>
     </div>
 
