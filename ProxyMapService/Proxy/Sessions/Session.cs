@@ -10,7 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy.Sessions
 {
-    public class Session
+    public partial class Session
     {
         private static readonly Dictionary<HandleStep, IHandler> Handlers = new()
         {
@@ -42,6 +42,34 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.ResetSession, ResetSessionHandler.Instance() },
         };
 
+        #region High-Performance Logging
+
+        [LoggerMessage(
+            EventId = 1101,
+            Level = LogLevel.Error,
+            Message = "Server Certificate Error: {ErrorMessage}")]
+        private static partial void LogCertificateError(ILogger logger, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1102,
+            Level = LogLevel.Error,
+            Message = "CA Certificate Error: {ErrorMessage}")]
+        private static partial void LogCACertificateError(ILogger logger, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1103,
+            Level = LogLevel.Debug,
+            Message = "Run step: {step}")]
+        private static partial void LogRunStep(ILogger logger, HandleStep step);
+
+        [LoggerMessage(
+            EventId = 1104,
+            Level = LogLevel.Debug,
+            Message = "Next step: {step}")]
+        private static partial void LogNextStep(ILogger logger, HandleStep step);
+
+        #endregion
+
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
             IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
@@ -55,7 +83,7 @@ namespace ProxyMapService.Proxy.Sessions
             }
             catch (Exception ex)
             {
-                logger.LogError("Server Certificate Error: {ErrorMessage}", ex.Message);
+                LogCertificateError(logger, ex.Message);
                 incomingClient.Close();
                 return;
             }
@@ -65,7 +93,7 @@ namespace ProxyMapService.Proxy.Sessions
             }
             catch (Exception ex)
             {
-                logger.LogError("CA Certificate Error: {ErrorMessage}", ex.Message);
+                LogCACertificateError(logger, ex.Message);
                 incomingClient.Close();
                 return;
             }
@@ -83,12 +111,12 @@ namespace ProxyMapService.Proxy.Sessions
                 {
                     if (logStep)
                     {
-                        logger.LogDebug("Run step: {step}", step);
+                        LogRunStep(logger, step);
                     }
                     step = await Handlers[step].Run(context);
                     if (logStep)
                     {
-                        logger.LogDebug("Next step: {step}", step);
+                        LogNextStep(logger, step);
                     }
                 }
                 catch (Exception ex)

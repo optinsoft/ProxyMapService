@@ -13,7 +13,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class TunnelHandler : BaseResponseCacheHandler, IHandler
+    public partial class TunnelHandler : BaseResponseCacheHandler, IHandler
     {
         private static readonly TunnelHandler Self = new();
         private const int BufferSize = 8192;
@@ -60,6 +60,70 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
+        #region High-Performance Logging
+
+        [LoggerMessage(
+            EventId = 1301,
+            Level = LogLevel.Error,
+            Message = "[RequestTunnel] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogRequestTunnelError(ILogger logger, string exceptionName, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1302,
+            Level = LogLevel.Error,
+            Message = "[ResponseTunnel] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogResponseTunnelError(ILogger logger, string exceptionName, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1303,
+            Level = LogLevel.Error,
+            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogTunnelError(ILogger logger, string exceptionName, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1304,
+            Level = LogLevel.Debug,
+            Message = "Tunnel {tunnelId}: reading from {direction}...")]
+        private static partial void LogTunnelReading(ILogger logger, long tunnelId, string direction);
+
+        [LoggerMessage(
+            EventId = 1305,
+            Level = LogLevel.Debug,
+            Message = "Tunnel {tunnelId}: Reset reading headers")]
+        private static partial void LogTunnelResetReadingHeaders(ILogger logger, long tunnelId);
+
+        [LoggerMessage(
+            EventId = 1306,
+            Level = LogLevel.Debug,
+            Message = "Tunnel {tunnelId}: Resetting other tunnel ({otherTunnelId}) reading headers")]
+        private static partial void LogOtherTunnelResetReadingHeaders(ILogger logger, long tunnelId, long otherTunnelId);
+
+        [LoggerMessage(
+            EventId = 1307,
+            Level = LogLevel.Debug,
+            Message = "Tunnel {tunnelId}: Reading headers from {direction}...")]
+        private static partial void LogTunnelReadingHeaders(ILogger logger, long tunnelId, string direction);
+
+        [LoggerMessage(
+            EventId = 1308,
+            Level = LogLevel.Debug,
+            Message = "Tunnel {tunnelId}: Headers read from {direction}")]
+        private static partial void LogTunnelHeadersRead(ILogger logger, long tunnelId, string direction);
+
+        [LoggerMessage(
+            EventId = 1309,
+            Level = LogLevel.Debug,
+            Message = "Tunnel {tunnelId}: Body read from {direction}")]
+        private static partial void LogTunnelBodyRead(ILogger logger, long tunnelId, string direction);
+
+        [LoggerMessage(
+            EventId = 1310,
+            Level = LogLevel.Debug,
+            Message = "Tunnel {tunnelId}: sending to {direction}...")]
+        private static partial void LogTunnelSending(ILogger logger, long tunnelId, string direction);
+
+        #endregion
+
         private static async Task RequestTunnel(SessionContext context,
             SslStream? incomingSslStream, CountingStream incomingStream, CountingStream outgoingStream,
             TaskCompletionSource incomingReady, TaskCompletionSource outgoingReady)
@@ -88,19 +152,19 @@ namespace ProxyMapService.Proxy.Handlers
             catch (ObjectDisposedException ex)
             {
                 incomingReady.SetException(ex);
-                //context.Logger.LogError("[RequestTunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                //LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
             }
             catch (IOException ex)
             {
                 incomingReady.SetException(ex);
-                //context.Logger.LogError("[RequestTunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                //LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
             }
             catch (Exception ex)
             {
                 incomingReady.SetException(ex);
-                context.Logger.LogError("[RequestTunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
             }
             await Tunnel(context, incomingStream, outgoingStream, outgoingReady,
@@ -123,19 +187,19 @@ namespace ProxyMapService.Proxy.Handlers
             catch (ObjectDisposedException ex)
             {
                 outgoingReady.SetException(ex);
-                //context.Logger.LogError("[ResponseTunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                //LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
             }
             catch (IOException ex)
             {
                 outgoingReady.SetException(ex);
-                //context.Logger.LogError("[ResponseTunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                //LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
             }
             catch (Exception ex)
             {
                 outgoingReady.SetException(ex);
-                context.Logger.LogError("[ResponseTunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
             }
             await Tunnel(context, outgoingStream, incomingStream, incomingReady,
@@ -161,8 +225,7 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     if (readCounter.IsLogReading)
                     {
-                        context.Logger.LogDebug("Tunnel {tunnelId}: reading from {direction}...",
-                            selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
+                        LogTunnelReading(context.Logger, selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                     }
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
                     if (bytesRead > 0)
@@ -172,7 +235,7 @@ namespace ProxyMapService.Proxy.Handlers
                             selfState.ResetReadHeaders = false;
                             if (readCounter.IsLogReading)
                             {
-                                context.Logger.LogDebug("Tunnel {tunnelId}: Reset reading headers", selfState.TunnelId);
+                                LogTunnelResetReadingHeaders(context.Logger, selfState.TunnelId);
                             }
                             if (selfState.Response)
                             {
@@ -190,7 +253,7 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             if (readCounter.IsLogReading)
                             {
-                                context.Logger.LogDebug("Tunnel {tunnelId}: Resetting other tunnel ({otherTunnelId}) reading headers",
+                                LogOtherTunnelResetReadingHeaders(context.Logger, 
                                     selfState.TunnelId, otherTunnelState.TunnelId);
                             }
                             otherTunnelState.ResetReadHeaders = true;
@@ -199,7 +262,7 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             if (readCounter.IsLogReading)
                             {
-                                context.Logger.LogDebug("Tunnel {tunnelId}: Reading headers from {direction}...",
+                                LogTunnelReadingHeaders(context.Logger,
                                     selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                             }
                             ms.Write(buffer, 0, bytesRead);
@@ -213,7 +276,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 {
                                     if (readCounter.IsLogReading)
                                     {
-                                        context.Logger.LogDebug("Tunnel {tunnelId}: Headers read from {direction}",
+                                        LogTunnelHeadersRead(context.Logger,
                                             selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                                     }
                                     if (selfState.Response)
@@ -257,7 +320,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 {
                                     if (readCounter.IsLogReading)
                                     {
-                                        context.Logger.LogDebug("Tunnel {tunnelId}: Body read from {direction}",
+                                        LogTunnelBodyRead(context.Logger,
                                             selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                                     }
                                     if (context.ResponseCacheFileStream != null)
@@ -283,7 +346,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 {
                                     if (sendCounter.IsLogSending)
                                     {
-                                        context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...",
+                                        LogTunnelSending(context.Logger,
                                             selfState.TunnelId, StreamDirectionName.GetName(sendCounter.Direction));
                                     }
                                     await destinationReady.Task;
@@ -304,7 +367,7 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             if (readCounter.IsLogReading)
                             {
-                                context.Logger.LogDebug("Tunnel {tunnelId}: Body read from {direction}",
+                                LogTunnelBodyRead(context.Logger,
                                     selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                             }
                             if (context.ResponseCacheFileStream != null)
@@ -322,7 +385,7 @@ namespace ProxyMapService.Proxy.Handlers
                             }
                             if (sendCounter.IsLogSending)
                             {
-                                context.Logger.LogDebug("Tunnel {tunnelId}: sending to {direction}...",
+                                LogTunnelSending(context.Logger,
                                     selfState.TunnelId, StreamDirectionName.GetName(sendCounter.Direction));
                             }
                             await destinationReady.Task;
@@ -333,15 +396,15 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (ObjectDisposedException)
             {
-                //context.Logger.LogError("[Tunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                //LogTunnelError(context.Logger, ex.GetType().Name, ex.Message);
             }
             catch (IOException)
             {
-                //context.Logger.LogError("[Tunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                //LogTunnelError(context.Logger, ex.GetType().Name, ex.Message);
             }
             catch (Exception ex)
             {
-                context.Logger.LogError("[Tunnel] {ExceptionName}: {ErrorMessage}", ex.GetType().Name, ex.Message);
+                LogTunnelError(context.Logger, ex.GetType().Name, ex.Message);
             }
         }
 
