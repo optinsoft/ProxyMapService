@@ -26,6 +26,9 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
+            var remoteEndPoint = context.OutgoingClient.Client.RemoteEndPoint;
+            context.Logger.LogBypassServerConnected(remoteEndPoint);
+
             context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 
             context.CreateOutgoingClientStream();

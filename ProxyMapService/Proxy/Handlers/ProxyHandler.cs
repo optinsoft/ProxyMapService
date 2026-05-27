@@ -25,19 +25,28 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception)
             {
                 context.ProxyCounters.SessionsCounter?.OnProxyFailed(context);
-                if (context.Http != null)
+                await (context switch
                 {
-                    await HttpProto.HttpReplyBadGateway(context);
-                }
-                if (context.Socks4 != null)
-                {
-                    await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
-                }
-                if (context.Socks5 != null)
-                {
-                    await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
-                }
+                    { Http: not null } => HttpProto.HttpReplyBadGateway(context),
+                    { Socks4: not null } => Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed),
+                    { Socks5: not null } => Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure),
+                    _ => Task.CompletedTask
+                });
                 throw;
+            }
+
+            var remoteEndPoint = context.OutgoingClient.Client.RemoteEndPoint;
+            switch (context.ProxyServer.ProxyType)
+            {
+                case ProxyType.Http:
+                    context.Logger.LogHttpProxyServerConnected(remoteEndPoint);
+                    break;
+                case ProxyType.Socks4:
+                    context.Logger.LogSocks4ProxyServerConnected(remoteEndPoint);
+                    break;
+                case ProxyType.Socks5:
+                    context.Logger.LogSocks5ProxyServerConnected(remoteEndPoint);
+                    break;
             }
 
             context.ProxyCounters.SessionsCounter?.OnProxyConnected(context);

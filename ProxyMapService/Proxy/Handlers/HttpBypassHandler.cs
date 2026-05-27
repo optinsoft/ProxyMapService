@@ -5,7 +5,7 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class HttpBypassHandler: BaseResponseCacheHandler, IHandler
+    public partial class HttpBypassHandler: BaseResponseCacheHandler, IHandler
     {
         private static readonly HttpBypassHandler Self = new();
 
@@ -40,6 +40,9 @@ namespace ProxyMapService.Proxy.Handlers
                 await HttpProto.HttpReplyBadGateway(context);
                 throw;
             }
+
+            var remoteEndPoint = context.OutgoingClient.Client.RemoteEndPoint;
+            context.Logger.LogBypassServerConnected(remoteEndPoint);
 
             context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 

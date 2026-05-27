@@ -68,6 +68,12 @@ namespace ProxyMapService.Proxy.Sessions
             Message = "Next step: {step}")]
         private static partial void LogNextStep(ILogger logger, HandleStep step);
 
+        [LoggerMessage(
+            EventId = 1105,
+            Level = LogLevel.Information,
+            Message = "Client connected. Address: {remoteEndPoint}")]
+        private static partial void LogClientConnected(ILogger logger, System.Net.EndPoint? remoteEndPoint);
+
         #endregion
 
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
@@ -76,6 +82,9 @@ namespace ProxyMapService.Proxy.Sessions
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
         {
+            var remoteEndPoint = incomingClient.Client.RemoteEndPoint;
+            LogClientConnected(logger, remoteEndPoint);
+
             X509Certificate2? serverCertificate, caCertificate;
             try
             {
@@ -97,34 +106,41 @@ namespace ProxyMapService.Proxy.Sessions
                 incomingClient.Close();
                 return;
             }
-            using var context = new SessionContext(incomingClient, mapping, 
-                mapping.Listen.Ssl, serverCertificate, caCertificate,
-                proxyProvider, proxyAuthenticator, usernameParameterResolver, 
-                hostRules, cacheRules, cacheManager, userAgent, 
-                sslClientConfig, sslServerConfig,
-                proxyCounters, logger, token);
-            proxyCounters.SessionsCounter?.OnSessionStarted(context);
-            var step = HandleStep.Initialize;
-            do
+            try
             {
-                try
+                using var context = new SessionContext(incomingClient, mapping,
+                    mapping.Listen.Ssl, serverCertificate, caCertificate,
+                    proxyProvider, proxyAuthenticator, usernameParameterResolver,
+                    hostRules, cacheRules, cacheManager, userAgent,
+                    sslClientConfig, sslServerConfig,
+                    proxyCounters, logger, token);
+                proxyCounters.SessionsCounter?.OnSessionStarted(context);
+                var step = HandleStep.Initialize;
+                do
                 {
-                    if (logStep)
+                    try
                     {
-                        LogRunStep(logger, step);
+                        if (logStep)
+                        {
+                            LogRunStep(logger, step);
+                        }
+                        step = await Handlers[step].Run(context);
+                        if (logStep)
+                        {
+                            LogNextStep(logger, step);
+                        }
                     }
-                    step = await Handlers[step].Run(context);
-                    if (logStep)
+                    catch (Exception ex)
                     {
-                        LogNextStep(logger, step);
+                        logger.LogError("Error: {ErrorMessage}", ex.Message);
+                        step = HandleStep.Terminate;
                     }
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError("Error: {ErrorMessage}", ex.Message);
-                    step = HandleStep.Terminate;
-                }
-            } while (step != HandleStep.Terminate);
+                } while (step != HandleStep.Terminate);
+            }
+            finally
+            {
+                incomingClient.Close();
+            }
         }
     }
 }
