@@ -49,7 +49,7 @@ namespace ProxyMapService.Proxy.Handlers
                 if (incomingSslCountingStream != null)
                 {
                     context.IncomingStream.ClearDisconnectHandlers();
-                    incomingSslCountingStream.DisconnectHandler += OnClientDisconnected;
+                    incomingSslCountingStream.DisconnectHandler += HandlerLogger.OnClientDisconnected;
                 }
 
                 return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream, incomingSslStream != null);
@@ -215,15 +215,6 @@ namespace ProxyMapService.Proxy.Handlers
                 FileShare.Read,
                 bufferSize: 64 * 1024,
                 useAsync: true);
-        }
-
-        private static void OnClientDisconnected(object? sender, EventArgs e)
-        {
-            if (sender is SessionContext context)
-            {
-                var remoteEndPoint = context.IncomingClient.Client.RemoteEndPoint;
-                context.Logger.LogClientDisconnected(remoteEndPoint);
-            }
         }
     }
 }

@@ -68,12 +68,6 @@ namespace ProxyMapService.Proxy.Sessions
             Message = "Next step: {step}")]
         private static partial void LogNextStep(ILogger logger, HandleStep step);
 
-        [LoggerMessage(
-            EventId = 1105,
-            Level = LogLevel.Information,
-            Message = "Client connected. Address: {remoteEndPoint}")]
-        private static partial void LogClientConnected(ILogger logger, System.Net.EndPoint? remoteEndPoint);
-
         #endregion
 
         public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
@@ -82,8 +76,7 @@ namespace ProxyMapService.Proxy.Sessions
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
         {
-            var remoteEndPoint = incomingClient.Client.RemoteEndPoint;
-            LogClientConnected(logger, remoteEndPoint);
+            logger.LogClientConnected(incomingClient);
 
             X509Certificate2? serverCertificate, caCertificate;
             try

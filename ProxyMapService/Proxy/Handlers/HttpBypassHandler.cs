@@ -41,12 +41,15 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            var remoteEndPoint = context.OutgoingClient.Client.RemoteEndPoint;
-            context.Logger.LogBypassServerConnected(remoteEndPoint);
+            context.Logger.LogBypassServerConnected(context.OutgoingClient);
 
             context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 
             context.CreateOutgoingClientStream();
+            if (context.OutgoingStream != null)
+            {
+                context.OutgoingStream.DisconnectHandler += HandlerLogger.OnBypassServerDisconnected;
+            }
 
             if (context.Http?.HTTPVerb == "CONNECT")
             {

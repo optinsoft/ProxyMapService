@@ -35,23 +35,26 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            var remoteEndPoint = context.OutgoingClient.Client.RemoteEndPoint;
             switch (context.ProxyServer.ProxyType)
             {
                 case ProxyType.Http:
-                    context.Logger.LogHttpProxyServerConnected(remoteEndPoint);
+                    context.Logger.LogHttpProxyServerConnected(context.OutgoingClient);
                     break;
                 case ProxyType.Socks4:
-                    context.Logger.LogSocks4ProxyServerConnected(remoteEndPoint);
+                    context.Logger.LogSocks4ProxyServerConnected(context.OutgoingClient);
                     break;
                 case ProxyType.Socks5:
-                    context.Logger.LogSocks5ProxyServerConnected(remoteEndPoint);
+                    context.Logger.LogSocks5ProxyServerConnected(context.OutgoingClient);
                     break;
             }
 
             context.ProxyCounters.SessionsCounter?.OnProxyConnected(context);
 
             context.CreateOutgoingClientStream();
+            if (context.OutgoingStream != null)
+            {
+                context.OutgoingStream.DisconnectHandler += HandlerLogger.OnProxyServerDisconnected;
+            }
 
             switch (context.ProxyServer.ProxyType)
             {
