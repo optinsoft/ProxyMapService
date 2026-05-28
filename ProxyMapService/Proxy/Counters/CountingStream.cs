@@ -12,6 +12,13 @@ namespace ProxyMapService.Proxy.Counters
         public long ReadTunnelId { get; set; } = readTunnelId;
         public long SendTunnelId { get; set; } = sendTunnelId;
 
+        public event EventHandler? DisconnectHandler;
+
+        public void ClearDisconnectHandlers()
+        {
+            DisconnectHandler = null;
+        }
+
         public virtual void OnBytesRead(int bytesRead, byte[]? bytesData, int startIndex)
         {
             readCounter?.OnBytesRead(context, bytesRead, bytesData, startIndex, ReadTunnelId);
@@ -35,21 +42,28 @@ namespace ProxyMapService.Proxy.Counters
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             var bytesRead = await stream.ReadAsync(buffer, cancellationToken);
-            if (!_readCountPaused)
+            if (!buffer.IsEmpty)
             {
-                readCounter?.OnBytesRead(context, bytesRead, buffer.ToArray(), 0, ReadTunnelId);
+                if (!_readCountPaused)
+                {
+                    readCounter?.OnBytesRead(context, bytesRead, buffer.ToArray(), 0, ReadTunnelId);
+                }
+                if (bytesRead == 0)
+                {
+                    DisconnectHandler?.Invoke(context, EventArgs.Empty);
+                }
             }
             return bytesRead;
         }
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            if (!_sendCountPaused)
+            if (!buffer.IsEmpty && !_sendCountPaused)
             {
                 sendCounter?.OnBytesSend(context, buffer.Length, buffer.ToArray(), 0, SendTunnelId);
             }
             await stream.WriteAsync(buffer, cancellationToken);
-            if (!_sendCountPaused)
+            if (!buffer.IsEmpty && !_sendCountPaused)
             {
                 sendCounter?.OnBytesSent(context, buffer.Length, buffer.ToArray(), 0, SendTunnelId);
             }

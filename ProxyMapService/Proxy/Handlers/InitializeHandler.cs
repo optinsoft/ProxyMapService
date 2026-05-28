@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Headers;
+﻿using Microsoft.Extensions.Logging;
+using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 
@@ -13,6 +14,10 @@ namespace ProxyMapService.Proxy.Handlers
             try
             {
                 context.CreateIncomingClientStream();
+                if (context.IncomingStream != null)
+                {
+                    context.IncomingStream.DisconnectHandler += OnClientDisconnected;
+                }
                 var requestHeaderBytes = await context.IncomingHeaderStream.ReadHeaderBytes(context.IncomingStream, context.Token);
                 if (requestHeaderBytes != null)
                 {
@@ -52,6 +57,15 @@ namespace ProxyMapService.Proxy.Handlers
         public static InitializeHandler Instance()
         {
             return Self;
+        }
+
+        private static void OnClientDisconnected(object? sender, EventArgs e)
+        {
+            if (sender is SessionContext context)
+            {
+                var remoteEndPoint = context.IncomingClient.Client.RemoteEndPoint;
+                context.Logger.LogClientDisconnected(remoteEndPoint);
+            }
         }
     }
 }

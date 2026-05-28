@@ -146,6 +146,8 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                     }
                     await incomingSslStream.AuthenticateAsServerAsync(SslOptionsFactory.BuildSslServerOptions(context, serverCertificate), context.Token);
+                    context.IncomingStream?.ClearDisconnectHandlers();
+                    incomingStream.DisconnectHandler += OnClientDisconnected;
                 }
                 incomingReady.SetResult();
             }
@@ -426,6 +428,15 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
                 await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheFileStream);
+            }
+        }
+
+        private static void OnClientDisconnected(object? sender, EventArgs e)
+        {
+            if (sender is SessionContext context)
+            {
+                var remoteEndPoint = context.IncomingClient.Client.RemoteEndPoint;
+                context.Logger.LogClientDisconnected(remoteEndPoint);
             }
         }
     }
