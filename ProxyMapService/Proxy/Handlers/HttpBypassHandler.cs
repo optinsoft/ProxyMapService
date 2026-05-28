@@ -41,7 +41,7 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            context.Logger.LogBypassServerConnected(context.OutgoingClient);
+            context.Logger.LogBypassServerConnected(context.OutgoingClient, context.Host);
 
             context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 
@@ -68,6 +68,7 @@ namespace ProxyMapService.Proxy.Handlers
                         context.RequestTunnelState.ResetReadHeaders = true;
                         context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
                         await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
+                        context.Logger.LogResponseFromCache(cacheFileStream.Name);
                         return HandleStep.Tunnel;
                     }
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);

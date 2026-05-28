@@ -430,6 +430,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
                 await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheFileStream);
+                context.Logger.LogResponseFromCache(cacheFileStream.Name);
             }
         }
     }

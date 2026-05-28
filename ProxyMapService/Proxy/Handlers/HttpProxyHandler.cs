@@ -84,6 +84,7 @@ namespace ProxyMapService.Proxy.Handlers
                             await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
                         }
                         await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
+                        context.Logger.LogResponseFromCache(cacheFileStream.Name);
                         return HandleStep.Tunnel;
                     }
 

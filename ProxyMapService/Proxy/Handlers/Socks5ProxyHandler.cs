@@ -110,6 +110,7 @@ namespace ProxyMapService.Proxy.Handlers
                                         context.RequestTunnelState.ResetReadHeaders = true;
                                         context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
                                         await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
+                                        context.Logger.LogResponseFromCache(cacheFileStream.Name);
                                     }
                                     else
                                     {

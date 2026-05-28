@@ -1,4 +1,4 @@
-﻿using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Network;
 using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -8,31 +8,37 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1201,
             Level = LogLevel.Information,
-            Message = "Client connected. Address: {remoteEndPoint}")]
+            Message = "Client connected from {remoteEndPoint}")]
         private static partial void LogClientConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1202,
             Level = LogLevel.Information,
-            Message = "Connected to server (bypass). Address: {remoteEndPoint}")]
+            Message = "Connected to server (bypass) {remoteEndPoint}")]
         private static partial void LogBypassServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+
+        [LoggerMessage(
+            EventId = 1202,
+            Level = LogLevel.Information,
+            Message = "Connected to server (bypass) {hostname}:{port} ({remoteEndPoint})")]
+        private static partial void LogBypassServerConnectedInternal2(this ILogger logger, string hostname, int port, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1203,
             Level = LogLevel.Information,
-            Message = "Connected to http proxy server. Address: {remoteEndPoint}")]
+            Message = "Connected to http proxy server {remoteEndPoint}")]
         private static partial void LogHttpProxyServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1204,
             Level = LogLevel.Information,
-            Message = "Connected to socks4 proxy server. Address: {remoteEndPoint}")]
+            Message = "Connected to socks4 proxy server {remoteEndPoint}")]
         private static partial void LogSocks4ProxyServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1205,
             Level = LogLevel.Information,
-            Message = "Connected to socks5 proxy server. Address: {remoteEndPoint}")]
+            Message = "Connected to socks5 proxy server {remoteEndPoint}")]
         private static partial void LogSocks5ProxyServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
@@ -53,6 +59,19 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Proxy server disconnected. Address: {remoteEndPoint}")]
         private static partial void LogProxyServerDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
+        [LoggerMessage(
+            EventId = 1209,
+            Level = LogLevel.Information,
+            Message = "Response served from file: {filePath}")]
+        public static partial void LogResponseFromFile(this ILogger logger, string filePath);
+
+        [LoggerMessage(
+            EventId = 1210,
+            Level = LogLevel.Information,
+            Message = "Response served from cache: {filePath}")]
+        public static partial void LogResponseFromCache(this ILogger logger, string filePath);
+
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;
@@ -72,10 +91,17 @@ namespace ProxyMapService.Proxy.Handlers
             logger.LogClientConnectedInternal(remoteEndPoint);
         }
 
-        public static void LogBypassServerConnected(this ILogger logger, TcpClient outgoingClient)
+        public static void LogBypassServerConnected(this ILogger logger, TcpClient outgoingClient, HostAddress host)
         {
             var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
-            logger.LogBypassServerConnectedInternal(remoteEndPoint);
+            if (System.Net.IPAddress.TryParse(host.Hostname, out _))
+            {
+                logger.LogBypassServerConnectedInternal(remoteEndPoint);
+            }
+            else
+            {
+                logger.LogBypassServerConnectedInternal2(host.Hostname, host.Port, remoteEndPoint);
+            }
         }
 
         public static void LogHttpProxyServerConnected(this ILogger logger, TcpClient outgoingClient)

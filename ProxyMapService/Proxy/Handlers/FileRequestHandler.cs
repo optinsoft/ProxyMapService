@@ -122,6 +122,8 @@ namespace ProxyMapService.Proxy.Handlers
 
             await HttpProto.HttpReplyFileStream(incomingStream, fileStream, context.Token);
 
+            context.Logger.LogResponseFromFile(fileStream.Name);
+
             return HandleStep.Terminate;
         }
 

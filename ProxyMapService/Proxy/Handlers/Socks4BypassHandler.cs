@@ -26,7 +26,7 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            context.Logger.LogBypassServerConnected(context.OutgoingClient);
+            context.Logger.LogBypassServerConnected(context.OutgoingClient, context.Host);
 
             context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 
