@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Headers;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
@@ -15,83 +16,97 @@ namespace ProxyMapService.Proxy.Handlers
         {
             var socks4 = context.Socks4;
 
-            if (socks4 == null)
+            System.Net.IPEndPoint? hostEndPoint = null;
+
+            try
             {
-                var httpProxyAuthorization =
-                    !String.IsNullOrEmpty(context.Http?.ProxyAuthorization)
-                    ? Encoding.ASCII.GetString(Convert.FromBase64String(context.Http.ProxyAuthorization)).Split(':')
-                    : null;
-                string? clientUserId =
-                    httpProxyAuthorization != null
-                    ? httpProxyAuthorization[0]
-                    : (!String.IsNullOrEmpty(context.Socks5?.Username) ? context.Socks5?.Username : context.Socks4?.UserId);
-                socks4 = new Socks4Header(context.Host.Hostname, context.Host.Port, clientUserId);
+                hostEndPoint = await context.Host.GetIPEndPoint();
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogHostError(ex.Message, context.Host.Hostname);
             }
 
-            context.OutgoingHeaderStream.SocksVersion = 0x04;
-
-            string? userId = 
-                !String.IsNullOrEmpty(context.ProxyServer?.Username) 
-                ? GetContextProxyUsernameWithParameters(context)
-                : (context.Mapping.Authentication.SetAuthentication 
-                ? GetContextAuthenticationUsernameWithParameters(context)
-                : (context.Mapping.Authentication.RemoveAuthentication ? null : socks4.UserId));
-
-            var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(context.Host.Hostname, context.Host.Port, userId);
-            await Socks4Proto.SendSocks4Request(context, socks4ConnectBytes);
-
-            var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
-
-            if (context.Socks4 != null)
+            if (hostEndPoint != null)
             {
-                if (responseHeaderBytes != null && responseHeaderBytes.Length > 0)
+                if (socks4 == null)
                 {
-                    if (context.IncomingStream != null)
-                    {
-                        await context.IncomingStream.WriteAsync(responseHeaderBytes, context.Token);
-                    }
+                    var httpProxyAuthorization =
+                        !String.IsNullOrEmpty(context.Http?.ProxyAuthorization)
+                        ? Encoding.ASCII.GetString(Convert.FromBase64String(context.Http.ProxyAuthorization)).Split(':')
+                        : null;
+                    string? clientUserId =
+                        httpProxyAuthorization != null
+                        ? httpProxyAuthorization[0]
+                        : (!String.IsNullOrEmpty(context.Socks5?.Username) ? context.Socks5?.Username : context.Socks4?.UserId);
+                    socks4 = new Socks4Header(hostEndPoint, clientUserId);
                 }
-                return HandleStep.Tunnel;
-            }
 
-            if (responseHeaderBytes != null)
-            {
-                var responseSocks4 = new Socks4Header(responseHeaderBytes);
-                if (responseSocks4.CommandCode == (byte)Socks4Command.RequestGranted)
+                context.OutgoingHeaderStream.SocksVersion = 0x04;
+
+                string? userId =
+                    !String.IsNullOrEmpty(context.ProxyServer?.Username)
+                    ? GetContextProxyUsernameWithParameters(context)
+                    : (context.Mapping.Authentication.SetAuthentication
+                    ? GetContextAuthenticationUsernameWithParameters(context)
+                    : (context.Mapping.Authentication.RemoveAuthentication ? null : socks4.UserId));
+
+                var socks4ConnectBytes = Socks4Header.GetConnectRequestBytes(hostEndPoint, userId);
+                await Socks4Proto.SendSocks4Request(context, socks4ConnectBytes);
+
+                var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
+
+                if (context.Socks4 != null)
                 {
-                    if (context.Http != null)
+                    if (responseHeaderBytes != null && responseHeaderBytes.Length > 0)
                     {
-                        if (context.Http.HTTPVerb == "CONNECT")
+                        if (context.IncomingStream != null)
                         {
-                            await HttpProto.HttpReplyConnectionEstablished(context);
+                            await context.IncomingStream.WriteAsync(responseHeaderBytes, context.Token);
                         }
-                        else
+                    }
+                    return HandleStep.Tunnel;
+                }
+
+                if (responseHeaderBytes != null)
+                {
+                    var responseSocks4 = new Socks4Header(responseHeaderBytes);
+                    if (responseSocks4.CommandCode == (byte)Socks4Command.RequestGranted)
+                    {
+                        if (context.Http != null)
                         {
-                            var requestFirstLine = $"{context.Http.HTTPVerb} {context.Http.HTTPTargetPath} {context.Http.HTTPProtocol}";
-                            var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
-                            if (httpRequestBytes != null && httpRequestBytes.Length > 0)
+                            if (context.Http.HTTPVerb == "CONNECT")
                             {
-                                context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
-                                using FileStream? cacheFileStream = await GetCacheFileStream(context);
-                                if (cacheFileStream != null)
+                                await HttpProto.HttpReplyConnectionEstablished(context);
+                            }
+                            else
+                            {
+                                var requestFirstLine = $"{context.Http.HTTPVerb} {context.Http.HTTPTargetPath} {context.Http.HTTPProtocol}";
+                                var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
+                                if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                                 {
-                                    context.RequestTunnelState.ResetReadHeaders = true;
-                                    context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                                    await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
-                                    context.Logger.LogResponseFromCache(cacheFileStream.Name);
-                                }
-                                else
-                                {
-                                    await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
+                                    using FileStream? cacheFileStream = await GetCacheFileStream(context);
+                                    if (cacheFileStream != null)
+                                    {
+                                        context.RequestTunnelState.ResetReadHeaders = true;
+                                        context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
+                                        await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
+                                        context.Logger.LogResponseFromCache(cacheFileStream.Name);
+                                    }
+                                    else
+                                    {
+                                        await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                                    }
                                 }
                             }
                         }
+                        if (context.Socks5 != null)
+                        {
+                            await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
+                        }
+                        return HandleStep.Tunnel;
                     }
-                    if (context.Socks5 != null)
-                    {
-                        await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
-                    }
-                    return HandleStep.Tunnel;
                 }
             }
 

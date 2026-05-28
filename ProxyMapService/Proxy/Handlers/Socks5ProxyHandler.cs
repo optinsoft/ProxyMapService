@@ -57,11 +57,12 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     try
                     {
-                        hostEndPoint = context.Host.GetIPEndPoint();
+                        hostEndPoint = await context.Host.GetIPEndPoint();
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
                         status = Socks5Status.HostUnreachable;
+                        context.Logger.LogHostError(ex.Message, context.Host.Hostname);
                     }
                 }
 

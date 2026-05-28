@@ -32,22 +32,23 @@ namespace ProxyMapService.Proxy.Handlers
             }
 
             string? requestFirstLine = null;
-            string? hostError = null;
+            var hostError = false;
 
             if (http.HTTPVerb == "CONNECT" && context.ProxyServer?.ResolveIP == true)
             {
                 try
                 {
-                    System.Net.IPEndPoint hostEndPoint = context.Host.GetIPEndPoint();
+                    System.Net.IPEndPoint hostEndPoint = await context.Host.GetIPEndPoint();
                     requestFirstLine = $"{http?.HTTPVerb} {hostEndPoint.Address}:{hostEndPoint.Port} {http?.HTTPProtocol}";
                 }
                 catch (Exception ex)
                 {
-                    hostError = ex.Message;
+                    hostError = true;
+                    context.Logger.LogHostError(ex.Message, context.Host.Hostname);
                 }
             }
 
-            if (hostError == null)
+            if (!hostError)
             {
                 string? clientAuthorization =
                     !String.IsNullOrEmpty(context.Socks5?.Username)

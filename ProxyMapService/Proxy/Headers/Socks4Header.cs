@@ -10,9 +10,9 @@ namespace ProxyMapService.Proxy.Headers
             Parse(this, array);
         }
 
-        public Socks4Header(string hostName, int hostPort, string? userId)
+        public Socks4Header(System.Net.IPEndPoint? hostEndPoint, string? userId)
         {
-            var connectBytes = GetConnectRequestBytes(hostName, hostPort, userId);
+            var connectBytes = GetConnectRequestBytes(hostEndPoint, userId);
             Parse(this, connectBytes);
         }
 
@@ -27,11 +27,10 @@ namespace ProxyMapService.Proxy.Headers
         public HostAddress? Host { get; private set; }
         public string? UserId { get; private set; }
 
-        public static byte[] GetConnectRequestBytes(string host, int port, string? userId)
+        public static byte[] GetConnectRequestBytes(System.Net.IPEndPoint? hostEndPoint, string? userId)
         {
-            System.Net.IPEndPoint hostEndPoint = HostAddress.GetIPEndPoint(host, port);
-            byte[] portBytes = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder((short)hostEndPoint.Port));
-            byte[] addrBytes = hostEndPoint.Address.GetAddressBytes();
+            byte[] portBytes = BitConverter.GetBytes(System.Net.IPAddress.HostToNetworkOrder((short)(hostEndPoint?.Port ?? 0)));
+            byte[] addrBytes = hostEndPoint?.Address.GetAddressBytes() ?? [0, 0, 0, 0];
             byte[] userIdBytes = Encoding.ASCII.GetBytes(userId ?? "");
             int ulen = userIdBytes.Length;
             byte[] requestBytes = new byte[9 + ulen];

@@ -71,6 +71,11 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Response served from cache: {filePath}")]
         public static partial void LogResponseFromCache(this ILogger logger, string filePath);
 
+        [LoggerMessage(
+            EventId = 1211,
+            Level = LogLevel.Error,
+            Message = "Host Error: {HostName}. {ErrorMessage}")]
+        public static partial void LogHostError(this ILogger logger, string errorMessage, string hostName);
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {

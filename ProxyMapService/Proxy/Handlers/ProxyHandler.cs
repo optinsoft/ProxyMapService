@@ -17,13 +17,21 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
 
+            var hostError = false;
+
             try
             {
-                System.Net.IPEndPoint outgoingEndPoint = HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
+                hostError = true;
+                System.Net.IPEndPoint outgoingEndPoint = await HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
+                hostError = false;
                 await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                if (hostError)
+                {
+                    context.Logger.LogHostError(ex.Message, context.Host.Hostname);
+                }
                 context.ProxyCounters.SessionsCounter?.OnProxyFailed(context);
                 await (context switch
                 {
@@ -32,6 +40,10 @@ namespace ProxyMapService.Proxy.Handlers
                     { Socks5: not null } => Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure),
                     _ => Task.CompletedTask
                 });
+                if (hostError)
+                {
+                    return HandleStep.Terminate;
+                }
                 throw;
             }
 

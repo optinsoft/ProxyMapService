@@ -86,14 +86,14 @@
             }
         }
 
-        public System.Net.IPEndPoint GetIPEndPoint(bool throwIfMoreThanOneIP = false)
+        public async Task<System.Net.IPEndPoint> GetIPEndPoint(bool throwIfMoreThanOneIP = false)
         {
-            return GetIPEndPoint(Hostname, Port, throwIfMoreThanOneIP);
+            return await GetIPEndPoint(Hostname, Port, throwIfMoreThanOneIP);
         }
 
-        public static System.Net.IPEndPoint GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false)
+        public static async Task<System.Net.IPEndPoint> GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false)
         {
-            var addresses = System.Net.Dns.GetHostAddresses(hostname);
+            var addresses = await System.Net.Dns.GetHostAddressesAsync(hostname);
             if (addresses.Length == 0)
             {
                 throw new ArgumentException(

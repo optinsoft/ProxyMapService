@@ -15,9 +15,22 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.ProxyCounters.SessionsCounter?.OnHostBypassed(context);
 
+            System.Net.IPEndPoint outgoingEndPoint;
+
             try
             {
-                System.Net.IPEndPoint outgoingEndPoint = context.Host.GetIPEndPoint();
+                outgoingEndPoint = await context.Host.GetIPEndPoint();
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogHostError(ex.Message, context.Host.Hostname);
+                context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+                await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
+                return HandleStep.Terminate;
+            }
+
+            try
+            {
                 await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
             }
             catch (SocketException ex)
