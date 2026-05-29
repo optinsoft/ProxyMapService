@@ -78,8 +78,8 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1303,
             Level = LogLevel.Error,
-            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
-        private static partial void LogTunnelError(ILogger logger, string exceptionName, string errorMessage);
+            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}\n{StackTrace}")]
+        private static partial void LogTunnelError(ILogger logger, string exceptionName, string errorMessage, string? stackTrace);
 
         [LoggerMessage(
             EventId = 1304,
@@ -155,8 +155,7 @@ namespace ProxyMapService.Proxy.Handlers
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
                     await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
                     context.Logger.LogServerTLSHandshakeSucceeded();
-                    context.IncomingStream?.ClearDisconnectHandlers();
-                    incomingStream.DisconnectHandler += HandlerLogger.OnClientDisconnected;
+                    context.IncomingStream?.TransferHandlersTo(incomingStream);
                 }
                 incomingReady.SetResult();
             }
@@ -204,8 +203,7 @@ namespace ProxyMapService.Proxy.Handlers
                     var sslClientOptions = SslOptionsFactory.BuildSslClientOptions(context);
                     await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.Token);
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host);
-                    context.OutgoingStream?.ClearDisconnectHandlers();
-                    outgoingStream.DisconnectHandler += HandlerLogger.OnClientDisconnected;
+                    context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                 }
                 outgoingReady.SetResult();
             }
@@ -453,7 +451,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (Exception ex)
             {
-                LogTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                LogTunnelError(context.Logger, ex.GetType().Name, ex.Message, ex.StackTrace);
             }
         }
 

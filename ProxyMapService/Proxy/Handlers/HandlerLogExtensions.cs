@@ -12,7 +12,7 @@ namespace ProxyMapService.Proxy.Handlers
             EventId = 1201,
             Level = LogLevel.Information,
             Message = "Client connected from {remoteEndPoint}")]
-        private static partial void LogClientConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        public static partial void LogClientConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1202,
@@ -89,14 +89,14 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1210,
             Level = LogLevel.Warning,
-            Message = "Connection to proxy server {ipEndPoint} failed. {message}")]
-        private static partial void LogProxyServerConnectionFailedInternal(this ILogger logger, string message, System.Net.IPEndPoint ipEndPoint);
+            Message = "Connection to proxy server {remoteEndPoint} failed. {message}")]
+        private static partial void LogProxyServerConnectionFailedInternal(this ILogger logger, string message, System.Net.EndPoint remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1210,
             Level = LogLevel.Warning,
-            Message = "Connection to proxy server {hostname}:{port} ({ipEndPoint}) failed. {message}")]
-        private static partial void LogProxyServerConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, System.Net.IPEndPoint ipEndPoint);
+            Message = "Connection to proxy server {hostname}:{port} ({remoteEndPoint}) failed. {message}")]
+        private static partial void LogProxyServerConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, System.Net.EndPoint remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1211,
@@ -138,19 +138,19 @@ namespace ProxyMapService.Proxy.Handlers
             EventId = 1221,
             Level = LogLevel.Information,
             Message = "Client disconnected. Address: {remoteEndPoint}")]
-        private static partial void LogClientDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        public static partial void LogClientDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1222,
             Level = LogLevel.Information,
             Message = "Server disconnected (bypass). Address: {remoteEndPoint}")]
-        private static partial void LogBypassServerDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        public static partial void LogBypassServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1223,
             Level = LogLevel.Information,
             Message = "Proxy server disconnected. Address: {remoteEndPoint}")]
-        private static partial void LogProxyServerDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        public static partial void LogProxyServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1231,
@@ -207,15 +207,8 @@ namespace ProxyMapService.Proxy.Handlers
             return remoteEndPoint;
         }
 
-        public static void LogClientConnected(this ILogger logger, TcpClient incomingClient)
+        public static void LogBypassServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, HostAddress host)
         {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(incomingClient);
-            logger.LogClientConnectedInternal(remoteEndPoint);
-        }
-
-        public static void LogBypassServerConnected(this ILogger logger, TcpClient outgoingClient, HostAddress host)
-        {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
             if (host.IsHostnameIP())
             {
                 logger.LogBypassServerConnectedInternal(remoteEndPoint);
@@ -226,9 +219,8 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        public static void LogHttpProxyServerConnected(this ILogger logger, TcpClient outgoingClient, ProxyServer proxyServer)
+        public static void LogHttpProxyServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, ProxyServer proxyServer)
         {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
             if (HostAddress.IsHostnameIP(proxyServer.Host))
             {
                 logger.LogHttpProxyServerConnectedInternal(remoteEndPoint);
@@ -239,9 +231,8 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        public static void LogSocks4ProxyServerConnected(this ILogger logger, TcpClient outgoingClient, ProxyServer proxyServer)
+        public static void LogSocks4ProxyServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, ProxyServer proxyServer)
         {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
             if (HostAddress.IsHostnameIP(proxyServer.Host))
             {
                 logger.LogSocks4ProxyServerConnectedInternal(remoteEndPoint);
@@ -252,9 +243,8 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        public static void LogSocks5ProxyServerConnected(this ILogger logger, TcpClient outgoingClient, ProxyServer proxyServer)
+        public static void LogSocks5ProxyServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, ProxyServer proxyServer)
         {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
             if (HostAddress.IsHostnameIP(proxyServer.Host))
             {
                 logger.LogSocks5ProxyServerConnectedInternal(remoteEndPoint);
@@ -301,19 +291,15 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        public static void LogProxyServerConnectionFailed(this ILogger logger, string message, System.Net.IPEndPoint ipEndPoint, ProxyServer proxyServer)
+        public static void LogProxyServerConnectionFailed(this ILogger logger, string message, System.Net.EndPoint remoteEndPoint, ProxyServer proxyServer)
         {
-            if (ipEndPoint.Address.IsIPv4MappedToIPv6)
-            {
-                ipEndPoint = new System.Net.IPEndPoint(ipEndPoint.Address.MapToIPv4(), ipEndPoint.Port);
-            }
             if (HostAddress.IsHostnameIP(proxyServer.Host))
             {
-                logger.LogProxyServerConnectionFailedInternal(message, ipEndPoint);
+                logger.LogProxyServerConnectionFailedInternal(message, remoteEndPoint);
             }
             else
             {
-                logger.LogProxyServerConnectionFailedInternal2(message, proxyServer.Host, proxyServer.Port, ipEndPoint);
+                logger.LogProxyServerConnectionFailedInternal2(message, proxyServer.Host, proxyServer.Port, remoteEndPoint);
             }
         }
 
@@ -354,24 +340,6 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 logger.LogSocks5ConnectionFailedInternal(message, host.Hostname, host.Port);
             }
-        }
-
-        public static void LogClientDisconnected(this ILogger logger, TcpClient incomingClient)
-        {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(incomingClient);
-            logger.LogClientDisconnectedInternal(remoteEndPoint);
-        }
-
-        public static void LogBypassServerDisconnected(this ILogger logger, TcpClient outgoingClient)
-        {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
-            logger.LogBypassServerDisconnectedInternal(remoteEndPoint);
-        }
-
-        public static void LogProxyServerDisconnected(this ILogger logger, TcpClient outgoingClient)
-        {
-            var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
-            logger.LogProxyServerDisconnectedInternal(remoteEndPoint);
         }
 
         public static void LogClientTLSHandshakeSucceeded(this ILogger logger, HostAddress host)

@@ -76,7 +76,16 @@ namespace ProxyMapService.Proxy.Sessions
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
         {
-            logger.LogClientConnected(incomingClient);
+            var incomingEndPoint = incomingClient.Client.RemoteEndPoint;
+            if (incomingEndPoint is System.Net.IPEndPoint ipEndPoint)
+            {
+                if (ipEndPoint.Address.IsIPv4MappedToIPv6)
+                {
+                    incomingEndPoint = new System.Net.IPEndPoint(ipEndPoint.Address.MapToIPv4(), ipEndPoint.Port);
+                }
+            }
+
+            logger.LogClientConnected(incomingEndPoint);
 
             X509Certificate2? serverCertificate, caCertificate;
             try
@@ -101,8 +110,8 @@ namespace ProxyMapService.Proxy.Sessions
             }
             try
             {
-                using var context = new SessionContext(incomingClient, mapping,
-                    mapping.Listen.Ssl, serverCertificate, caCertificate,
+                using var context = new SessionContext(incomingClient, incomingEndPoint, 
+                    mapping, mapping.Listen.Ssl, serverCertificate, caCertificate,
                     proxyProvider, proxyAuthenticator, usernameParameterResolver,
                     hostRules, cacheRules, cacheManager, userAgent,
                     sslClientConfig, sslServerConfig,

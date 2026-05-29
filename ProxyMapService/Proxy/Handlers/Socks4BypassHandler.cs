@@ -14,11 +14,9 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.ProxyCounters.SessionsCounter?.OnHostBypassed(context);
 
-            System.Net.IPEndPoint outgoingEndPoint;
-
             try
             {
-                outgoingEndPoint = await context.Host.GetIPEndPoint();
+                context.OutgoingEndPoint = await context.Host.GetIPEndPoint();
             }
             catch (Exception ex)
             {
@@ -30,7 +28,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             try
             {
-                await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
+                await context.OutgoingClient.ConnectAsync(context.OutgoingEndPoint, context.Token);
             }
             catch (Exception)
             {
@@ -39,7 +37,7 @@ namespace ProxyMapService.Proxy.Handlers
                 throw;
             }
 
-            context.Logger.LogBypassServerConnected(context.OutgoingClient, context.Host);
+            context.Logger.LogBypassServerConnected(context.OutgoingEndPoint, context.Host);
 
             context.ProxyCounters.SessionsCounter?.OnBypassConnected(context);
 

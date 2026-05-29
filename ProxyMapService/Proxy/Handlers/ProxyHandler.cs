@@ -17,22 +17,20 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
 
-            System.Net.IPEndPoint? outgoingEndPoint = null;
-
             try
             {
-                outgoingEndPoint = await HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
-                await context.OutgoingClient.ConnectAsync(outgoingEndPoint, context.Token);
+                context.OutgoingEndPoint = await HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
+                await context.OutgoingClient.ConnectAsync(context.OutgoingEndPoint, context.Token);
             }
             catch (Exception ex)
             {
-                if (outgoingEndPoint == null)
+                if (context.OutgoingEndPoint == null)
                 {
                     context.Logger.LogHostError(ex.Message, context.Host.Hostname);
                 }
                 else
                 {
-                    context.Logger.LogProxyServerConnectionFailed(ex.Message, outgoingEndPoint, context.ProxyServer);
+                    context.Logger.LogProxyServerConnectionFailed(ex.Message, context.OutgoingEndPoint, context.ProxyServer);
                 }
                 context.ProxyCounters.SessionsCounter?.OnProxyFailed(context);
                 await (context switch
@@ -48,13 +46,13 @@ namespace ProxyMapService.Proxy.Handlers
             switch (context.ProxyServer.ProxyType)
             {
                 case ProxyType.Http:
-                    context.Logger.LogHttpProxyServerConnected(context.OutgoingClient, context.ProxyServer);
+                    context.Logger.LogHttpProxyServerConnected(context.OutgoingEndPoint, context.ProxyServer);
                     break;
                 case ProxyType.Socks4:
-                    context.Logger.LogSocks4ProxyServerConnected(context.OutgoingClient, context.ProxyServer);
+                    context.Logger.LogSocks4ProxyServerConnected(context.OutgoingEndPoint, context.ProxyServer);
                     break;
                 case ProxyType.Socks5:
-                    context.Logger.LogSocks5ProxyServerConnected(context.OutgoingClient, context.ProxyServer);
+                    context.Logger.LogSocks5ProxyServerConnected(context.OutgoingEndPoint, context.ProxyServer);
                     break;
             }
 

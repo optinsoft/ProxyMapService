@@ -110,7 +110,12 @@ namespace ProxyMapService.Proxy.Network
                     hostname
                 );
             }
-            return new System.Net.IPEndPoint(addresses[0], port);
+            var ipEndPoint = new System.Net.IPEndPoint(addresses[0], port);
+            if (ipEndPoint.Address.IsIPv4MappedToIPv6)
+            {
+                return new System.Net.IPEndPoint(ipEndPoint.Address.MapToIPv4(), ipEndPoint.Port);
+            }
+            return ipEndPoint;
         }
 
         public bool IsHostnameIP()

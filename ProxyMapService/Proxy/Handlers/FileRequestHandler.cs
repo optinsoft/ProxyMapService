@@ -59,8 +59,7 @@ namespace ProxyMapService.Proxy.Handlers
                     : null;
                 if (incomingSslCountingStream != null)
                 {
-                    context.IncomingStream.ClearDisconnectHandlers();
-                    incomingSslCountingStream.DisconnectHandler += HandlerLogger.OnClientDisconnected;
+                    context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
                 }
 
                 return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream, incomingSslStream != null);

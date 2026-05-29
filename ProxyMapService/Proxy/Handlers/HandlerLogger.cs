@@ -8,7 +8,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (sender is SessionContext context)
             {
-                context.Logger.LogClientDisconnected(context.IncomingClient);
+                context.Logger.LogClientDisconnected(context.IncomingEndPoint);
             }
         }
 
@@ -16,7 +16,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (sender is SessionContext context)
             {
-                context.Logger.LogBypassServerDisconnected(context.OutgoingClient);
+                context.Logger.LogBypassServerDisconnected(context.OutgoingEndPoint);
             }
         }
 
@@ -24,7 +24,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (sender is SessionContext context)
             {
-                context.Logger.LogProxyServerDisconnected(context.OutgoingClient);
+                context.Logger.LogProxyServerDisconnected(context.OutgoingEndPoint);
             }
         }
     }

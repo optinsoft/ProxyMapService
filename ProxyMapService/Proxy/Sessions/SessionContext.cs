@@ -46,6 +46,10 @@ namespace ProxyMapService.Proxy.Sessions
 
         public CountingStream? IncomingStream { get; set; }
         public CountingStream? OutgoingStream { get; set; }
+
+        public System.Net.EndPoint IncomingEndPoint { get; set; }
+        public System.Net.IPEndPoint? OutgoingEndPoint {  get; set; }
+
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }
@@ -101,8 +105,9 @@ namespace ProxyMapService.Proxy.Sessions
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
         public bool CachedReply { get; set; }
 
-        public SessionContext(TcpClient incomingClient, ProxyMapping mapping, 
-            bool ssl, X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
+        public SessionContext(TcpClient incomingClient, System.Net.EndPoint incomingEndPoint, 
+            ProxyMapping mapping, bool ssl, 
+            X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent,
@@ -110,7 +115,9 @@ namespace ProxyMapService.Proxy.Sessions
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
             IncomingClient = incomingClient;
+            IncomingEndPoint = incomingEndPoint;
             OutgoingClient = new TcpClient();
+            OutgoingEndPoint = null;
             Mapping = mapping;
             Ssl = ssl;
             UpstreamSsl = ssl;

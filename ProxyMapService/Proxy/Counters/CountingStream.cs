@@ -14,9 +14,11 @@ namespace ProxyMapService.Proxy.Counters
 
         public event EventHandler? DisconnectHandler;
 
-        public void ClearDisconnectHandlers()
+        public void TransferHandlersTo(CountingStream target)
         {
-            DisconnectHandler = null;
+            if (target == null) return;
+            target.DisconnectHandler = this.DisconnectHandler;
+            this.DisconnectHandler = null;
         }
 
         public virtual void OnBytesRead(int bytesRead, byte[]? bytesData, int startIndex)
