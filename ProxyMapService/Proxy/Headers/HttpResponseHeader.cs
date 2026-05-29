@@ -43,12 +43,12 @@ namespace ProxyMapService.Proxy.Headers
             self.StatusCode = GetStatusCode(strings);
             self.StatusText = GetStatusText(strings);
             self.ContentLength = GetContentLength(strings);
-            self.ContentType = GetHeaderValue(strings, "content-type:");
-            self.ETag = GetHeaderValue(strings, "etag:");
-            self.CacheControl = GetHeaderValue(strings, "cache-control:");
-            self.Date = GetHeaderValue(strings, "date:");
-            self.Expires = GetHeaderValue(strings, "expires:");
-            self.LastModified = GetHeaderValue(strings, "last-modified:");
+            self.ContentType = GetSingleHeaderValue(strings, "content-type:");
+            self.ETag = GetFirstHeaderValue(strings, "etag:");
+            self.CacheControl = GetCommaSeparatedHeaderValues(strings, "cache-control:");
+            self.Date = GetSingleHeaderValue(strings, "date:");
+            self.Expires = GetSingleHeaderValue(strings, "expires:", "0");
+            self.LastModified = GetSingleHeaderValue(strings, "last-modified:");
             self.Headers = strings;
         }
 
@@ -82,12 +82,46 @@ namespace ProxyMapService.Proxy.Headers
                 .TrimStart());
         }
 
-        private static string? GetHeaderValue(IEnumerable<string> strings, string key)
+        private static string? GetSingleHeaderValue(IEnumerable<string> strings, string key)
         {
             return strings
                 .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .TrimStart();
+        }
+
+        private static string? GetSingleHeaderValue(IEnumerable<string> strings, string key, string? fallbackIfMultiple)
+        {
+            var values = strings
+                .Where(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Substring(key.Length).TrimStart())
+                .ToList();
+            if (values.Count == 0)
+            {
+                return null;
+            }
+            if (values.Count > 1)
+            {
+                return fallbackIfMultiple;
+            }
+            return values[0];
+        }
+
+        private static string? GetFirstHeaderValue(IEnumerable<string> strings, string key)
+        {
+            return strings
+                .FirstOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                ?.Substring(key.Length)
+                .TrimStart();
+        }
+
+        private static string? GetCommaSeparatedHeaderValues(IEnumerable<string> strings, string key)
+        {
+            var values = strings
+                .Where(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Substring(key.Length).Trim())
+                .Where(v => !string.IsNullOrEmpty(v));
+            return values.Any() ? string.Join(", ", values) : null;
         }
     }
 }

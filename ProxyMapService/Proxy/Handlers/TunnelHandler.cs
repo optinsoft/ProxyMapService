@@ -113,6 +113,12 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1309,
             Level = LogLevel.Debug,
+            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogTunnelDebugError(ILogger logger, string exceptionName, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1309,
+            Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: Body read from {direction}")]
         private static partial void LogTunnelBodyRead(ILogger logger, long tunnelId, string direction);
 
@@ -221,6 +227,8 @@ namespace ProxyMapService.Proxy.Handlers
 
             CancellationToken token = context.Token;
 
+            bool reading = false;
+
             try
             {
                 int bytesRead, headersEnd, searchStart = 0;
@@ -231,7 +239,9 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         LogTunnelReading(context.Logger, selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                     }
+                    reading = true;
                     bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
+                    reading = false;
                     if (bytesRead > 0)
                     {
                         if (selfState.ResetReadHeaders)
@@ -398,13 +408,23 @@ namespace ProxyMapService.Proxy.Handlers
                     }
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
             }
-            catch (ObjectDisposedException)
+            catch (ObjectDisposedException ex)
             {
-                //LogTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                if (readCounter.IsLogReading)
+                {
+                    LogTunnelDebugError(context.Logger, ex.GetType().Name, ex.Message);
+                }
             }
-            catch (IOException)
+            catch (IOException ex)
             {
-                //LogTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                if (readCounter.IsLogReading)
+                {
+                    LogTunnelDebugError(context.Logger, ex.GetType().Name, ex.Message);
+                }
+                if (reading)
+                {
+                    source.OnDisconnected();
+                }
             }
             catch (Exception ex)
             {

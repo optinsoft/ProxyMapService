@@ -49,6 +49,11 @@ namespace ProxyMapService.Proxy.Handlers
 
             Socks5Status status = await Socks5Auth(context, username, password);
 
+            if (status != Socks5Status.Succeeded)
+            {
+                context.Logger.LogSocks5ConnectionFailed(status, context.Host, context.ProxyServer);
+            }
+
             if (status == Socks5Status.Succeeded)
             {
                 System.Net.IPEndPoint? hostEndPoint = null;
@@ -81,6 +86,10 @@ namespace ProxyMapService.Proxy.Handlers
                     if (status == Socks5Status.Succeeded)
                     {
                         context.Logger.LogServerConnectedViaSocks5Proxy(context.Host, context.ProxyServer);
+                    }
+                    else
+                    {
+                        context.Logger.LogSocks5ConnectionFailed(status, context.Host, context.ProxyServer);
                     }
 
                     if (context.Socks5 != null)

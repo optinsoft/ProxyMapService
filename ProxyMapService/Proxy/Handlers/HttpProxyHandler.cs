@@ -108,10 +108,17 @@ namespace ProxyMapService.Proxy.Handlers
                     }
 
                     var responseHttp = responseHeaderBytes != null ? new HttpResponseHeader(responseHeaderBytes) : null;
-                    
-                    if (http.HTTPVerb == "CONNECT" && responseHttp?.StatusCode == "200")
+
+                    if (http.HTTPVerb == "CONNECT")
                     {
-                        context.Logger.LogServerConnectedViaHttpProxy(context.Host, context.ProxyServer);
+                        if (responseHttp?.StatusCode == "200")
+                        {
+                            context.Logger.LogServerConnectedViaHttpProxy(context.Host, context.ProxyServer);
+                        }
+                        else
+                        {
+                            context.Logger.LogHttpConnectionFailed(responseHttp, context.Host, context.ProxyServer);
+                        }
                     }
 
                     if (context.Http != null)

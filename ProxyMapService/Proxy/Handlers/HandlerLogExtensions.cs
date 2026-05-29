@@ -1,5 +1,7 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
+using ProxyMapService.Proxy.Socks;
 using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -85,39 +87,87 @@ namespace ProxyMapService.Proxy.Handlers
         private static partial void LogServerConnectedViaSocks5Proxy(this ILogger logger, string hostname, int port, string proxyHost, int proxyPort);
 
         [LoggerMessage(
+            EventId = 1210,
+            Level = LogLevel.Warning,
+            Message = "Connection to proxy server {ipEndPoint} failed. {message}")]
+        private static partial void LogProxyServerConnectionFailedInternal(this ILogger logger, string message, System.Net.IPEndPoint ipEndPoint);
+
+        [LoggerMessage(
+            EventId = 1210,
+            Level = LogLevel.Warning,
+            Message = "Connection to proxy server {hostname}:{port} ({ipEndPoint}) failed. {message}")]
+        private static partial void LogProxyServerConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, System.Net.IPEndPoint ipEndPoint);
+
+        [LoggerMessage(
             EventId = 1211,
+            Level = LogLevel.Warning,
+            Message = "HTTP connection to server {hostname}:{port} failed. {message}")]
+        private static partial void LogHttpConnectionFailedInternal(this ILogger logger, string message, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1211,
+            Level = LogLevel.Warning,
+            Message = "HTTP connection to server {hostname}:{port} via {proxyHost}:{proxyPort} failed. {message}")]
+        private static partial void LogHttpConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, string proxyHost, int proxyPort);
+
+        [LoggerMessage(
+            EventId = 1212,
+            Level = LogLevel.Warning,
+            Message = "SOCKS4 connection to server {hostname}:{port} failed. {message}")]
+        private static partial void LogSocks4ConnectionFailedInternal(this ILogger logger, string message, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1212,
+            Level = LogLevel.Warning,
+            Message = "SOCKS4 connection to server {hostname}:{port} via {proxyHost}:{proxyPort} failed. {message}")]
+        private static partial void LogSocks4ConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, string proxyHost, int proxyPort);
+
+        [LoggerMessage(
+            EventId = 1213,
+            Level = LogLevel.Warning,
+            Message = "SOCKS5 connection to server {hostname}:{port} failed. {message}")]
+        private static partial void LogSocks5ConnectionFailedInternal(this ILogger logger, string message, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1213,
+            Level = LogLevel.Warning,
+            Message = "SOCKS5 connection to server {hostname}:{port} via {proxyHost}:{proxyPort} failed. {message}")]
+        private static partial void LogSocks5ConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, string proxyHost, int proxyPort);
+
+        [LoggerMessage(
+            EventId = 1221,
             Level = LogLevel.Information,
             Message = "Client disconnected. Address: {remoteEndPoint}")]
         private static partial void LogClientDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
-            EventId = 1212,
+            EventId = 1222,
             Level = LogLevel.Information,
             Message = "Server disconnected (bypass). Address: {remoteEndPoint}")]
         private static partial void LogBypassServerDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
-            EventId = 1213,
+            EventId = 1223,
             Level = LogLevel.Information,
             Message = "Proxy server disconnected. Address: {remoteEndPoint}")]
         private static partial void LogProxyServerDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
-            EventId = 1221,
+            EventId = 1231,
             Level = LogLevel.Information,
             Message = "Response served from file: {filePath}")]
         public static partial void LogResponseFromFile(this ILogger logger, string filePath);
 
         [LoggerMessage(
-            EventId = 1222,
+            EventId = 1232,
             Level = LogLevel.Information,
             Message = "Response served from cache: {filePath}")]
         public static partial void LogResponseFromCache(this ILogger logger, string filePath);
 
         [LoggerMessage(
-            EventId = 1231,
-            Level = LogLevel.Error,
-            Message = "Host Error: {HostName}. {ErrorMessage}")]
+            EventId = 1241,
+            Level = LogLevel.Warning,
+            Message = "Host lookup failed: {HostName}. {ErrorMessage}")]
         public static partial void LogHostError(this ILogger logger, string errorMessage, string hostName);
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
@@ -224,6 +274,61 @@ namespace ProxyMapService.Proxy.Handlers
             else
             {
                 logger.LogServerConnectedInternal(host.Hostname, host.Port);
+            }
+        }
+
+        public static void LogProxyServerConnectionFailed(this ILogger logger, string message, System.Net.IPEndPoint ipEndPoint, ProxyServer proxyServer)
+        {
+            if (ipEndPoint.Address.IsIPv4MappedToIPv6)
+            {
+                ipEndPoint = new System.Net.IPEndPoint(ipEndPoint.Address.MapToIPv4(), ipEndPoint.Port);
+            }
+            if (HostAddress.IsHostnameIP(proxyServer.Host))
+            {
+                logger.LogProxyServerConnectionFailedInternal(message, ipEndPoint);
+            }
+            else
+            {
+                logger.LogProxyServerConnectionFailedInternal2(message, proxyServer.Host, proxyServer.Port, ipEndPoint);
+            }
+        }
+
+        public static void LogHttpConnectionFailed(this ILogger logger, HttpResponseHeader? responseHttp, HostAddress host, ProxyServer? proxyServer)
+        {
+            string message = responseHttp != null ? $"{responseHttp.StatusCode} {responseHttp.StatusText}" : "response it empty";
+            if (proxyServer != null)
+            {
+                logger.LogHttpConnectionFailedInternal2(message, host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
+            }
+            else
+            {
+                logger.LogHttpConnectionFailedInternal(message, host.Hostname, host.Port);
+            }
+        }
+
+        public static void LogSocks4ConnectionFailed(this ILogger logger, Socks4Command command, HostAddress host, ProxyServer? proxyServer)
+        {
+            string message = command.ToLogMessage();
+            if (proxyServer != null)
+            {
+                logger.LogSocks4ConnectionFailedInternal2(message, host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
+            }
+            else
+            {
+                logger.LogSocks4ConnectionFailedInternal(message, host.Hostname, host.Port);
+            }
+        }
+
+        public static void LogSocks5ConnectionFailed(this ILogger logger, Socks5Status status, HostAddress host, ProxyServer? proxyServer)
+        {
+            string message = status.ToLogMessage();
+            if (proxyServer != null)
+            {
+                logger.LogSocks5ConnectionFailedInternal2(message, host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
+            }
+            else
+            {
+                logger.LogSocks5ConnectionFailedInternal(message, host.Hostname, host.Port);
             }
         }
 

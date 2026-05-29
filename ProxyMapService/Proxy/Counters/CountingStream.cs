@@ -34,6 +34,12 @@ namespace ProxyMapService.Proxy.Counters
             sendCounter?.OnBytesSent(context, bytesSent, bytesData, startIndex, SendTunnelId);
         }
 
+        public virtual void OnDisconnected()
+        {
+            DisconnectHandler?.Invoke(context, EventArgs.Empty);
+            DisconnectHandler = null;
+        }
+
         public void PauseReadCount() { _readCountPaused = true; }
         public void PauseSendCount() { _sendCountPaused = true; }
         public void ResumeReadCount() { _readCountPaused = false; }
@@ -50,7 +56,7 @@ namespace ProxyMapService.Proxy.Counters
                 }
                 if (bytesRead == 0)
                 {
-                    DisconnectHandler?.Invoke(context, EventArgs.Empty);
+                    OnDisconnected();
                 }
             }
             return bytesRead;

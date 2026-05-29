@@ -57,10 +57,16 @@ namespace ProxyMapService.Proxy.Handlers
                 var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
 
                 var responseSocks4 = responseHeaderBytes != null ? new Socks4Header(responseHeaderBytes): null;
-                
-                if (responseSocks4?.CommandCode == (byte)Socks4Command.RequestGranted)
+
+                var command = (Socks4Command)(responseSocks4?.CommandCode ?? 0);
+
+                if (command == Socks4Command.RequestGranted)
                 {
                     context.Logger.LogServerConnectedViaSocks4Proxy(context.Host, context.ProxyServer);
+                }
+                else
+                {
+                    context.Logger.LogSocks4ConnectionFailed(command, context.Host, context.ProxyServer);
                 }
 
                 if (context.Socks4 != null)
@@ -77,7 +83,7 @@ namespace ProxyMapService.Proxy.Handlers
 
                 if (responseSocks4 != null)
                 {
-                    if (responseSocks4.CommandCode == (byte)Socks4Command.RequestGranted)
+                    if (command == Socks4Command.RequestGranted)
                     {
                         if (context.Http != null)
                         {
