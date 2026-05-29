@@ -39,7 +39,7 @@ namespace ProxyMapService.Proxy.Handlers
                 try
                 {
                     System.Net.IPEndPoint hostEndPoint = await context.Host.GetIPEndPoint();
-                    requestFirstLine = $"{http?.HTTPVerb} {hostEndPoint.Address}:{hostEndPoint.Port} {http?.HTTPProtocol}";
+                    requestFirstLine = $"{http.HTTPVerb} {hostEndPoint.Address}:{hostEndPoint.Port} {http.HTTPProtocol}";
                 }
                 catch (Exception ex)
                 {
@@ -66,7 +66,7 @@ namespace ProxyMapService.Proxy.Handlers
                     ? Convert.ToBase64String(Encoding.ASCII.GetBytes($"{GetContextAuthenticationUsernameWithParameters(context)}:{context.Mapping.Authentication.Password}"))
                     : (context.Mapping.Authentication.RemoveAuthentication ? "" : clientAuthorization));
 
-                var httpRequestBytes = http?.GetBytes(true, proxyAuthorization, requestFirstLine, context.Host);
+                var httpRequestBytes = http.GetBytes(true, proxyAuthorization, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
@@ -107,6 +107,13 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                     }
 
+                    var responseHttp = responseHeaderBytes != null ? new HttpResponseHeader(responseHeaderBytes) : null;
+                    
+                    if (http.HTTPVerb == "CONNECT" && responseHttp?.StatusCode == "200")
+                    {
+                        context.Logger.LogServerConnectedViaHttpProxy(context.Host, context.ProxyServer);
+                    }
+
                     if (context.Http != null)
                     {
                         if (responseHeaderBytes != null && responseHeaderBytes.Length > 0)
@@ -119,9 +126,8 @@ namespace ProxyMapService.Proxy.Handlers
                         return HandleStep.Tunnel;
                     }
 
-                    if (responseHeaderBytes != null)
+                    if (responseHttp != null)
                     {
-                        var responseHttp = new HttpResponseHeader(responseHeaderBytes);
                         if (responseHttp.StatusCode == "200")
                         {
                             if (context.Socks4 != null)

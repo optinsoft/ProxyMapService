@@ -1,4 +1,6 @@
-﻿namespace ProxyMapService.Proxy.Network
+﻿using Microsoft.Extensions.Hosting;
+
+namespace ProxyMapService.Proxy.Network
 {
     public class HostAddress
     {
@@ -109,6 +111,16 @@
                 );
             }
             return new System.Net.IPEndPoint(addresses[0], port);
+        }
+
+        public bool IsHostnameIP()
+        {
+            return IsHostnameIP(Hostname);
+        }
+
+        public static bool IsHostnameIP(string hostname)
+        {
+            return System.Net.IPAddress.TryParse(hostname, out _);
         }
     }
 }

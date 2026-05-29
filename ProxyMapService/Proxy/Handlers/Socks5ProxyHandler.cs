@@ -76,6 +76,13 @@ namespace ProxyMapService.Proxy.Handlers
 
                     var socks5Reply = await Socks5Proto.ReadConnectReply(context);
 
+                    status = socks5Reply != null && socks5Reply[0] == 0x05 ? (Socks5Status)socks5Reply[1] : Socks5Status.GeneralFailure;
+
+                    if (status == Socks5Status.Succeeded)
+                    {
+                        context.Logger.LogServerConnectedViaSocks5Proxy(context.Host, context.ProxyServer);
+                    }
+
                     if (context.Socks5 != null)
                     {
                         if (socks5Reply != null && socks5Reply.Length > 0)
@@ -87,8 +94,6 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                         return HandleStep.Tunnel;
                     }
-
-                    status = socks5Reply != null && socks5Reply[0] == 0x05 ? (Socks5Status)socks5Reply[1] : Socks5Status.GeneralFailure;
 
                     if (status == Socks5Status.Succeeded)
                     {

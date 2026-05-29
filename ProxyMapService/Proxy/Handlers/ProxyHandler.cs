@@ -50,13 +50,13 @@ namespace ProxyMapService.Proxy.Handlers
             switch (context.ProxyServer.ProxyType)
             {
                 case ProxyType.Http:
-                    context.Logger.LogHttpProxyServerConnected(context.OutgoingClient);
+                    context.Logger.LogHttpProxyServerConnected(context.OutgoingClient, context.ProxyServer);
                     break;
                 case ProxyType.Socks4:
-                    context.Logger.LogSocks4ProxyServerConnected(context.OutgoingClient);
+                    context.Logger.LogSocks4ProxyServerConnected(context.OutgoingClient, context.ProxyServer);
                     break;
                 case ProxyType.Socks5:
-                    context.Logger.LogSocks5ProxyServerConnected(context.OutgoingClient);
+                    context.Logger.LogSocks5ProxyServerConnected(context.OutgoingClient, context.ProxyServer);
                     break;
             }
 
