@@ -8,6 +8,7 @@ using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System.Diagnostics;
 using System.Net.Security;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
@@ -151,7 +152,9 @@ namespace ProxyMapService.Proxy.Handlers
                             throw new NullServerCertificateException();
                         }
                     }
-                    await incomingSslStream.AuthenticateAsServerAsync(SslOptionsFactory.BuildSslServerOptions(context, serverCertificate), context.Token);
+                    var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
+                    await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
+                    context.Logger.LogServerTLSHandshakeSucceeded();
                     context.IncomingStream?.ClearDisconnectHandlers();
                     incomingStream.DisconnectHandler += HandlerLogger.OnClientDisconnected;
                 }
@@ -160,20 +163,30 @@ namespace ProxyMapService.Proxy.Handlers
             catch (ObjectDisposedException ex)
             {
                 incomingReady.SetException(ex);
-                //LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
+                //LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                //return;
             }
             catch (IOException ex)
             {
                 incomingReady.SetException(ex);
-                //LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
+                //LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                //return;
+            }
+            catch (AuthenticationException ex)
+            {
+                //incomingReady.SetException(ex);
+                //throw;
+                context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                return;
             }
             catch (Exception ex)
             {
-                incomingReady.SetException(ex);
+                //incomingReady.SetException(ex);
+                //throw;
                 LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
-                throw;
+                return;
             }
             await Tunnel(context, incomingStream, outgoingStream, outgoingReady,
                 context.ProxyCounters.IncomingReadCounter, context.ProxyCounters.OutgoingSendCounter,
@@ -188,7 +201,9 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 if (outgoingSslStream != null)
                 {
-                    await outgoingSslStream.AuthenticateAsClientAsync(SslOptionsFactory.BuildSslClientOptions(context), context.Token);
+                    var sslClientOptions = SslOptionsFactory.BuildSslClientOptions(context);
+                    await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.Token);
+                    context.Logger.LogClientTLSHandshakeSucceeded(context.Host);
                     context.OutgoingStream?.ClearDisconnectHandlers();
                     outgoingStream.DisconnectHandler += HandlerLogger.OnClientDisconnected;
                 }
@@ -197,20 +212,30 @@ namespace ProxyMapService.Proxy.Handlers
             catch (ObjectDisposedException ex)
             {
                 outgoingReady.SetException(ex);
-                //LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
+                //LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                //return;
             }
             catch (IOException ex)
             {
                 outgoingReady.SetException(ex);
-                //LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
                 throw;
+                //LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                //return;
+            }
+            catch (AuthenticationException ex)
+            {
+                //incomingReady.SetException(ex);
+                //throw;
+                context.Logger.LogClientTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message, context.Host);
+                return;
             }
             catch (Exception ex)
             {
-                outgoingReady.SetException(ex);
+                //outgoingReady.SetException(ex);
+                //throw;
                 LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
-                throw;
+                return;
             }
             await Tunnel(context, outgoingStream, incomingStream, incomingReady,
                 context.ProxyCounters.OutgoingReadCounter, context.ProxyCounters.IncomingSendCounter,

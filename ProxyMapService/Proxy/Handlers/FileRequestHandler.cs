@@ -6,6 +6,7 @@ using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System.Net.Security;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -37,7 +38,17 @@ namespace ProxyMapService.Proxy.Handlers
                             throw new NullServerCertificateException();
                         }
                     }
-                    await incomingSslStream.AuthenticateAsServerAsync(SslOptionsFactory.BuildSslServerOptions(context, serverCertificate), context.Token);
+                    var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
+                    try
+                    {
+                        await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
+                    }
+                    catch (AuthenticationException ex)
+                    {
+                        context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                        return HandleStep.Terminate;
+                    }
+                    context.Logger.LogServerTLSHandshakeSucceeded();
                 }
 
                 using CountingStream? incomingSslCountingStream =

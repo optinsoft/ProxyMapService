@@ -167,8 +167,32 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1241,
             Level = LogLevel.Warning,
-            Message = "Host lookup failed: {HostName}. {ErrorMessage}")]
-        public static partial void LogHostError(this ILogger logger, string errorMessage, string hostName);
+            Message = "Host lookup failed: {hostname}. {ErrorMessage}")]
+        public static partial void LogHostError(this ILogger logger, string errorMessage, string hostname);
+
+        [LoggerMessage(
+            EventId = 1251,
+            Level = LogLevel.Information,
+            Message = "TLS handshake with {hostname}:{port} completed successfully.")]
+        private static partial void LogClientTLSHandshakeSucceededInternal(this ILogger logger, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1252,
+            Level = LogLevel.Information,
+            Message = "TLS handshake with client completed successfully.")]
+        public static partial void LogServerTLSHandshakeSucceeded(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1253,
+            Level = LogLevel.Warning,
+            Message = "TLS handshake with {hostname}:{port} failed. {message}")]
+        private static partial void LogClientTLSHandshakeFailedInternal(this ILogger logger, string message, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1254,
+            Level = LogLevel.Warning,
+            Message = "TLS handshake with client failed. {message}")]
+        public static partial void LogServerTLSHandshakeFailed(this ILogger logger, string message);
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
@@ -348,6 +372,16 @@ namespace ProxyMapService.Proxy.Handlers
         {
             var remoteEndPoint = GetTcpClientRemoteEndPoint(outgoingClient);
             logger.LogProxyServerDisconnectedInternal(remoteEndPoint);
+        }
+
+        public static void LogClientTLSHandshakeSucceeded(this ILogger logger, HostAddress host)
+        {
+            logger.LogClientTLSHandshakeSucceededInternal(host.Hostname, host.Port);
+        }
+
+        public static void LogClientTLSHandshakeFailed(this ILogger logger, string message, HostAddress host)
+        {
+            logger.LogClientTLSHandshakeFailedInternal(message, host.Hostname, host.Port);
         }
     }
 }
