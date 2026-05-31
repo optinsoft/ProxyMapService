@@ -13,6 +13,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.Socks4?.Host == null || context.Socks4.Host.Hostname.Length == 0)
             {
+                context.Logger.LogNoHost();
                 context.ProxyCounters.SessionsCounter?.OnNoHost(context);
                 await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
@@ -32,6 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Socks4File;
                 default:
                     //ActionEnum.Deny
+                    context.Logger.LogHostRejected(context.Host.Hostname, context.Host.Port);
                     context.ProxyCounters.SessionsCounter?.OnHostRejected(context);
                     await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                     return HandleStep.Terminate;

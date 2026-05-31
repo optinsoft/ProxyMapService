@@ -242,6 +242,24 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "SOCKS5 proxy authorization failed: incorrect credentials.")]
         public static partial void LogSocks5ProxyIncorrectCredentials(this ILogger logger);
 
+        [LoggerMessage(
+            EventId = 1271,
+            Level = LogLevel.Warning,
+            Message = "No host.")]
+        public static partial void LogNoHost(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1272,
+            Level = LogLevel.Warning,
+            Message = "Host rejected: {hostname}:{port}")]
+        public static partial void LogHostRejected(this ILogger logger, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1273,
+            Level = LogLevel.Warning,
+            Message = "Forward HTTP proxy connections are not allowed.")]
+        public static partial void LogHttpForwardingRejected(this ILogger logger);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;
