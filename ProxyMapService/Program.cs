@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Middleware;
 using ProxyMapService.Services;
+using ProxyMapService.Vite;
 using ProxyMapService.WebLogging;
 using System.Text;
 
@@ -108,6 +108,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    ViteLauncher.StartIfNeeded();
 }
 
 app.UseCors(AllowAllCors);
