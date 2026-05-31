@@ -147,6 +147,7 @@ namespace ProxyMapService.Proxy.Handlers
                             }
                             return HandleStep.Tunnel;
                         }
+                        context.Logger.LogHttpResponse(responseHttp.StatusCode, responseHttp.StatusText);
                         if (context.Socks4 != null)
                         {
                             await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);

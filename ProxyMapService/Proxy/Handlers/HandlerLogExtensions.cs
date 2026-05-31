@@ -125,11 +125,35 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1213,
             Level = LogLevel.Warning,
+            Message = "SOCKS5 authentication on server {hostname}:{port} failed. {message}")]
+        private static partial void LogSocks5AuthFailedInternal(this ILogger logger, string message, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1213,
+            Level = LogLevel.Warning,
+            Message = "SOCKS5 authentication on server {hostname}:{port} via {proxyHost}:{proxyPort} failed. {message}")]
+        private static partial void LogSocks5AuthFailedInternal2(this ILogger logger, string message, string hostname, int port, string proxyHost, int proxyPort);
+
+        [LoggerMessage(
+            EventId = 1214,
+            Level = LogLevel.Warning,
+            Message = "Bad SOCKS5 connect request to server {hostname}:{port}. {message}")]
+        private static partial void LogSocks5BadConnectRequestInternal(this ILogger logger, string message, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1214,
+            Level = LogLevel.Warning,
+            Message = "Bad SOCKS5 connect request to server {hostname}:{port} via {proxyHost}:{proxyPort}. {message}")]
+        private static partial void LogSocks5BadConnectRequestInternal2(this ILogger logger, string message, string hostname, int port, string proxyHost, int proxyPort);
+
+        [LoggerMessage(
+            EventId = 1215,
+            Level = LogLevel.Warning,
             Message = "SOCKS5 connection to server {hostname}:{port} failed. {message}")]
         private static partial void LogSocks5ConnectionFailedInternal(this ILogger logger, string message, string hostname, int port);
 
         [LoggerMessage(
-            EventId = 1213,
+            EventId = 1215,
             Level = LogLevel.Warning,
             Message = "SOCKS5 connection to server {hostname}:{port} via {proxyHost}:{proxyPort} failed. {message}")]
         private static partial void LogSocks5ConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, string proxyHost, int proxyPort);
@@ -203,7 +227,7 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1262,
             Level = LogLevel.Warning,
-            Message = "HTTP proxy authorization failed: incorrect credentials.")]
+            Message = "HTTP proxy authentication failed: incorrect credentials.")]
         public static partial void LogHttpProxyIncorrectCredentials(this ILogger logger);
 
         [LoggerMessage(
@@ -215,7 +239,7 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1264,
             Level = LogLevel.Warning,
-            Message = "SOCKS4 proxy authorization failed: incorrect credentials.")]
+            Message = "SOCKS4 proxy authentication failed: incorrect credentials.")]
         public static partial void LogSocks4ProxyIncorrectCredentials(this ILogger logger);
 
         [LoggerMessage(
@@ -227,19 +251,19 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1266,
             Level = LogLevel.Warning,
-            Message = "SOCKS5 proxy authorization failed: no method 0x{method:X2}.")]
+            Message = "SOCKS5 proxy authentication failed: no method 0x{method:X2}.")]
         public static partial void LogSocks5ProxyNoMethod(this ILogger logger, byte method);
 
         [LoggerMessage(
             EventId = 1267,
             Level = LogLevel.Warning,
-            Message = "SOCKS5 proxy authorization failed: unable to parse username and password.")]
+            Message = "SOCKS5 proxy authentication failed: unable to parse username and password.")]
         public static partial void LogSocks5ProxyParseUsernamePasswordFailed(this ILogger logger);
 
         [LoggerMessage(
             EventId = 1268,
             Level = LogLevel.Warning,
-            Message = "SOCKS5 proxy authorization failed: incorrect credentials.")]
+            Message = "SOCKS5 proxy authentication failed: incorrect credentials.")]
         public static partial void LogSocks5ProxyIncorrectCredentials(this ILogger logger);
 
         [LoggerMessage(
@@ -259,6 +283,54 @@ namespace ProxyMapService.Proxy.Handlers
             Level = LogLevel.Warning,
             Message = "Forward HTTP proxy connections are not allowed.")]
         public static partial void LogHttpForwardingRejected(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1275,
+            Level = LogLevel.Warning,
+            Message = "HTTP Error {statusCode} {statusText}")]
+        public static partial void LogHttpResponse(this ILogger logger, string? statusCode, string? statusText);
+
+        [LoggerMessage(
+            EventId = 1276,
+            Level = LogLevel.Warning,
+            Message = "Bad request.")]
+        public static partial void LogBadRequest(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1277,
+            Level = LogLevel.Warning,
+            Message = "Bad SOCKS version: 0x{version:X2}.")]
+        public static partial void LogBadSocksVersion(this ILogger logger, byte version);
+
+        [LoggerMessage(
+            EventId = 1278,
+            Level = LogLevel.Warning,
+            Message = "Bad SOCKS4 request: 0x{command:X2}.")]
+        public static partial void LogSocks4BadRequest(this ILogger logger, byte command);
+
+        [LoggerMessage(
+            EventId = 1279,
+            Level = LogLevel.Warning,
+            Message = "Bad SOCKS5 request.")]
+        public static partial void LogSocks5BadRequest(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1280,
+            Level = LogLevel.Warning,
+            Message = "Bad HTTP request.")]
+        public static partial void LogHttpBadRequest(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1284,
+            Level = LogLevel.Warning,
+            Message = "File not found: {path}")]
+        public static partial void LogHttpFileNotFound(this ILogger logger, string? path);
+
+        [LoggerMessage(
+            EventId = 1285,
+            Level = LogLevel.Warning,
+            Message = "The HTTP request method is not allowed: {method}")]
+        public static partial void LogHttpMethodNotAllowed(this ILogger logger, string? method);
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
@@ -392,6 +464,32 @@ namespace ProxyMapService.Proxy.Handlers
             else
             {
                 logger.LogSocks4ConnectionFailedInternal(message, host.Hostname, host.Port);
+            }
+        }
+
+        public static void LogSocks5AuthFailed(this ILogger logger, Socks5Status status, HostAddress host, ProxyServer? proxyServer)
+        {
+            string message = status.ToLogMessage();
+            if (proxyServer != null)
+            {
+                logger.LogSocks5AuthFailedInternal2(message, host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
+            }
+            else
+            {
+                logger.LogSocks5AuthFailedInternal(message, host.Hostname, host.Port);
+            }
+        }
+
+        public static void LogSocks5BadConnectRequest(this ILogger logger, Socks5Status status, HostAddress host, ProxyServer? proxyServer)
+        {
+            string message = status.ToLogMessage();
+            if (proxyServer != null)
+            {
+                logger.LogSocks5BadConnectRequestInternal2(message, host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
+            }
+            else
+            {
+                logger.LogSocks5BadConnectRequestInternal(message, host.Hostname, host.Port);
             }
         }
 

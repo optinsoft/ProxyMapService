@@ -27,6 +27,7 @@ namespace ProxyMapService.Proxy.Handlers
                             context.Http = new HttpRequestHeader(requestHeaderBytes);
                             if (context.Http.BadRequest)
                             {
+                                context.Logger.LogHttpBadRequest();
                                 context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
                                 await HttpProto.HttpReplyBadRequest(context);
                                 return HandleStep.Terminate;
@@ -38,10 +39,15 @@ namespace ProxyMapService.Proxy.Handlers
                             {
                                 return HandleStep.Socks4Initialized;
                             }
+                            context.Logger.LogSocks4BadRequest(context.Socks4.CommandCode);
                             break;
                         case 0x05:
                             context.Socks5 = new Socks5Header(requestHeaderBytes);
                             return HandleStep.Socks5Initialized;
+                        default:
+                            context.Logger.LogBadSocksVersion(context.IncomingHeaderStream.SocksVersion);
+                            break;
+
                     }
                 }
             }

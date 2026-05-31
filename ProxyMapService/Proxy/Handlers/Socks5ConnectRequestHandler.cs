@@ -19,6 +19,7 @@ namespace ProxyMapService.Proxy.Handlers
             Socks5Status status = context.Socks5?.ParseConnectRequest(bytesArray) ?? Socks5Status.GeneralFailure;
             if (status != Socks5Status.Succeeded)
             {
+                context.Logger.LogSocks5BadConnectRequest(status, context.Host, context.ProxyServer);
                 context.ProxyCounters.SessionsCounter?.OnSocks5Failure(context);
                 await Socks5Proto.Socks5ReplyStatus(context, status);
                 return HandleStep.Terminate;
