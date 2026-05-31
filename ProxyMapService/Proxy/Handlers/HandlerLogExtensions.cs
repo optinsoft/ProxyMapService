@@ -194,6 +194,54 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "TLS handshake with client failed. {message}")]
         public static partial void LogServerTLSHandshakeFailed(this ILogger logger, string message);
 
+        [LoggerMessage(
+            EventId = 1261,
+            Level = LogLevel.Warning,
+            Message = "HTTP proxy authentication required.")]
+        public static partial void LogHttpProxyAuthenticationRequired(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1262,
+            Level = LogLevel.Warning,
+            Message = "HTTP proxy authorization failed: incorrect credentials.")]
+        public static partial void LogHttpProxyIncorrectCredentials(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1263,
+            Level = LogLevel.Warning,
+            Message = "SOCKS4 proxy authentication required.")]
+        public static partial void LogSocks4ProxyAuthenticationRequired(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1264,
+            Level = LogLevel.Warning,
+            Message = "SOCKS4 proxy authorization failed: incorrect credentials.")]
+        public static partial void LogSocks4ProxyIncorrectCredentials(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1265,
+            Level = LogLevel.Warning,
+            Message = "SOCKS5 proxy authentication required.")]
+        public static partial void LogSocks5ProxyAuthenticationRequired(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1266,
+            Level = LogLevel.Warning,
+            Message = "SOCKS5 proxy authorization failed: no method 0x{method:X2}.")]
+        public static partial void LogSocks5ProxyNoMethod(this ILogger logger, byte method);
+
+        [LoggerMessage(
+            EventId = 1267,
+            Level = LogLevel.Warning,
+            Message = "SOCKS5 proxy authorization failed: unable to parse username and password.")]
+        public static partial void LogSocks5ProxyParseUsernamePasswordFailed(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1268,
+            Level = LogLevel.Warning,
+            Message = "SOCKS5 proxy authorization failed: incorrect credentials.")]
+        public static partial void LogSocks5ProxyIncorrectCredentials(this ILogger logger);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

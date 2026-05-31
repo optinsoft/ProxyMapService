@@ -21,6 +21,7 @@ namespace ProxyMapService.Proxy.Handlers
                 OnAuthenticationNotRequired(context);
                 if (!IsMethodPresent(context, 0x0))
                 {
+                    context.Logger.LogSocks5ProxyNoMethod(0x0);
                     await Socks5Proto.Socks5ReplyNoMethod(context);
                     return HandleStep.Terminate;
                 }
@@ -30,6 +31,7 @@ namespace ProxyMapService.Proxy.Handlers
             OnAuthenticationRequired(context);
             if (!IsMethodPresent(context, 0x02))
             {
+                context.Logger.LogSocks5ProxyNoMethod(0x02);
                 await Socks5Proto.Socks5ReplyNoMethod(context);
                 return HandleStep.Terminate;
             }

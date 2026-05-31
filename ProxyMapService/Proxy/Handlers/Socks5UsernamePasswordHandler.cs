@@ -17,6 +17,7 @@ namespace ProxyMapService.Proxy.Handlers
             byte[]? bytesArray = await Socks5Proto.ReadUsernamePassword(context);
             if (!(context.Socks5?.ParseUsernamePassword(bytesArray) ?? false))
             {
+                context.Logger.LogSocks5ProxyParseUsernamePasswordFailed();
                 context.ProxyCounters.SessionsCounter?.OnSocks5Failure(context);
                 await Socks5Proto.Socks5ReplyNotAuthenticated(context);
                 return HandleStep.Terminate;
@@ -29,6 +30,7 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Socks5Authenticated;
             }
 
+            context.Logger.LogSocks5ProxyIncorrectCredentials();
             OnAuthenticationInvalid(context);
             await Socks5Proto.Socks5ReplyNotAuthenticated(context);
             return HandleStep.Terminate;

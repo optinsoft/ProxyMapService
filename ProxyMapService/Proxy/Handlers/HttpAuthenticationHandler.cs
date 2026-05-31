@@ -17,6 +17,7 @@ namespace ProxyMapService.Proxy.Handlers
                     OnAuthenticationNotRequired(context);
                     return HandleStep.HttpAuthenticationNotRequired;
                 }
+                context.Logger.LogHttpProxyAuthenticationRequired();
                 OnAuthenticationRequired(context);
                 await HttpProto.HttpReplyProxyAuthenticationRequired(context);
                 return HandleStep.Terminate;
@@ -28,6 +29,7 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.HttpAuthenticated;
             }
 
+            context.Logger.LogHttpProxyIncorrectCredentials();
             OnAuthenticationInvalid(context);
             await HttpProto.HttpReplyProxyUnauthorized(context);
             return HandleStep.Terminate;
