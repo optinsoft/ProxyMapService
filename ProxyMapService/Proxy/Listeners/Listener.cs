@@ -2,7 +2,7 @@
 
 namespace ProxyMapService.Proxy.Listeners
 {
-    public class Listener(System.Net.IPEndPoint incomingEndPoint, Action<TcpClient, CancellationToken> incomingClientHandler, ILogger logger) : IDisposable
+    public class Listener(System.Net.IPEndPoint incomingEndPoint, Action<TcpClient, CancellationToken> incomingClientHandler, ILogger serviceLogger) : IDisposable
     {
         private TcpListener? _listener;
         private CancellationTokenSource? _cancelSource;
@@ -42,11 +42,11 @@ namespace ProxyMapService.Proxy.Listeners
                 {
                     retry = false;
                     await Task.Delay(1000, stoppingToken);
-                    logger.LogInformation("Starting listener on {} (retry #{}) ...", incomingEndPoint, retryNum);
+                    serviceLogger.LogInformation("Starting listener on {} (retry #{}) ...", incomingEndPoint, retryNum);
                 }
                 else
                 {
-                    logger.LogInformation("Starting listener on {} ...", incomingEndPoint);
+                    serviceLogger.LogInformation("Starting listener on {} ...", incomingEndPoint);
                 }
                 try
                 {
@@ -56,25 +56,25 @@ namespace ProxyMapService.Proxy.Listeners
                 {
                     if (ex.ErrorCode == 10048 && retryNum++ < maxListenerStartRetries)
                     {
-                        logger.LogWarning("Unable to start listener on {}\r\n{}",
+                        serviceLogger.LogWarning("Unable to start listener on {}\r\n{}",
                             incomingEndPoint,
                             "Only one usage of each socket address (protocol/network address/port) is normally permitted");
                         retry = true;
                     }
                     else
                     {
-                        logger.LogError(ex, "Unable to start listener on {}", incomingEndPoint);
+                        serviceLogger.LogError(ex, "Unable to start listener on {}", incomingEndPoint);
                         return;
                     }
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Unable to start listener on {}", incomingEndPoint);
+                    serviceLogger.LogError(ex, "Unable to start listener on {}", incomingEndPoint);
                     return;
                 }
             } while (retry);
 
-            logger.LogInformation("Listening on {} ...", incomingEndPoint);
+            serviceLogger.LogInformation("Listening on {} ...", incomingEndPoint);
 
             try
             {
@@ -120,10 +120,10 @@ namespace ProxyMapService.Proxy.Listeners
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Unexpected Error");
+                serviceLogger.LogError(ex, "Unexpected Error");
             }
 
-            logger.LogInformation("Listening on {} has finished", incomingEndPoint);
+            serviceLogger.LogInformation("Listening on {} has finished", incomingEndPoint);
         }
 
         protected virtual async Task AcceptClients(TcpListener listener, CancellationToken stoppingToken)

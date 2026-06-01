@@ -14,8 +14,8 @@ namespace ProxyMapService.Proxy
     public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
         List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
         SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
-        ProxyCounters proxyCounters, ILogger logger, bool logStep, int maxListenerStartRetries, 
-        CancellationToken stoppingToken)
+        ProxyCounters proxyCounters, ILogger serviceLogger, ILogger sessionLogger, 
+        bool logStep, int maxListenerStartRetries, CancellationToken stoppingToken)
     {
         private readonly List<ProxyServer> _proxyServers = [];
         private readonly List<IConfigurationRoot> _proxyServerFileConfigurations = [];
@@ -62,7 +62,7 @@ namespace ProxyMapService.Proxy
                     }
                     else
                     {
-                        logger.LogWarning("Bad listen port: {}", port);
+                        serviceLogger.LogWarning("Bad listen port: {}", port);
                     }
                 }
 
@@ -70,7 +70,7 @@ namespace ProxyMapService.Proxy
             } 
             catch (Exception ex)
             {
-                logger.LogError(ex, "ProxyMapper.Start failed with exception");
+                serviceLogger.LogError(ex, "ProxyMapper.Start failed with exception");
             }
         }
 
@@ -85,9 +85,9 @@ namespace ProxyMapService.Proxy
                     proxyAuthenticator, usernameParameterResolver,
                     hostRules, cacheRules, cacheManager, userAgent, 
                     sslClientConfig, sslServerConfig,
-                    proxyCounters, logger, logStep, token);
+                    proxyCounters, sessionLogger, logStep, token);
 
-            using var listener = new Listener(incomingEndPoint, incomingClientHandler, logger);
+            using var listener = new Listener(incomingEndPoint, incomingClientHandler, serviceLogger);
             await listener.Start(maxListenerStartRetries, stoppingToken);
         }
     }

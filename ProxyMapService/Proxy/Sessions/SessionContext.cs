@@ -47,7 +47,7 @@ namespace ProxyMapService.Proxy.Sessions
         public CountingStream? IncomingStream { get; set; }
         public CountingStream? OutgoingStream { get; set; }
 
-        public System.Net.EndPoint IncomingEndPoint { get; set; }
+        public System.Net.EndPoint? IncomingEndPoint { get; set; }
         public System.Net.IPEndPoint? OutgoingEndPoint {  get; set; }
 
         public HttpRequestHeader? Http { get; set; }
@@ -105,7 +105,7 @@ namespace ProxyMapService.Proxy.Sessions
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
         public bool CachedReply { get; set; }
 
-        public SessionContext(TcpClient incomingClient, System.Net.EndPoint incomingEndPoint, 
+        public SessionContext(TcpClient incomingClient, System.Net.EndPoint? incomingEndPoint, 
             ProxyMapping mapping, bool ssl, 
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,

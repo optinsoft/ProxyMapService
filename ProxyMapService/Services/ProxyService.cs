@@ -17,6 +17,7 @@ namespace ProxyMapService.Services
         private readonly string _serviceInfo = $"Service created at {DateTime.Now}";
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
+        private readonly ILogger _sessionLogger;
         private readonly ProxyCounters _proxyCounters = new();
         private readonly HostsCounter _hostsCounter = new();
         private readonly BytesLogger? _bytesLogger = null;
@@ -44,11 +45,12 @@ namespace ProxyMapService.Services
             get => _started;
         }
 
-        public ProxyService(IConfiguration configuration, ILogger<ProxyService> logger)
+        public ProxyService(IConfiguration configuration, ILogger<ProxyService> logger, ILoggerFactory loggerFactory)
         {
             _configuration = configuration;
             _logger = logger;
-            _bytesLogger = new BytesLogger(_logger);
+            _sessionLogger = loggerFactory.CreateLogger("ProxySession");
+            _bytesLogger = new BytesLogger(_sessionLogger);
             var HostStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("Enabled") ?? false;
             if (HostStatsEnabled)
             {
@@ -161,7 +163,7 @@ namespace ProxyMapService.Services
             {
                 tasks.Add(new ProxyMapper(mapping, _hostRules, _cacheRules, _cacheManager,
                     userAgent, _sslClientOptions, _sslServerOptions, _proxyCounters,
-                    _logger, logStep, _maxListenerStartRetries, cancellationToken).Start());
+                    _logger, _sessionLogger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;
             _startTime = DateTime.Now;
