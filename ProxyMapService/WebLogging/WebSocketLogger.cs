@@ -3,34 +3,21 @@ using Microsoft.Extensions.Options;
 
 namespace ProxyMapService.WebLogging
 {
-    public class WebSocketLogger : ILogger
+    public class WebSocketLogger(
+        string categoryName,
+        IServiceProvider serviceProvider,
+        IOptionsMonitor<LoggerFilterOptions> filterOptions,
+        IOptionsMonitor<WebSocketLoggerOptions> loggerOptions) : ILogger
     {
-        private readonly string _categoryName;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly IOptionsMonitor<LoggerFilterOptions> _filterOptions;
-        private readonly IOptionsMonitor<WebSocketLoggerOptions> _loggerOptions;
-
-        public WebSocketLogger(
-            string categoryName,
-            IServiceProvider serviceProvider,
-            IOptionsMonitor<LoggerFilterOptions> filterOptions,
-            IOptionsMonitor<WebSocketLoggerOptions> loggerOptions)
-        {
-            _categoryName = categoryName;
-            _serviceProvider = serviceProvider;
-            _filterOptions = filterOptions;
-            _loggerOptions = loggerOptions;
-        }
-
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            if (!_loggerOptions.CurrentValue.Enabled) return false;
+            if (!loggerOptions.CurrentValue.Enabled) return false;
 
-            var filter = _filterOptions.CurrentValue;
-            if (_categoryName.StartsWith("Microsoft.AspNetCore.SignalR") ||
-                _categoryName.StartsWith("Microsoft.AspNetCore.Routing"))
+            var filter = filterOptions.CurrentValue;
+            if (categoryName.StartsWith("Microsoft.AspNetCore.SignalR") ||
+                categoryName.StartsWith("Microsoft.AspNetCore.Routing"))
             {
                 return false;
             }
@@ -38,11 +25,11 @@ namespace ProxyMapService.WebLogging
             var rules = filter.Rules;
             LogLevel? minLogLevel = null;
 
-            minLogLevel ??= FindRule(rules, "WebSocket", _categoryName);
+            minLogLevel ??= FindRule(rules, "WebSocket", categoryName);
 
             minLogLevel ??= FindRule(rules, "WebSocket", null);
 
-            minLogLevel ??= FindRule(rules, null, _categoryName);
+            minLogLevel ??= FindRule(rules, null, categoryName);
 
             minLogLevel ??= FindRule(rules, null, null);
 
@@ -58,13 +45,13 @@ namespace ProxyMapService.WebLogging
             var logEntry = new
             {
                 Timestamp = DateTime.UtcNow,
-                Category = _categoryName,
+                Category = categoryName,
                 Level = logLevel.ToString(),
                 Message = message,
                 Exception = exception?.Message
             };
 
-            var hubContext = _serviceProvider.GetService<IHubContext<LogHub>>();
+            var hubContext = serviceProvider.GetService<IHubContext<LogHub>>();
 
             if (hubContext != null)
             {
@@ -72,7 +59,7 @@ namespace ProxyMapService.WebLogging
             }
         }
 
-        private LogLevel? FindRule(System.Collections.Generic.IEnumerable<LoggerFilterRule> rules, string? provider, string? category)
+        private static LogLevel? FindRule(System.Collections.Generic.IEnumerable<LoggerFilterRule> rules, string? provider, string? category)
         {
             foreach (var rule in rules)
             {

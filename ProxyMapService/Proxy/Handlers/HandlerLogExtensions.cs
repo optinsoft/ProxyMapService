@@ -17,13 +17,13 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1202,
             Level = LogLevel.Information,
-            Message = "Connected to server {remoteEndPoint} (bypass)")]
+            Message = "Connected to server {remoteEndPoint} (direct connection)")]
         private static partial void LogBypassServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1202,
             Level = LogLevel.Information,
-            Message = "Connected to server {hostname}:{port} ({remoteEndPoint}) (bypass)")]
+            Message = "Connected to server {hostname}:{port} ({remoteEndPoint}) (direct connection)")]
         private static partial void LogBypassServerConnectedInternal2(this ILogger logger, string hostname, int port, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
@@ -167,7 +167,7 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1222,
             Level = LogLevel.Information,
-            Message = "Server disconnected (bypass). Address: {remoteEndPoint}")]
+            Message = "Server disconnected. Address: {remoteEndPoint}")]
         public static partial void LogBypassServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(

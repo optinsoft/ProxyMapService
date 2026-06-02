@@ -76,7 +76,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 {
                     var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
-                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/EventLog"))
+                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/updates"))
                     {
                         context.Token = accessToken;
                     }
