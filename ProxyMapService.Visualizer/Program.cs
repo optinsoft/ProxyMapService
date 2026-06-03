@@ -99,6 +99,12 @@ internal class Program
         // Format stored: "SourceHandler -> StepName -> Target"
         var uniqueTransitions = new HashSet<string>();
 
+        // Lists to categorize transitions into logical subgraphs
+        var httpTransitions = new List<string>();
+        var socks4Transitions = new List<string>();
+        var socks5Transitions = new List<string>();
+        var generalTransitions = new List<string>();
+
         // Scan for all C# files recursively within the target folder
         var files = Directory.GetFiles(sourceFolder, "*.cs", SearchOption.AllDirectories);
 
@@ -155,20 +161,59 @@ internal class Program
                         // Only append to Mermaid if this exact transition hasn't been processed yet
                         if (uniqueTransitions.Add(transitionKey))
                         {
+                            // Generate the Mermaid line for this transition
+                            string mermaidLine;
                             if (isTerminal)
                             {
-                                sb.AppendLine($"    {className} -- {stepName} --> {targetHandler}([{stepName}])");
-                                sb.AppendLine($"    class {targetHandler} terminal;");
+                                mermaidLine = $"    {className} -- {stepName} --> {targetHandler}([{stepName}])\n    class {targetHandler} terminal;";
                             }
                             else
                             {
-                                sb.AppendLine($"    {className} -- {stepName} --> {targetHandler}");
+                                mermaidLine = $"    {className} -- {stepName} --> {targetHandler}";
+                            }
+
+                            // Categorize the transition based on the class or step name
+                            if (className.StartsWith("Http") || stepName.StartsWith("Http"))
+                            {
+                                httpTransitions.Add(mermaidLine);
+                            }
+                            else if (className.StartsWith("Socks4") || stepName.StartsWith("Socks4"))
+                            {
+                                socks4Transitions.Add(mermaidLine);
+                            }
+                            else if (className.StartsWith("Socks5") || stepName.StartsWith("Socks5"))
+                            {
+                                socks5Transitions.Add(mermaidLine);
+                            }
+                            else
+                            {
+                                generalTransitions.Add(mermaidLine);
                             }
                         }
                     }
                 }
             }
         }
+
+        // 1. Append HTTP Subgraph
+        sb.AppendLine("    subgraph HTTP [HTTP Protocol]");
+        foreach (var line in httpTransitions) sb.AppendLine($"    {line}");
+        sb.AppendLine("    end\n");
+
+        // 2. Append Socks4 Subgraph
+        sb.AppendLine("    subgraph Socks4 [SOCKS4 Protocol]");
+        foreach (var line in socks4Transitions) sb.AppendLine($"    {line}");
+        sb.AppendLine("    end\n");
+
+        // 3. Append Socks5 Subgraph
+        sb.AppendLine("    subgraph Socks5 [SOCKS5 Protocol]");
+        foreach (var line in socks5Transitions) sb.AppendLine($"    {line}");
+        sb.AppendLine("    end\n");
+
+        // 4. Append General Transitions (Initialize, Tunnel, Session management, etc.)
+        sb.AppendLine("    subgraph General [Core & General Logic]");
+        foreach (var line in generalTransitions) sb.AppendLine($"    {line}");
+        sb.AppendLine("    end");
 
         sb.AppendLine("```");
         return sb.ToString();
