@@ -95,6 +95,10 @@ internal class Program
         sb.AppendLine("    %% Styling for terminal (end) states");
         sb.AppendLine("    classDef terminal fill:#fcc,stroke:#333,stroke-width:2px;");
 
+        // Use a HashSet to track unique transitions and avoid duplicates
+        // Format stored: "SourceHandler -> StepName -> Target"
+        var uniqueTransitions = new HashSet<string>();
+
         // Scan for all C# files recursively within the target folder
         var files = Directory.GetFiles(sourceFolder, "*.cs", SearchOption.AllDirectories);
 
@@ -131,18 +135,35 @@ internal class Program
                     if (returnExpression.Contains("HandleStep."))
                     {
                         string stepName = returnExpression.Split('.').Last();
+                        string targetHandler;
+                        bool isTerminal = false;
 
-                        // Try to find the next target handler from our reflection-loaded dictionary
-                        if (_stateTransitions.TryGetValue(stepName, out string? targetHandler))
+                        // Determine the target node name
+                        if (_stateTransitions.TryGetValue(stepName, out string? foundHandler))
                         {
-                            sb.AppendLine($"    {className} -- {stepName} --> {targetHandler}");
+                            targetHandler = foundHandler;
                         }
                         else
                         {
-                            // If the step is missing from the dictionary, it's an end/terminal state (like Terminate)
-                            string nodeId = $"Terminal_{stepName}";
-                            sb.AppendLine($"    {className} -- {stepName} --> {nodeId}([{stepName}])");
-                            sb.AppendLine($"    class {nodeId} terminal;");
+                            targetHandler = $"Terminal_{stepName}";
+                            isTerminal = true;
+                        }
+
+                        // Create a unique key for this transition
+                        string transitionKey = $"{className}|{stepName}|{targetHandler}";
+
+                        // Only append to Mermaid if this exact transition hasn't been processed yet
+                        if (uniqueTransitions.Add(transitionKey))
+                        {
+                            if (isTerminal)
+                            {
+                                sb.AppendLine($"    {className} -- {stepName} --> {targetHandler}([{stepName}])");
+                                sb.AppendLine($"    class {targetHandler} terminal;");
+                            }
+                            else
+                            {
+                                sb.AppendLine($"    {className} -- {stepName} --> {targetHandler}");
+                            }
                         }
                     }
                 }
