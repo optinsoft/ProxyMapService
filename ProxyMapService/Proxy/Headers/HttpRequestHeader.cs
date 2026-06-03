@@ -170,7 +170,7 @@ namespace ProxyMapService.Proxy.Headers
         {
             if (target == null) 
                 return null;
-            if (target?.StartsWith('/') == true) 
+            if (target.StartsWith('/') == true) 
                 return target;
             Uri uri = new(httpVerb == "CONNECT" ? "http://" + target : target);
             return uri.PathAndQuery;
@@ -180,7 +180,7 @@ namespace ProxyMapService.Proxy.Headers
         {
             if (target == null) 
                 return null;
-            if (target?.StartsWith('/') == true) 
+            if (target.StartsWith('/') == true) 
                 return null;
             Uri uri = new(httpVerb == "CONNECT" ? "http://" + target : target);
             return new HostAddress(uri.Host, uri.Port);
