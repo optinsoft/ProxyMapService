@@ -319,7 +319,7 @@ namespace ProxyMapService.Proxy.Handlers
                                     if (selfState.Response)
                                     {
                                         Debug.Assert(context.RequestHeader != null, "!!! HTTP Request Header is null !!!");
-                                        context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4);
+                                        context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4, context);
                                         if (CreateResponseCacheFileStream(context))
                                         {
                                             if (context.ResponseCacheFileStream != null)
@@ -333,7 +333,7 @@ namespace ProxyMapService.Proxy.Handlers
                                     else
                                     {
                                         Debug.Assert(context.ResponseHeader == null, "!!! HTTP Response Header is not null !!!");
-                                        context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines);
+                                        context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines, context);
                                         requestCacheEntry = await GetCacheEntry(context);
                                         if (context.Host.Overwritten)
                                         {

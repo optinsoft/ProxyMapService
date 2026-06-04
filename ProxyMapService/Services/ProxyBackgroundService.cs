@@ -8,7 +8,7 @@ namespace ProxyMapService.Services
     {
         private readonly IProxyService _proxyService;
         private readonly ILogger _logger;
-        private string _serviceId = RandomStringGenerator.GenerateRandomString(6);
+        private readonly string _serviceId = RandomStringGenerator.GenerateRandomString(6);
 
         public ProxyBackgroundService(IProxyService proxyService, ILogger<ProxyService> logger)
         {

@@ -17,7 +17,7 @@ namespace ProxyMapService.Proxy.Handlers
                     ExpiresAt = context.UsernameParameterResolver.CurrentSessionExpiresAt?.ToUniversalTime(),
                     Expired = context.UsernameParameterResolver.CurrentSessionExpired,
                 };
-                await HttpProto.HttpReplyJson(context.IncomingStream, response, context.Token);
+                await HttpProto.HttpReplyJson(context, response);
             }
             return HandleStep.Terminate;
         }

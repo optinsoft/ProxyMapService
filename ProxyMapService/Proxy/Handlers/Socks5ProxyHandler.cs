@@ -118,7 +118,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
                                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                                 {
-                                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
+                                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context);
                                     using FileStream? cacheFileStream = await GetCacheFileStream(context);
                                     if (cacheFileStream != null)
                                     {

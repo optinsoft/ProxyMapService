@@ -7,19 +7,26 @@ namespace ProxyMapService.Proxy.Proto
 {
     public class HttpProto
     {
-        public static async Task HttpReplyConnectionEstablished(Stream? incomingStream, CancellationToken token)
+        public static async Task HttpReplyConnectionEstablished(Stream? incomingStream, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
             if (incomingStream == null) return;
-            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection established\r\n\r\n");
+            string[] headers = [
+                "HTTP/1.1 200 Connection established"
+            ];
+            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
+            var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
+            var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, token);
         }
 
         public static async Task HttpReplyConnectionEstablished(SessionContext context)
         {
-            await HttpReplyConnectionEstablished(context.IncomingStream, context.Token);
+            await HttpReplyConnectionEstablished(context.IncomingStream, context, context.Token);
         }
 
-        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, List<string>? customHeaders, string? errorMessage, CancellationToken token)
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, List<string>? customHeaders, string? errorMessage, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
             if (incomingStream == null) return;
             List<string> headers = [
@@ -36,6 +43,7 @@ namespace ProxyMapService.Proxy.Proto
                 headers.Add("Content-Type: text/html; charset=UTF-8");
             }
             headers.Add($"Content-Length: {contentBytes.Length}");
+            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, [.. headers]);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
             byte[] bytes = contentBytes.Length > 0 ? new byte[headerBytes.Length + contentBytes.Length] : headerBytes;
@@ -47,119 +55,135 @@ namespace ProxyMapService.Proxy.Proto
             await incomingStream.WriteAsync(bytes, token);
         }
 
-        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, List<string>? customHeaders, CancellationToken token)
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, List<string>? customHeaders,
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, httpStatusLine, customHeaders, null, token);
+            await HttpReplyError(incomingStream, httpStatusLine, customHeaders, null, httpLoggersProvider, token);
         }
 
-        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, string? errorMessage, CancellationToken token)
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, string? errorMessage,
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, httpStatusLine, null, errorMessage, token);
+            await HttpReplyError(incomingStream, httpStatusLine, null, errorMessage, httpLoggersProvider, token);
         }
 
-        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine, CancellationToken token)
+        public static async Task HttpReplyError(Stream? incomingStream, string httpStatusLine,
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, httpStatusLine, null, null, token);
+            await HttpReplyError(incomingStream, httpStatusLine, null, null, httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyError(SessionContext context, string httpStatusLine, string? errorMessage = null)
         {
-            await HttpReplyError(context.IncomingStream, httpStatusLine, null, errorMessage, context.Token);
+            await HttpReplyError(context.IncomingStream, httpStatusLine, null, errorMessage, context, context.Token);
         }
 
-        public static async Task HttpReplyBadGateway(Stream? incomingStream, string? errorMessage, CancellationToken token)
+        public static async Task HttpReplyBadGateway(Stream? incomingStream, string? errorMessage,
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 502 Bad Gateway", null, errorMessage, token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 502 Bad Gateway", null, errorMessage, httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyBadGateway(SessionContext context, string? errorMessage = null)
         {
-            await HttpReplyBadGateway(context.IncomingStream, errorMessage, context.Token);
+            await HttpReplyBadGateway(context.IncomingStream, errorMessage, context, context.Token);
         }
 
-        public static async Task HttpReplyGatewayTimeout(Stream? incomingStream, string? errorMessage, CancellationToken token)
+        public static async Task HttpReplyGatewayTimeout(Stream? incomingStream, string? errorMessage,
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 504 Gateway Timeout", null, errorMessage, token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 504 Gateway Timeout", null, errorMessage, httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyGatewayTimeout(SessionContext context, string? errorMessage)
         {
-            await HttpReplyGatewayTimeout(context.IncomingStream, errorMessage, context.Token);
+            await HttpReplyGatewayTimeout(context.IncomingStream, errorMessage, context, context.Token);
         }
 
-        public static async Task HttpReplyProxyAuthenticationRequired(Stream? incomingStream, CancellationToken token)
+        public static async Task HttpReplyProxyAuthenticationRequired(Stream? incomingStream, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 407 Proxy Authentication Required", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""], token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 407 Proxy Authentication Required", 
+                ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""], httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyProxyAuthenticationRequired(SessionContext context)
         {
-            await HttpReplyProxyAuthenticationRequired(context.IncomingStream, context.Token);
+            await HttpReplyProxyAuthenticationRequired(context.IncomingStream, context, context.Token);
         }
 
-        public static async Task HttpReplyProxyUnauthorized(Stream? incomingStream, CancellationToken token)
+        public static async Task HttpReplyProxyUnauthorized(Stream? incomingStream, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 401 Unauthorized", ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""], token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 401 Unauthorized", 
+                ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""], httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyProxyUnauthorized(SessionContext context)
         {
-            await HttpReplyProxyUnauthorized(context.IncomingStream, context.Token);
+            await HttpReplyProxyUnauthorized(context.IncomingStream, context, context.Token);
         }
 
-        public static async Task HttpReplyBadRequest(Stream? incomingStream, CancellationToken token)
+        public static async Task HttpReplyBadRequest(Stream? incomingStream, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 400 Bad Request", token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 400 Bad Request", httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyBadRequest(SessionContext context)
         {
-            await HttpReplyBadRequest(context.IncomingStream, context.Token);
+            await HttpReplyBadRequest(context.IncomingStream, context, context.Token);
         }
 
-        public static async Task HttpReplyForbidden(Stream? incomingStream, CancellationToken token)
+        public static async Task HttpReplyForbidden(Stream? incomingStream, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 403 Forbidden", token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 403 Forbidden", httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyForbidden(SessionContext context)
         {
-            await HttpReplyForbidden(context.IncomingStream, context.Token);
+            await HttpReplyForbidden(context.IncomingStream, context, context.Token);
         }
 
-        public static async Task HttpReplyNotFound(Stream? incomingStream, CancellationToken token)
+        public static async Task HttpReplyNotFound(Stream? incomingStream, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 404 Not Found", token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 404 Not Found", httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyNotFound(SessionContext context)
         {
-            await HttpReplyNotFound(context.IncomingStream, context.Token);
+            await HttpReplyNotFound(context.IncomingStream, context, context.Token);
         }
 
-        public static async Task HttpReplyMethodNotAllowed(Stream? incomingStream, CancellationToken token)
+        public static async Task HttpReplyMethodNotAllowed(Stream? incomingStream, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyError(incomingStream, "HTTP/1.1 405 Method Not Allowed", token);
+            await HttpReplyError(incomingStream, "HTTP/1.1 405 Method Not Allowed", httpLoggersProvider, token);
         }
         
         public static async Task HttpReplyMethodNotAllowed(SessionContext context)
         {
-            await HttpReplyMethodNotAllowed(context.IncomingStream, context.Token);
+            await HttpReplyMethodNotAllowed(context.IncomingStream, context, context.Token);
         }
 
-        public static async Task HttpReplyText(Stream? incomingStream, string text, CancellationToken token)
+        public static async Task HttpReplyText(Stream? incomingStream, string text, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
             if (incomingStream == null) return;
 
             byte[] textBytes = Encoding.UTF8.GetBytes(text);
 
-            List<string> headers = [
+            string[] headers = [
                 "HTTP/1.1 200 OK",
                 $"Date: {DateTime.UtcNow:R}",
                 "Connection: close",
                 $"Content-Length: {textBytes.Length}",
                 "Content-Type: text/plain; charset=utf-8"
             ];
+
+            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider,headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -168,19 +192,22 @@ namespace ProxyMapService.Proxy.Proto
             await incomingStream.WriteAsync(textBytes, token);
         }
 
-        public static async Task HttpReplyJson(Stream? incomingStream, object data, JsonSerializerOptions serializerOptions, CancellationToken token)
+        public static async Task HttpReplyJson(Stream? incomingStream, object data, JsonSerializerOptions serializerOptions, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
             if (incomingStream == null) return;
 
             byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(data, serializerOptions);
 
-            List<string> headers = [
+            string[] headers = [
                 "HTTP/1.1 200 OK",
                 $"Date: {DateTime.UtcNow:R}",
                 "Connection: close",
                 $"Content-Length: {jsonBytes.Length}",
                 "Content-Type: application/json; charset=utf-8"
             ];
+
+            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -195,25 +222,39 @@ namespace ProxyMapService.Proxy.Proto
             WriteIndented = false
         };
 
-        public static async Task HttpReplyJson(Stream? incomingStream, object data, CancellationToken token)
+        public static async Task HttpReplyJson(Stream? incomingStream, object data, 
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyJson(incomingStream, data, SnakeCaseOptions, token);
+            await HttpReplyJson(incomingStream, data, SnakeCaseOptions, httpLoggersProvider, token);
         }
 
-        public static async Task HttpReplyFileStream(Stream? incomingStream, FileStream fileStream, CancellationToken token)
+        public static async Task HttpReplyJson(SessionContext context, object data, JsonSerializerOptions serializerOptions)
+        {
+            await HttpReplyJson(context.IncomingStream, data, serializerOptions, context, context.Token);
+        }
+
+        public static async Task HttpReplyJson(SessionContext context, object data)
+        {
+            await HttpReplyJson(context.IncomingStream, data, SnakeCaseOptions, context, context.Token);
+        }
+
+        public static async Task HttpReplyFileStream(Stream? incomingStream, FileStream fileStream,
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
             if (incomingStream == null) return;
 
             var fileInfo = new FileInfo(fileStream.Name);
             string contentType = GetContentType(fileInfo.Extension);
 
-            List<string> headers = [
+            string[] headers = [
                 "HTTP/1.1 200 OK",
                 $"Date: {DateTime.UtcNow:R}",
                 "Connection: close",
                 $"Content-Length: {fileInfo.Length}",
                 $"Content-Type: {contentType}"
             ];
+
+            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -224,7 +265,7 @@ namespace ProxyMapService.Proxy.Proto
 
         public static async Task HttpReplyFileStream(SessionContext context, FileStream fileStream)
         {
-            await HttpReplyFileStream(context.IncomingStream, fileStream, context.Token);
+            await HttpReplyFileStream(context.IncomingStream, fileStream, context, context.Token);
         }
 
         public static async Task HttpReplyCacheFileStream(SessionContext context, CountingStream? incomingStream,

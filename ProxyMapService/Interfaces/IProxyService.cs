@@ -1,5 +1,4 @@
 ﻿using ProxyMapService.Models;
-using ProxyMapService.Proxy.Counters;
 
 namespace ProxyMapService.Interfaces
 {

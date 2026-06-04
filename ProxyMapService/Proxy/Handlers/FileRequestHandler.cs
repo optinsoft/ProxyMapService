@@ -91,7 +91,7 @@ namespace ProxyMapService.Proxy.Handlers
                         var headerBytes = HttpParser.GetRequestHeaderBytes(ms, headersEnd);
                         if (headerBytes != null && headerBytes.Length > 0)
                         {
-                            context.RequestHeader = new HttpRequestHeader(headerBytes);
+                            context.RequestHeader = new HttpRequestHeader(headerBytes, context);
                         }
                         return;
                     }
@@ -112,7 +112,7 @@ namespace ProxyMapService.Proxy.Handlers
                 else
                 {
                     context.Logger.LogHttpBadRequest();
-                    await HttpProto.HttpReplyBadRequest(incomingStream, context.Token);
+                    await HttpProto.HttpReplyBadRequest(incomingStream, context, context.Token);
                     return HandleStep.Terminate;
                 }
             }
@@ -120,7 +120,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
-                await HttpProto.HttpReplyMethodNotAllowed(incomingStream, context.Token);
+                await HttpProto.HttpReplyMethodNotAllowed(incomingStream, context, context.Token);
                 return HandleStep.Terminate;
             }
 
@@ -129,11 +129,11 @@ namespace ProxyMapService.Proxy.Handlers
             if (fileStream == null)
             {
                 context.Logger.LogHttpFileNotFound(http.HTTPTargetPath);
-                await HttpProto.HttpReplyNotFound(incomingStream, context.Token);
+                await HttpProto.HttpReplyNotFound(incomingStream, context, context.Token);
                 return HandleStep.Terminate;
             }
 
-            await HttpProto.HttpReplyFileStream(incomingStream, fileStream, context.Token);
+            await HttpProto.HttpReplyFileStream(incomingStream, fileStream, context, context.Token);
 
             context.Logger.LogResponseFromFile(fileStream.Name);
 

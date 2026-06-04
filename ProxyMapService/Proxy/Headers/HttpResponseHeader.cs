@@ -1,19 +1,20 @@
-﻿using System.Text;
+﻿using ProxyMapService.Proxy.Counters;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
 {
     public class HttpResponseHeader
     {
-        public HttpResponseHeader(byte[] array)
+        public HttpResponseHeader(byte[] array, IHttpLoggersProvider? httpLoggersProvider)
         {
             HeaderLength = array.Length;
-            Parse(this, array);
+            Parse(this, array, httpLoggersProvider);
         }
 
-        public HttpResponseHeader(string[] strings, int headerLength)
+        public HttpResponseHeader(string[] strings, int headerLength, IHttpLoggersProvider? httpLoggersProvider)
         {
             HeaderLength = headerLength;
-            Parse(this, strings);
+            Parse(this, strings, httpLoggersProvider);
         }
 
         public int HeaderLength { get; private set; }
@@ -30,13 +31,13 @@ namespace ProxyMapService.Proxy.Headers
         public string? LastModified { get; private set; }
         public string[]? Headers { get; private set; }
 
-        private static void Parse(HttpResponseHeader self, byte[] array)
+        private static void Parse(HttpResponseHeader self, byte[] array, IHttpLoggersProvider? httpLoggersProvider)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-            Parse(self, strings);
+            Parse(self, strings, httpLoggersProvider);
         }
 
-        private static void Parse(HttpResponseHeader self, string[] strings)
+        private static void Parse(HttpResponseHeader self, string[] strings, IHttpLoggersProvider? httpLoggersProvider)
         {
             self.BadResponse = false;
             self.HTTPProtocol = GetHTTPProtocol(strings);
@@ -50,6 +51,7 @@ namespace ProxyMapService.Proxy.Headers
             self.Expires = GetSingleHeaderValue(strings, "expires:", "0");
             self.LastModified = GetSingleHeaderValue(strings, "last-modified:");
             self.Headers = strings;
+            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, strings);
         }
 
         private static string GetHTTPProtocol(IEnumerable<string> strings)

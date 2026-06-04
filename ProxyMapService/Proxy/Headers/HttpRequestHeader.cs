@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using Microsoft.Extensions.Primitives;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 
@@ -7,14 +7,14 @@ namespace ProxyMapService.Proxy.Headers
 {
     public class HttpRequestHeader
     {
-        public HttpRequestHeader(byte[] array)
+        public HttpRequestHeader(byte[] array, IHttpLoggersProvider? httpLoggersProvider)
         {
-            Parse(this, array);
+            Parse(this, array, httpLoggersProvider);
         }
 
-        public HttpRequestHeader(string[] strings)
+        public HttpRequestHeader(string[] strings, IHttpLoggersProvider? httpLoggersProvider)
         {
-            Parse(this, strings);
+            Parse(this, strings, httpLoggersProvider);
         }
 
         public bool BadRequest { get; private set; }
@@ -34,13 +34,13 @@ namespace ProxyMapService.Proxy.Headers
             return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
         }
 
-        private static void Parse(HttpRequestHeader self, byte[] array)
+        private static void Parse(HttpRequestHeader self, byte[] array, IHttpLoggersProvider? httpLoggersProvider)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-            Parse(self, strings);
+            Parse(self, strings, httpLoggersProvider);
         }
 
-        private static void Parse(HttpRequestHeader self, string[] strings)
+        private static void Parse(HttpRequestHeader self, string[] strings, IHttpLoggersProvider? httpLoggersProvider)
         {
             self.BadRequest = false;
             try
@@ -60,6 +60,7 @@ namespace ProxyMapService.Proxy.Headers
             {
                 self.BadRequest = true;
             }
+            httpLoggersProvider?.RequestHeadersLogger.OnHttpHeader(httpLoggersProvider, strings);
         }
 
         private static byte[] GetBytes(string[]? headers, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)

@@ -16,7 +16,7 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     Success = true,
                 };
-                await HttpProto.HttpReplyJson(context.IncomingStream, response, context.Token);
+                await HttpProto.HttpReplyJson(context, response);
             }
             return HandleStep.Terminate;
         }

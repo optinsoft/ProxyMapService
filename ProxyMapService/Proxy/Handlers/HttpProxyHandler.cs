@@ -28,7 +28,7 @@ namespace ProxyMapService.Proxy.Handlers
                     connectHttpCommand.Add($"User-Agent: {context.UserAgent}");
                 }
                 connectHttpCommand.Add("Proxy-Connection: Keep-Alive");
-                http = new HttpRequestHeader([.. connectHttpCommand]);
+                http = new HttpRequestHeader([.. connectHttpCommand], null);
             }
 
             string? requestFirstLine = null;
@@ -69,7 +69,7 @@ namespace ProxyMapService.Proxy.Handlers
                 var httpRequestBytes = http.GetBytes(true, proxyAuthorization, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
+                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context.Http == null ? context : null);
 
                     using FileStream? cacheFileStream = await GetCacheFileStream(context);
                     if (cacheFileStream != null)
@@ -96,7 +96,7 @@ namespace ProxyMapService.Proxy.Handlers
                     if (responseHeaderBytes != null)
                     {
                         context.RequestTunnelState.ResetReadHeaders = true;
-                        context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes);
+                        context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes, context);
                         if (CreateResponseCacheFileStream(context))
                         {
                             if (context.ResponseCacheFileStream != null)
@@ -107,7 +107,7 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                     }
 
-                    var responseHttp = responseHeaderBytes != null ? new HttpResponseHeader(responseHeaderBytes) : null;
+                    var responseHttp = responseHeaderBytes != null ? context.ResponseHeader : null;
 
                     if (http.HTTPVerb == "CONNECT")
                     {

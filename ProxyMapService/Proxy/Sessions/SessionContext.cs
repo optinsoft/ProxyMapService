@@ -1,6 +1,5 @@
 ﻿// Ignore Spelling: Proxified
 
-using Microsoft.Extensions.Caching.Memory;
 using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
@@ -14,7 +13,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Proxy.Sessions
 {
-    public class SessionContext : IDisposable
+    public class SessionContext : IDisposable, IHttpLoggersProvider
     {
         private readonly HostAddress _host;
         private HttpRequestHeader? _requestHeader;
@@ -80,7 +79,6 @@ namespace ProxyMapService.Proxy.Sessions
                 if (_requestHeader != null)
                 {
                     _requestCacheRules = CacheRule.FindRules(_requestHeader.HTTPTargetPath, _requestHeader.Accept, CacheRules);
-                    ProxyCounters.HttpRequestHeadersLogger?.OnHttpHeader(this, _requestHeader.Headers);
                 }
                 else
                 {
@@ -94,16 +92,15 @@ namespace ProxyMapService.Proxy.Sessions
             set
             {
                 _responseHeader = value;
-                if (_responseHeader != null)
-                {
-                    ProxyCounters.HttpResponseHeadersLogger?.OnHttpHeader(this, _responseHeader.Headers);
-                }
             }
         }
         public CacheEntry? ResponseCacheEntry { get; set; }
         public FileStream? ResponseCacheFileStream { get; set; }
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
         public bool CachedReply { get; set; }
+
+        public IHttpHeadersLogger RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
+        public IHttpHeadersLogger ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
 
         public SessionContext(TcpClient incomingClient, System.Net.EndPoint? incomingEndPoint, 
             ProxyMapping mapping, bool ssl, 

@@ -32,8 +32,6 @@ namespace ProxyMapService.Services
         private readonly List<CacheRule> _cacheRules = [];
         private CacheRepository? _cacheRepository;
         private CacheManager? _cacheManager;
-        private SslClientOptionsConfig _sslClientOptions = new();
-        private SslServerOptionsConfig _sslServerOptions = new();
 
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -140,8 +138,8 @@ namespace ProxyMapService.Services
 
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
-            _sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
-            _sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
+            var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
+            var sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
             var logStep = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogStep") ?? false;
 
             if (proxyMappings == null || proxyMappings.Count == 0)
@@ -162,7 +160,7 @@ namespace ProxyMapService.Services
             foreach (var mapping in proxyMappings)
             {
                 tasks.Add(new ProxyMapper(mapping, _hostRules, _cacheRules, _cacheManager,
-                    userAgent, _sslClientOptions, _sslServerOptions, _proxyCounters,
+                    userAgent, sslClientOptions, sslServerOptions, _proxyCounters,
                     _logger, _sessionLogger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;

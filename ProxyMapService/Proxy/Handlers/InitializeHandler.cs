@@ -24,7 +24,7 @@ namespace ProxyMapService.Proxy.Handlers
                     switch (context.IncomingHeaderStream.SocksVersion)
                     {
                         case 0x00:
-                            context.Http = new HttpRequestHeader(requestHeaderBytes);
+                            context.Http = new HttpRequestHeader(requestHeaderBytes, context);
                             if (context.Http.BadRequest)
                             {
                                 context.Logger.LogHttpBadRequest();

@@ -1,10 +1,8 @@
-﻿using ProxyMapService.Proxy.Sessions;
-
-namespace ProxyMapService.Proxy.Counters
+﻿namespace ProxyMapService.Proxy.Counters
 {
     public class HttpHeadersLogger(bool response) : IHttpHeadersLogger
     {
-        public void OnHttpHeader(SessionContext context, string[]? headers)
+        public void OnHttpHeader(object context, string[]? headers)
         {
             HttpHeadersHandler?.Invoke(context, new()
             {

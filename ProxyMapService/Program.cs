@@ -36,6 +36,8 @@ Console.OutputEncoding = Encoding.UTF8;
 
 builder.Services.AddSignalR();
 
+builder.Services.AddSingleton<HttpTrafficMonitor>();
+
 builder.Services.AddSingleton<IProxyService, ProxyService>();
 builder.Services.AddHostedService<ProxyBackgroundService>();
 
