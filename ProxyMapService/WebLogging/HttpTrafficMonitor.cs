@@ -12,7 +12,7 @@ namespace ProxyMapService.WebLogging
         void IHttpTrafficMonitor.LogHttpHeaders(object? sender, HttpHeadersEventArgs e)
         {
             var currentOptions = monitoringOptions.CurrentValue;
-            if (!currentOptions.Enabled || !currentOptions.TrafficMonitor.Enabled)
+            if (!currentOptions.TrafficMonitor.Enabled)
             {
                 return;
             }

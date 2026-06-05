@@ -2,8 +2,8 @@
 {
     public class WebSocketMonitoringOptions
     {
-        public bool Enabled { get; set; } = false;
-        public int QueueCapacity { get; set; } = 10000;
+        public EventLogOptions EventLog { get; set; } = new();
         public TrafficMonitorOptions TrafficMonitor { get; set; } = new();
+        public int QueueCapacity { get; set; } = 10000;
     }
 }

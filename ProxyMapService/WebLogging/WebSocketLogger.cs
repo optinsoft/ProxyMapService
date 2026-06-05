@@ -10,11 +10,16 @@ namespace ProxyMapService.WebLogging
         IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : ILogger
     {
         private WebSocketLogBackgroundService? _backgroundService;
+
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            if (!monitoringOptions.CurrentValue.Enabled) return false;
+            var currentOptions = monitoringOptions.CurrentValue;
+            if (!currentOptions.EventLog.Enabled)
+            {
+                return false;
+            }
 
             var filter = filterOptions.CurrentValue;
             if (categoryName.StartsWith("Microsoft.AspNetCore.SignalR") ||
