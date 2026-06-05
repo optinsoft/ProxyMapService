@@ -6,6 +6,7 @@
         IHttpHeadersLogger ResponseHeadersLogger { get; }
         string GetRequestId();
         string GetResponseId();
+        string? GetConnectionType();
         string? GetRoute();
     }
 }

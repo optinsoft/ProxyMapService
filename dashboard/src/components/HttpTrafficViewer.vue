@@ -24,11 +24,14 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
     const resTime = res ? new Date(res.timestamp).getTime() : null
     const duration = (resTime && reqTime) ? (resTime - reqTime) : null
 
+    const connectionTypeDisplay = req.connectionType || res?.connectionType || '-'
+    
     const routeDisplay = res?.route || req.route || '-'
 
     return {
       id: req.id,
       timestamp: new Date(req.timestamp).toLocaleTimeString(),
+      connectionType: connectionTypeDisplay,
       method: req.method.toUpperCase(),
       target: req.target,
       route: routeDisplay,
@@ -76,6 +79,7 @@ const selectRow = (id: string) => {
           <thead>
             <tr>
               <th>Time</th>
+              <th>Connection</th>
               <th>Method</th>
               <th>Target</th>
               <th>Route</th>
@@ -94,14 +98,11 @@ const selectRow = (id: string) => {
               @click="selectRow(tx.id)"
             >
               <td class="cell-time">{{ tx.timestamp }}</td>
-              <td>
-                <span :class="['method-badge', 'method-' + tx.method.toLowerCase()]">
-                  {{ tx.method }}
-                </span>
-              </td>
+              <td class="cell-protocol">{{ tx.connectionType }}</td>
+              <td class="cell-method">{{ tx.method }}</td>
               <td class="cell-target" :title="tx.target">{{ tx.target }}</td>
               <td>
-                <span :class="['route-badge', tx.route.toLowerCase() === 'bypass' ? 'route-bypass' : 'route-proxy']">
+                <span :class="['route-badge', {'direct': 'route-direct', 'file': 'route-file'}[tx.route.toLowerCase()] || 'route-proxy']">
                   {{ tx.route }}
                 </span>
               </td>
@@ -127,8 +128,13 @@ const selectRow = (id: string) => {
         
         <div class="sidebar-content">
           <div class="info-block">
-            <p><strong>Target:</strong> <span class="mono">{{ selectedTransaction.target }}</span></p>
-            <p><strong>Method:</strong> <span class="mono">{{ selectedTransaction.method }}</span></p>
+            <p><strong>Connection Type:</strong> <span class="mono">{{ selectedTransaction.connectionType }}</span></p>
+            <p><strong>HTTP Method:</strong> <span class="mono">{{ selectedTransaction.method }}</span></p>
+            <p><strong>HTTP Target:</strong> <span class="mono">{{ selectedTransaction.target }}</span></p>
+            <p><strong>Route:</strong> <span class="mono">{{ selectedTransaction.route }}</span></p>
+            <p><strong>Status Code:</strong> <span class="mono">{{ selectedTransaction.statusCode }}</span></p>
+            <p><strong>Status Text:</strong> <span class="mono">{{ selectedTransaction.statusText }}</span></p>
+            <p><strong>Duration (ms):</strong> <span class="mono">{{ selectedTransaction.durationMs }}</span></p>
           </div>
 
           <!-- Section A: Request Headers -->
@@ -204,12 +210,13 @@ const selectRow = (id: string) => {
   padding: 10px; position: sticky; top: 0; border-bottom: 1px solid #2d2d2d; z-index: 2;
 }
 /* Width distribution metrics */
-.traffic-table th:nth-child(1) { width: 90px; }
-.traffic-table th:nth-child(2) { width: 90px; }
-.traffic-table th:nth-child(3) { width: 35%; }
-.traffic-table th:nth-child(4) { width: 100px; }
-.traffic-table th:nth-child(5) { width: 180px; }
-.traffic-table th:nth-child(6) { width: 90px; }
+.traffic-table th:nth-child(1) { width: 60px; }
+.traffic-table th:nth-child(2) { width: 60px; }
+.traffic-table th:nth-child(3) { width: 60px; }
+.traffic-table th:nth-child(4) { width: 20%; }
+.traffic-table th:nth-child(5) { width: 20%; }
+.traffic-table th:nth-child(6) { width: 20%; }
+.traffic-table th:nth-child(7) { width: 60px; }
 
 .traffic-table td { padding: 8px 10px; border-bottom: 1px solid #2d2d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .traffic-table tbody tr:hover { background-color: #2a2a2a; }
@@ -217,6 +224,8 @@ const selectRow = (id: string) => {
 
 .empty-row { text-align: center; color: #666; padding: 40px !important; font-style: italic; }
 .cell-time { color: #858585; font-family: monospace; }
+.cell-protocol { color: #e3e3e3; font-family: monospace; }
+.cell-method { color: #e3e3e3; font-family: monospace; }
 .cell-target { color: #e3e3e3; font-family: monospace; }
 .cell-duration { font-family: monospace; text-align: right; padding-right: 15px !important; }
 

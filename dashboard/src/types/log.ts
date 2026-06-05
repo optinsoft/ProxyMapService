@@ -9,6 +9,7 @@ export interface LogEntry {
 export interface HttpRequestEntry {
   timestamp: string;
   id: string;
+  connectionType: string;
   method: string;
   target: string;
   route: string;
@@ -18,6 +19,7 @@ export interface HttpRequestEntry {
 export interface HttpResponseEntry {
   timestamp: string;
   id: string;
+  connectionType: string;
   statusCode: string;
   statusText: string;
   route: string;
@@ -28,6 +30,7 @@ export interface HttpResponseEntry {
 export interface MergedTrafficEntry {
   id: string;
   timestamp: string;
+  connectionType: string;
   method: string;
   target: string;
   route: string;

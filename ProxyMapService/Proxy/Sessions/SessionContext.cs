@@ -53,6 +53,8 @@ namespace ProxyMapService.Proxy.Sessions
         public System.Net.EndPoint? IncomingEndPoint { get; set; }
         public System.Net.IPEndPoint? OutgoingEndPoint {  get; set; }
 
+        public ProxyType? ConnectionType { get; set; }
+
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }
@@ -110,20 +112,30 @@ namespace ProxyMapService.Proxy.Sessions
             _requestId = Guid.NewGuid().ToString();
             return _requestId;
         }
-        string? IHttpLoggersProvider.GetResponseId()
+        string IHttpLoggersProvider.GetResponseId()
         {
             return _requestId ?? Guid.NewGuid().ToString();
+        }
+        string? IHttpLoggersProvider.GetConnectionType()
+        {
+            return (ConnectionType switch
+            {
+                ProxyType.Http => "http",
+                ProxyType.Socks4 => "socks4",
+                ProxyType.Socks5 => "socks5",
+                _ => null
+            });
         }
         string? IHttpLoggersProvider.GetRoute()
         {
             switch (ProxyServer?.ProxyType)
             {
                 case ProxyType.Http:
-                    return "http";
+                    return $"http://{ProxyServer.Host}:{ProxyServer.Port}";
                 case ProxyType.Socks4:
-                    return "socks4";
+                    return $"socks4://{ProxyServer.Host}:{ProxyServer.Port}";
                 case ProxyType.Socks5:
-                    return "socks5";
+                    return $"socks5://{ProxyServer.Host}:{ProxyServer.Port}";
                 default:
                     break;
             }
