@@ -4,10 +4,13 @@ using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
+using ProxyMapService.Proxy.Socks;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -19,6 +22,7 @@ namespace ProxyMapService.Proxy.Sessions
         private HttpRequestHeader? _requestHeader;
         private HttpResponseHeader? _responseHeader;
         private List<CacheRule> _requestCacheRules;
+        private string? _requestId;
 
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
@@ -101,15 +105,41 @@ namespace ProxyMapService.Proxy.Sessions
 
         IHttpHeadersLogger IHttpLoggersProvider.RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
         IHttpHeadersLogger IHttpLoggersProvider.ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
-        string IHttpLoggersProvider.GetRoute()
+        string IHttpLoggersProvider.GetRequestId()
         {
-            return (this switch
+            _requestId = Guid.NewGuid().ToString();
+            return _requestId;
+        }
+        string? IHttpLoggersProvider.GetResponseId()
+        {
+            return _requestId ?? Guid.NewGuid().ToString();
+        }
+        string? IHttpLoggersProvider.GetRoute()
+        {
+            switch (ProxyServer?.ProxyType)
             {
-                { Http: not null } => "http",
-                { Socks4: not null } => "socks4",
-                { Socks5: not null } => "socks5",
-                _ => ""
-            });
+                case ProxyType.Http:
+                    return "http";
+                case ProxyType.Socks4:
+                    return "socks4";
+                case ProxyType.Socks5:
+                    return "socks5";
+                default:
+                    break;
+            }
+            if (HostAction == null) return null;
+            switch (HostAction)
+            {
+                case ActionEnum.Allow:
+                    return "proxy";
+                case ActionEnum.Bypass:
+                    return "direct";
+                case ActionEnum.File:
+                    return "file";
+                default:
+                    //ActionEnum.Deny
+                    return "deny";
+            }
         }
 
         public SessionContext(TcpClient incomingClient, System.Net.EndPoint? incomingEndPoint, 

@@ -2,10 +2,10 @@
 {
     public class HttpRequestDto
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public required string Id { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public string? Method { get; set; }
-        public string? Url { get; set; }
+        public string? Target { get; set; }
         public string? Route { get; set; }
         public Dictionary<string, string> Headers { get; set; } = [];
     }

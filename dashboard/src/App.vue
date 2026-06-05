@@ -4,14 +4,19 @@ import * as signalR from '@microsoft/signalr'
 import LoginForm from './components/LoginForm.vue'
 import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
+import HttpTrafficViewer from './components/HttpTrafficViewer.vue'
 import { isTokenExpired } from './utils/jwt'
-import type { LogEntry } from './types/log'
+import type { LogEntry, HttpRequestEntry, HttpResponseEntry } from './types/log'
 
 const logs = ref<LogEntry[]>([])
+const requests = ref<HttpRequestEntry[]>([])
+const responses = ref<HttpResponseEntry[]>([])
 const isConnected = ref<boolean>(false)
 
 const currentToken = ref<string>('')
 let expiryCheckTimer: ReturnType<typeof setInterval> | null = null
+
+const activeTab = ref<'logs' | 'network'>('logs')
 
 let connection: signalR.HubConnection | null = null
 
@@ -39,6 +44,16 @@ const startSignalR = () => {
     // scrollToBottom()
   })
 
+  connection.on('HttpRequest', (data: HttpRequestEntry) => {
+    requests.value.push(data)
+    if (requests.value.length > 200) requests.value.shift()
+  })  
+
+  connection.on('HttpResponse', (data: HttpResponseEntry) => {
+    responses.value.push(data)
+    if (responses.value.length > 200) responses.value.shift()
+  })
+  
   connection.start()
     .then(() => {
       isConnected.value = true
@@ -85,6 +100,11 @@ const clearLogs = (): void => {
   logs.value = []
 }
 
+const clearNetworkData = () => {
+  requests.value = []; 
+  responses.value = [] 
+}
+
 onMounted(() => {
   const savedToken = localStorage.getItem('TOKEN_ID')
   
@@ -120,9 +140,34 @@ onUnmounted(() => {
         <div class="section-title">ProxyMapService Performance Metrics</div>
         <ProxyStats :token="currentToken" />
       </section>
-      <section class="dashboard-section">
-        <LogViewer :logs="logs" :isConnected="isConnected" @clear-logs="clearLogs" />
-      </section>
+      <div class="tab-navigation">
+        <button 
+          :class="['tab-btn', { active: activeTab === 'logs' }]" 
+          @click="activeTab = 'logs'"
+        >
+          📄 Event Log
+        </button>  
+        <button 
+          :class="['tab-btn', { active: activeTab === 'network' }]" 
+          @click="activeTab = 'network'"
+        >
+          🌐 HTTP Traffic
+        </button>              
+      </div>
+      <div class="tab-view-content">
+        <LogViewer 
+          v-if="activeTab === 'logs'" 
+          :logs="logs" 
+          :isConnected="isConnected" 
+          @clear-logs="clearLogs" />
+        <HttpTrafficViewer 
+          v-if="activeTab === 'network'" 
+          :requests="requests" 
+          :responses="responses"
+          :isConnected="isConnected"
+          @clear-network="clearNetworkData"
+        />          
+      </div>
     </div>
 
     <div v-else class="unauthorized-placeholder">
@@ -147,7 +192,6 @@ body {
 }
 .logo { margin: 0; font-size: 1.3rem; color: #4caf50; font-weight: 700; }
 
-/* Стили панели пользователя в шапке */
 .user-menu { display: flex; align-items: center; gap: 15px; }
 .user-badge { font-size: 13px; color: #4caf50; background: rgba(76, 175, 80, 0.1); padding: 4px 10px; border-radius: 12px; }
 .btn-logout {
@@ -167,4 +211,43 @@ body {
 .placeholder-icon { font-size: 2.5rem; margin-bottom: 15px; }
 .unauthorized-placeholder h4 { margin: 0 0 8px 0; color: #e53935; font-size: 1.1rem; }
 .unauthorized-placeholder p { margin: 0; max-width: 400px; color: #777; font-size: 13px; line-height: 1.5; }
+
+.tab-navigation {
+  display: flex;
+  gap: 4px;
+  /* border-bottom: 2px solid #2d2d2d; */
+  margin-top: 10px;  
+}
+.tab-btn {
+  background: #1e1e1e;
+  color: #858585;
+  border: 1px solid #2d2d2d;
+  border-bottom: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  transition: all 0.2s ease;
+}
+.tab-btn:hover {
+  color: #fff;
+  background: #252526;
+}
+.tab-btn.active {
+  background: #2d2d2d;
+  color: #4caf50;
+  border-color: #4caf50;
+  border-bottom: 0px solid #2d2d2d;
+  margin-bottom: -1px; /* Pull overlap forward over global line */
+}
+.tab-view-content {
+  margin-top: 0px;
+}
+.tab-view-content > div {
+  border-top-left-radius: 0px !important;
+  /* border-top-right-radius: 0px !important; */
+  border: 1px solid #4caf50;
+}
 </style>

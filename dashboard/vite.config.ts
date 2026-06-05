@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
                   const { username, password } = JSON.parse(body)
                   if (username === login_username && password === login_password) {
                     const cryptoKey = new TextEncoder().encode(jwt_secret)
-                     const token = await new jose.SignJWT({ name: username, role: 'user' })
+                     const token = await new jose.SignJWT({ name: username, role: 'admin' })
                       .setProtectedHeader({ alg: 'HS256' })
                       .setIssuedAt()
                       .setIssuer(jwt_iss)

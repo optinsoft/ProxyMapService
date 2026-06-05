@@ -27,14 +27,16 @@ namespace ProxyMapService.WebLogging
 
             if (!e.Response)
             {
-                if (HttpHeaderParser.ParseRequestRawHeaders(headers, route) is HttpRequestDto requestDto)
+                var id = loggersProvider.GetRequestId();
+                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id, route) is HttpRequestDto requestDto)
                 {
                     websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
                 }
             }
             else
             {
-                if (HttpHeaderParser.ParseResponseRawHeaders(headers, route) is HttpResponseDto responseDto)
+                var id = loggersProvider.GetResponseId();
+                if (HttpHeaderParser.ParseResponseRawHeaders(headers, id, route) is HttpResponseDto responseDto)
                 {
                     websocketLogService.QueueMessage(new HttpResponseMessageEntry(responseDto));
                 }

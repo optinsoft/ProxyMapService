@@ -108,6 +108,7 @@ const handleClear = (): void => {
   align-items: center;
   background-color: #2d2d2d;
   padding: 10px 15px;
+  height: 36px;
   border-bottom: 1px solid #3c3c3c;
 }
 .status-indicator { display: flex; align-items: center; font-size: 14px; }
