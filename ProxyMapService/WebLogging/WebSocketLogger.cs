@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
+using ProxyMapService.Services;
 
 namespace ProxyMapService.WebLogging
 {
@@ -7,13 +7,14 @@ namespace ProxyMapService.WebLogging
         string categoryName,
         IServiceProvider serviceProvider,
         IOptionsMonitor<LoggerFilterOptions> filterOptions,
-        IOptionsMonitor<WebSocketLoggerOptions> loggerOptions) : ILogger
+        IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : ILogger
     {
+        private WebSocketLogBackgroundService? _backgroundService;
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            if (!loggerOptions.CurrentValue.Enabled) return false;
+            if (!monitoringOptions.CurrentValue.Enabled) return false;
 
             var filter = filterOptions.CurrentValue;
             if (categoryName.StartsWith("Microsoft.AspNetCore.SignalR") ||
@@ -40,23 +41,22 @@ namespace ProxyMapService.WebLogging
         {
             if (!IsEnabled(logLevel)) return;
 
+            if (_backgroundService == null)
+            {
+                _backgroundService = serviceProvider.GetRequiredService<WebSocketLogBackgroundService>();
+            }
+
             var message = formatter(state, exception);
 
-            var logEntry = new
-            {
-                Timestamp = DateTime.UtcNow,
-                Category = categoryName,
-                Level = logLevel.ToString(),
-                Message = message,
-                Exception = exception?.Message
-            };
-
-            var hubContext = serviceProvider.GetService<IHubContext<LogHub>>();
-
-            if (hubContext != null)
-            {
-                _ = hubContext.Clients.All.SendAsync("EventLog", logEntry);
-            }
+            var logEntry = new LogMessageEntry(
+                Timestamp: DateTime.UtcNow,
+                Category: categoryName,
+                Level: logLevel.ToString(),
+                Message: message,
+                Exception: exception?.Message
+            );
+            
+            _backgroundService.QueueMessage(logEntry);
         }
 
         private static LogLevel? FindRule(System.Collections.Generic.IEnumerable<LoggerFilterRule> rules, string? provider, string? category)

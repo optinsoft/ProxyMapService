@@ -9,6 +9,7 @@ using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Utils;
+using ProxyMapService.WebLogging;
 
 namespace ProxyMapService.Services
 {
@@ -43,7 +44,7 @@ namespace ProxyMapService.Services
             get => _started;
         }
 
-        public ProxyService(IConfiguration configuration, ILogger<ProxyService> logger, ILoggerFactory loggerFactory)
+        public ProxyService(IConfiguration configuration, ILogger<ProxyService> logger, ILoggerFactory loggerFactory, IHttpTrafficMonitor httpTrafficMonitor)
         {
             _configuration = configuration;
             _logger = logger;
@@ -103,6 +104,8 @@ namespace ProxyMapService.Services
             {
                 _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += _bytesLogger.LogHttpHeaders;
             }
+            _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
+            _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
             _logger.LogInformation(
                 "[ProxyService.{}] Service is created at {}.",
                 _serviceId,

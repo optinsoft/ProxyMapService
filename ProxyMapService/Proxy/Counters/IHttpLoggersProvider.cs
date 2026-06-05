@@ -4,5 +4,6 @@
     {
         IHttpHeadersLogger RequestHeadersLogger { get; }
         IHttpHeadersLogger ResponseHeadersLogger { get; }
+        string GetRoute();
     }
 }

@@ -1,5 +1,4 @@
-﻿using ProxyMapService.Proxy.Sessions;
-using System.Text;
+﻿using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -24,15 +23,13 @@ namespace ProxyMapService.Proxy.Http
         private static readonly byte[][] HttpVersionPrefixBytes =
             HttpVersions.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
 
-        public static bool StartsWithHttpMethod(ReadOnlySpan<byte> span, bool partially)
+        public static bool StartsWithHttpMethod(ReadOnlySpan<byte> lineSpan, bool partially)
         {
             foreach (var method in HttpMethodPrefixBytes)
             {
                 var methodSpan = method.AsSpan();
-
-                int compareLength = partially ? Math.Min(span.Length, methodSpan.Length) : methodSpan.Length;
-
-                if (compareLength <= span.Length && span.Slice(0, compareLength)
+                int compareLength = partially ? Math.Min(lineSpan.Length, methodSpan.Length) : methodSpan.Length;
+                if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength)
                         .SequenceEqual(methodSpan.Slice(0, compareLength)))
                 {
                     return true;
@@ -42,15 +39,13 @@ namespace ProxyMapService.Proxy.Http
             return false;
         }
 
-        public static bool StartsWithHttpVersion(ReadOnlySpan<byte> span, bool partially)
+        public static bool StartsWithHttpVersion(ReadOnlySpan<byte> lineSpan, bool partially)
         {
             foreach (var version in HttpVersionPrefixBytes)
             {
                 var versionSpan = version.AsSpan();
-
-                int compareLength = partially ? Math.Min(span.Length, versionSpan.Length) : versionSpan.Length;
-
-                if (compareLength <= span.Length && span.Slice(0, compareLength)
+                int compareLength = partially ? Math.Min(lineSpan.Length, versionSpan.Length) : versionSpan.Length;
+                if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength)
                         .SequenceEqual(versionSpan.Slice(0, compareLength)))
                 {
                     return true;

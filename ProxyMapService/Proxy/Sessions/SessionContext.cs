@@ -99,8 +99,18 @@ namespace ProxyMapService.Proxy.Sessions
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
         public bool CachedReply { get; set; }
 
-        public IHttpHeadersLogger RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
-        public IHttpHeadersLogger ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
+        IHttpHeadersLogger IHttpLoggersProvider.RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
+        IHttpHeadersLogger IHttpLoggersProvider.ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
+        string IHttpLoggersProvider.GetRoute()
+        {
+            return (this switch
+            {
+                { Http: not null } => "http",
+                { Socks4: not null } => "socks4",
+                { Socks5: not null } => "socks5",
+                _ => ""
+            });
+        }
 
         public SessionContext(TcpClient incomingClient, System.Net.EndPoint? incomingEndPoint, 
             ProxyMapping mapping, bool ssl, 

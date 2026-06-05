@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using ProxyMapService.Services;
 
 namespace ProxyMapService.WebLogging
 {
@@ -6,11 +7,11 @@ namespace ProxyMapService.WebLogging
     public class WebSocketLoggerProvider(
         IServiceProvider serviceProvider,
         IOptionsMonitor<LoggerFilterOptions> filterOptions,
-        IOptionsMonitor<WebSocketLoggerOptions> loggerOptions) : ILoggerProvider
+        IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : ILoggerProvider
     {
         public ILogger CreateLogger(string categoryName)
         {
-            return new WebSocketLogger(categoryName, serviceProvider, filterOptions, loggerOptions);
+            return new WebSocketLogger(categoryName, serviceProvider, filterOptions, monitoringOptions);
         }
 
         public void Dispose()

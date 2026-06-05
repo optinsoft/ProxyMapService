@@ -1,6 +1,6 @@
 ﻿namespace ProxyMapService.WebLogging
 {
-    public class WebSocketLoggerOptions
+    public class TrafficMonitorOptions
     {
         public bool Enabled { get; set; } = false;
     }

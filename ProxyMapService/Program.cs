@@ -36,7 +36,10 @@ Console.OutputEncoding = Encoding.UTF8;
 
 builder.Services.AddSignalR();
 
-builder.Services.AddSingleton<HttpTrafficMonitor>();
+builder.Services.AddSingleton<WebSocketLogBackgroundService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSocketLogBackgroundService>());
+
+builder.Services.AddSingleton<IHttpTrafficMonitor, HttpTrafficMonitor>();
 
 builder.Services.AddSingleton<IProxyService, ProxyService>();
 builder.Services.AddHostedService<ProxyBackgroundService>();
@@ -88,7 +91,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         }
     });
 
-builder.Services.Configure<WebSocketLoggerOptions>(builder.Configuration.GetSection("Logging:WebSocket"));
+builder.Services.Configure<WebSocketMonitoringOptions>(builder.Configuration.GetSection("WebSocketMonitoring"));
 
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, WebSocketLoggerProvider>());
