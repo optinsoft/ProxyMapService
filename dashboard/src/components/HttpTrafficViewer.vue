@@ -24,16 +24,14 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
     const resTime = res ? new Date(res.timestamp).getTime() : null
     const duration = (resTime && reqTime) ? (resTime - reqTime) : null
 
-    const connectionTypeDisplay = req.connectionType || res?.connectionType || '-'
-    
     const routeDisplay = res?.route || req.route || '-'
 
     return {
       id: req.id,
       timestamp: new Date(req.timestamp).toLocaleTimeString(),
-      connectionType: connectionTypeDisplay,
-      method: req.method.toUpperCase(),
-      target: req.target,
+      inbound: req.inbound,
+      requestURI: req.requestURI,
+      requestMethod: req.requestMethod.toUpperCase(),
       route: routeDisplay,
       statusCode: res ? parseInt(res.statusCode, 10) : null,
       statusText: res ? res.statusText : '',
@@ -79,10 +77,10 @@ const selectRow = (id: string) => {
           <thead>
             <tr>
               <th>Time</th>
-              <th>Connection</th>
-              <th>Method</th>
-              <th>Target</th>
+              <th>Inbound</th>
               <th>Route</th>
+              <th>Request URI</th>
+              <th>Method</th>
               <th>Status</th>
               <th>Duration</th>
             </tr>
@@ -98,14 +96,14 @@ const selectRow = (id: string) => {
               @click="selectRow(tx.id)"
             >
               <td class="cell-time">{{ tx.timestamp }}</td>
-              <td class="cell-protocol">{{ tx.connectionType }}</td>
-              <td class="cell-method">{{ tx.method }}</td>
-              <td class="cell-target" :title="tx.target">{{ tx.target }}</td>
+              <td class="cell-inbound">{{ tx.inbound }}</td>
               <td>
                 <span :class="['route-badge', {'direct': 'route-direct', 'file': 'route-file'}[tx.route.toLowerCase()] || 'route-proxy']">
                   {{ tx.route }}
                 </span>
               </td>
+              <td class="cell-target" :title="tx.requestURI">{{ tx.requestURI }}</td>
+              <td class="cell-method">{{ tx.requestMethod }}</td>
               <td>
                 <span :class="['status-tag', getStatusClass(tx.statusCode)]">
                   {{ tx.statusCode ? `${tx.statusCode} ${tx.statusText}` : 'Pending...' }}
@@ -128,10 +126,10 @@ const selectRow = (id: string) => {
         
         <div class="sidebar-content">
           <div class="info-block">
-            <p><strong>Connection Type:</strong> <span class="mono">{{ selectedTransaction.connectionType }}</span></p>
-            <p><strong>HTTP Method:</strong> <span class="mono">{{ selectedTransaction.method }}</span></p>
-            <p><strong>HTTP Target:</strong> <span class="mono">{{ selectedTransaction.target }}</span></p>
+            <p><strong>Inbound:</strong> <span class="mono">{{ selectedTransaction.inbound }}</span></p>
             <p><strong>Route:</strong> <span class="mono">{{ selectedTransaction.route }}</span></p>
+            <p><strong>Request URI:</strong> <span class="mono">{{ selectedTransaction.requestURI }}</span></p>
+            <p><strong>Request Method:</strong> <span class="mono">{{ selectedTransaction.requestMethod }}</span></p>
             <p><strong>Status Code:</strong> <span class="mono">{{ selectedTransaction.statusCode }}</span></p>
             <p><strong>Status Text:</strong> <span class="mono">{{ selectedTransaction.statusText }}</span></p>
             <p><strong>Duration (ms):</strong> <span class="mono">{{ selectedTransaction.durationMs }}</span></p>
@@ -157,7 +155,7 @@ const selectRow = (id: string) => {
           <h5 class="headers-title">Response Headers</h5>
           <div class="headers-grid">
             <div v-if="Object.keys(selectedTransaction.responseHeaders).length === 0" class="no-headers">
-              No response headers found (Transaction pending or empty)
+              No response headers found
             </div>
             <div 
               v-for="(value, key) in selectedTransaction.responseHeaders" 
@@ -211,10 +209,10 @@ const selectRow = (id: string) => {
 }
 /* Width distribution metrics */
 .traffic-table th:nth-child(1) { width: 60px; }
-.traffic-table th:nth-child(2) { width: 60px; }
-.traffic-table th:nth-child(3) { width: 60px; }
+.traffic-table th:nth-child(2) { width: 180px; }
+.traffic-table th:nth-child(3) { width: 20%; }
 .traffic-table th:nth-child(4) { width: 20%; }
-.traffic-table th:nth-child(5) { width: 20%; }
+.traffic-table th:nth-child(5) { width: 70px; }
 .traffic-table th:nth-child(6) { width: 20%; }
 .traffic-table th:nth-child(7) { width: 60px; }
 
@@ -224,7 +222,7 @@ const selectRow = (id: string) => {
 
 .empty-row { text-align: center; color: #666; padding: 40px !important; font-style: italic; }
 .cell-time { color: #858585; font-family: monospace; }
-.cell-protocol { color: #e3e3e3; font-family: monospace; }
+.cell-inbound { color: #e3e3e3; font-family: monospace; }
 .cell-method { color: #e3e3e3; font-family: monospace; }
 .cell-target { color: #e3e3e3; font-family: monospace; }
 .cell-duration { font-family: monospace; text-align: right; padding-right: 15px !important; }

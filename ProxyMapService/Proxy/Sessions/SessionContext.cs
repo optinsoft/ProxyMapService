@@ -24,6 +24,7 @@ namespace ProxyMapService.Proxy.Sessions
         private List<CacheRule> _requestCacheRules;
         private string? _requestId;
 
+        public System.Net.IPEndPoint InboundEndpoint {  get; private set; }
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
@@ -53,7 +54,7 @@ namespace ProxyMapService.Proxy.Sessions
         public System.Net.EndPoint? IncomingEndPoint { get; set; }
         public System.Net.IPEndPoint? OutgoingEndPoint {  get; set; }
 
-        public ProxyType? ConnectionType { get; set; }
+        public ProxyType? InboundType { get; set; }
 
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
@@ -116,13 +117,13 @@ namespace ProxyMapService.Proxy.Sessions
         {
             return _requestId ?? Guid.NewGuid().ToString();
         }
-        string? IHttpLoggersProvider.GetConnectionType()
+        string? IHttpLoggersProvider.GetInbound()
         {
-            return (ConnectionType switch
+            return (InboundType switch
             {
-                ProxyType.Http => "http",
-                ProxyType.Socks4 => "socks4",
-                ProxyType.Socks5 => "socks5",
+                ProxyType.Http => $"http://{InboundEndpoint}",
+                ProxyType.Socks4 => $"socks4://{InboundEndpoint}",
+                ProxyType.Socks5 => $"socks5://{InboundEndpoint}",
                 _ => null
             });
         }
@@ -154,8 +155,8 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
-        public SessionContext(TcpClient incomingClient, System.Net.EndPoint? incomingEndPoint, 
-            ProxyMapping mapping, bool ssl, 
+        public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
+            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, bool ssl, 
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
@@ -163,6 +164,7 @@ namespace ProxyMapService.Proxy.Sessions
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
+            InboundEndpoint = inboundEndpoint;
             IncomingClient = incomingClient;
             IncomingEndPoint = incomingEndPoint;
             OutgoingClient = new TcpClient();

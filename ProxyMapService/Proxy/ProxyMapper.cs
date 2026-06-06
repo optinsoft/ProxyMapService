@@ -76,18 +76,18 @@ namespace ProxyMapService.Proxy
 
         private async Task StartListenerAsync(int listenPort, ProxyProvider proxyProvider, ProxyAuthenticator proxyAuthenticator)
         {
-            var incomingEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, listenPort);
+            var inboundEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, listenPort);
 
             UsernameParameterResolver usernameParameterResolver = new();
 
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
-                await Session.Run(client, mapping, proxyProvider,
-                    proxyAuthenticator, usernameParameterResolver,
+                await Session.Run(inboundEndPoint, client, mapping, 
+                    proxyProvider, proxyAuthenticator, usernameParameterResolver,
                     hostRules, cacheRules, cacheManager, userAgent, 
                     sslClientConfig, sslServerConfig,
                     proxyCounters, sessionLogger, logStep, token);
 
-            using var listener = new Listener(incomingEndPoint, incomingClientHandler, serviceLogger);
+            using var listener = new Listener(inboundEndPoint, incomingClientHandler, serviceLogger);
             await listener.Start(maxListenerStartRetries, stoppingToken);
         }
     }

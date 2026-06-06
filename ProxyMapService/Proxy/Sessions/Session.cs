@@ -70,8 +70,9 @@ namespace ProxyMapService.Proxy.Sessions
 
         #endregion
 
-        public static async Task Run(TcpClient incomingClient, ProxyMapping mapping, IProxyProvider proxyProvider, 
-            IProxyAuthenticator proxyAuthenticator, IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
+        public static async Task Run(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
+            ProxyMapping mapping, IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
+            IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
@@ -110,7 +111,8 @@ namespace ProxyMapService.Proxy.Sessions
             }
             try
             {
-                using var context = new SessionContext(incomingClient, incomingEndPoint, 
+                using var context = new SessionContext(
+                    inboundEndpoint, incomingClient, incomingEndPoint, 
                     mapping, mapping.Listen.Ssl, serverCertificate, caCertificate,
                     proxyProvider, proxyAuthenticator, usernameParameterResolver,
                     hostRules, cacheRules, cacheManager, userAgent,

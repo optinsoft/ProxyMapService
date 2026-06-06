@@ -22,14 +22,14 @@ namespace ProxyMapService.WebLogging
                 return;
             }
 
-            var connectionType = loggersProvider.GetConnectionType();
+            var inbound = loggersProvider.GetInbound();
             var route = loggersProvider.GetRoute();
             var headers = e.Headers;
 
             if (!e.Response)
             {
                 var id = loggersProvider.GetRequestId();
-                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id, connectionType, route) is HttpRequestDto requestDto)
+                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id, inbound, route) is HttpRequestDto requestDto)
                 {
                     websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
                 }
@@ -37,7 +37,7 @@ namespace ProxyMapService.WebLogging
             else
             {
                 var id = loggersProvider.GetResponseId();
-                if (HttpHeaderParser.ParseResponseRawHeaders(headers, id, connectionType, route) is HttpResponseDto responseDto)
+                if (HttpHeaderParser.ParseResponseRawHeaders(headers, id, inbound, route) is HttpResponseDto responseDto)
                 {
                     websocketLogService.QueueMessage(new HttpResponseMessageEntry(responseDto));
                 }

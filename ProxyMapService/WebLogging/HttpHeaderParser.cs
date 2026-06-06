@@ -79,13 +79,14 @@ namespace ProxyMapService.WebLogging
             };
         }
 
-        public static HttpRequestDto? ParseRequestRawHeaders(string[]? rawHeaders, string id, string? connectionType, string? route)
+        public static HttpRequestDto? ParseRequestRawHeaders(string[]? rawHeaders, string id, string? inbound, string? route)
         {
             if (rawHeaders == null) return null;
 
             var dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             bool firstLine = true;
+            string? requestLine = null;
             string? httpVerb = null;
             string? httpTarget = null;
 
@@ -96,6 +97,7 @@ namespace ProxyMapService.WebLogging
                 if (firstLine)
                 {
                     firstLine = false;
+                    requestLine = headerLine;
                     var methodLength = StartsWithHttpMethod(headerLine.AsSpan());
                     if (methodLength > 0)
                     {
@@ -110,13 +112,11 @@ namespace ProxyMapService.WebLogging
                                 target = target.Slice(0, targetEnd);
                                 httpVerb = method.ToString();
                                 httpTarget = target.ToString();
-                                continue;
                             }
                         }
                     }
+                    continue;
                 }
-
-                if (string.IsNullOrWhiteSpace(headerLine)) break;
 
                 int separatorIndex = headerLine.IndexOf(':');
                 if (separatorIndex > 0)
@@ -134,23 +134,25 @@ namespace ProxyMapService.WebLogging
             var dto = new HttpRequestDto()
             {
                 Id = id,
-                Method = httpVerb,
-                Target = httpTarget,
-                ConnectionType = connectionType,
+                RequestURI = httpTarget,
+                RequestMethod = httpVerb,
+                Inbound = inbound,
                 Route = route,
+                RequestLine = requestLine,
                 Headers = dictionary
             };
 
             return dto;
         }
 
-        public static HttpResponseDto? ParseResponseRawHeaders(string[]? rawHeaders, string id, string? connectionType, string? route)
+        public static HttpResponseDto? ParseResponseRawHeaders(string[]? rawHeaders, string id, string? inbound, string? route)
         {
             if (rawHeaders == null) return null;
 
             var dictionary = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             bool firstLine = true;
+            string? statusLine = null;
             string? httpStatusCode = null;
             string? httpStatuseText = null;
 
@@ -161,6 +163,7 @@ namespace ProxyMapService.WebLogging
                 if (firstLine)
                 {
                     firstLine = false;
+                    statusLine = headerLine;
                     var versionLength = StartsWithHttpVersion(headerLine.AsSpan());
                     if (versionLength > 0)
                     {
@@ -173,9 +176,9 @@ namespace ProxyMapService.WebLogging
                             var statusText = status.Slice(codeEnd + 1);
                             httpStatusCode = statusCode.ToString();
                             httpStatuseText = statusText.ToString();
-                            continue;
                         }
                     }
+                    continue;
                 }
 
                 int separatorIndex = headerLine.IndexOf(':');
@@ -196,8 +199,9 @@ namespace ProxyMapService.WebLogging
                 Id = id,
                 StatusCode = httpStatusCode,
                 StatusText = httpStatuseText,
-                ConnectionType = connectionType,
+                Inbound = inbound,
                 Route = route,
+                StatusLine = statusLine,
                 Headers = dictionary
             };
 

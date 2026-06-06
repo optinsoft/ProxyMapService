@@ -25,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
                     switch (context.IncomingHeaderStream.SocksVersion)
                     {
                         case 0x00:
-                            context.ConnectionType = ProxyType.Http;
+                            context.InboundType = ProxyType.Http;
                             context.Http = new HttpRequestHeader(requestHeaderBytes, context);
                             if (context.Http.BadRequest)
                             {
@@ -36,7 +36,7 @@ namespace ProxyMapService.Proxy.Handlers
                             }
                             return HandleStep.HttpInitialized;
                         case 0x04:
-                            context.ConnectionType = ProxyType.Socks4;
+                            context.InboundType = ProxyType.Socks4;
                             context.Socks4 = new Socks4Header(requestHeaderBytes);
                             if (context.Socks4.IsConnectRequest(requestHeaderBytes))
                             {
@@ -45,7 +45,7 @@ namespace ProxyMapService.Proxy.Handlers
                             context.Logger.LogSocks4BadRequest(context.Socks4.CommandCode);
                             break;
                         case 0x05:
-                            context.ConnectionType = ProxyType.Socks5;
+                            context.InboundType = ProxyType.Socks5;
                             context.Socks5 = new Socks5Header(requestHeaderBytes);
                             return HandleStep.Socks5Initialized;
                         default:
