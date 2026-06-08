@@ -320,13 +320,16 @@ namespace ProxyMapService.Proxy.Handlers
                                     {
                                         Debug.Assert(context.RequestHeader != null, "!!! HTTP Request Header is null !!!");
                                         context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4, context);
-                                        if (CreateResponseCacheFileStream(context))
+                                        if (!context.ResponseHeader.BadResponse)
                                         {
-                                            if (context.ResponseCacheFileStream != null)
+                                            if (CreateResponseCacheFileStream(context))
                                             {
-                                                ms.Position = 0;
-                                                await ms.CopyToAsync(context.ResponseCacheFileStream);
-                                                await HandleEndOfResponseCacheFileStream(context);
+                                                if (context.ResponseCacheFileStream != null)
+                                                {
+                                                    ms.Position = 0;
+                                                    await ms.CopyToAsync(context.ResponseCacheFileStream);
+                                                    await HandleEndOfResponseCacheFileStream(context);
+                                                }
                                             }
                                         }
                                     }

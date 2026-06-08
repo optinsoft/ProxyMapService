@@ -154,6 +154,10 @@ namespace ProxyMapService.Proxy.Sessions
                     return "deny";
             }
         }
+        string? IHttpLoggersProvider.GetTargetHost()
+        {
+            return $"{Host.Hostname}:{Host.Port}";
+        }
 
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
             System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, bool ssl, 

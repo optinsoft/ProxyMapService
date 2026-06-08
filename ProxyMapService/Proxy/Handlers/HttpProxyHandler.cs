@@ -97,12 +97,15 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         context.RequestTunnelState.ResetReadHeaders = true;
                         context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes, context);
-                        if (CreateResponseCacheFileStream(context))
+                        if (!context.ResponseHeader.BadResponse)
                         {
-                            if (context.ResponseCacheFileStream != null)
+                            if (CreateResponseCacheFileStream(context))
                             {
-                                await context.ResponseCacheFileStream.WriteAsync(responseHeaderBytes.AsMemory(0, responseHeaderBytes.Length));
-                                await HandleEndOfResponseCacheFileStream(context);
+                                if (context.ResponseCacheFileStream != null)
+                                {
+                                    await context.ResponseCacheFileStream.WriteAsync(responseHeaderBytes.AsMemory(0, responseHeaderBytes.Length));
+                                    await HandleEndOfResponseCacheFileStream(context);
+                                }
                             }
                         }
                     }

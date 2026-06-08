@@ -79,7 +79,7 @@ namespace ProxyMapService.WebLogging
             };
         }
 
-        public static HttpRequestDto? ParseRequestRawHeaders(string[]? rawHeaders, string id, string? inbound, string? route)
+        public static HttpRequestDto? ParseRequestRawHeaders(string[]? rawHeaders, string id)
         {
             if (rawHeaders == null) return null;
 
@@ -136,8 +136,6 @@ namespace ProxyMapService.WebLogging
                 Id = id,
                 RequestURI = httpTarget,
                 RequestMethod = httpVerb,
-                Inbound = inbound,
-                Route = route,
                 RequestLine = requestLine,
                 Headers = dictionary
             };
@@ -145,7 +143,7 @@ namespace ProxyMapService.WebLogging
             return dto;
         }
 
-        public static HttpResponseDto? ParseResponseRawHeaders(string[]? rawHeaders, string id, string? inbound, string? route)
+        public static HttpResponseDto? ParseResponseRawHeaders(string[]? rawHeaders, string id)
         {
             if (rawHeaders == null) return null;
 
@@ -199,8 +197,6 @@ namespace ProxyMapService.WebLogging
                 Id = id,
                 StatusCode = httpStatusCode,
                 StatusText = httpStatuseText,
-                Inbound = inbound,
-                Route = route,
                 StatusLine = statusLine,
                 Headers = dictionary
             };

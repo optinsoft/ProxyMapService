@@ -33,6 +33,7 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       requestURI: req.requestURI,
       requestMethod: req.requestMethod.toUpperCase(),
       route: routeDisplay,
+      targetHost: res?.targetHost ?? req.targetHost,
       statusCode: res ? parseInt(res.statusCode, 10) : null,
       statusText: res ? res.statusText : '',
       durationMs: duration,
@@ -79,6 +80,7 @@ const selectRow = (id: string) => {
               <th>Time</th>
               <th>Inbound</th>
               <th>Route</th>
+              <th>Target Host</th>
               <th>Request URI</th>
               <th>Method</th>
               <th>Status</th>
@@ -102,7 +104,8 @@ const selectRow = (id: string) => {
                   {{ tx.route }}
                 </span>
               </td>
-              <td class="cell-target" :title="tx.requestURI">{{ tx.requestURI }}</td>
+              <td class="cell-target-host">{{ tx.targetHost }}</td>
+              <td class="cell-request-uri" :title="tx.requestURI">{{ tx.requestURI }}</td>
               <td class="cell-method">{{ tx.requestMethod }}</td>
               <td>
                 <span :class="['status-tag', getStatusClass(tx.statusCode)]">
@@ -128,6 +131,7 @@ const selectRow = (id: string) => {
           <div class="info-block">
             <p><strong>Inbound:</strong> <span class="mono">{{ selectedTransaction.inbound }}</span></p>
             <p><strong>Route:</strong> <span class="mono">{{ selectedTransaction.route }}</span></p>
+            <p><strong>Target Host:</strong> <span class="mono">{{ selectedTransaction.targetHost }}</span></p>
             <p><strong>Request URI:</strong> <span class="mono">{{ selectedTransaction.requestURI }}</span></p>
             <p><strong>Request Method:</strong> <span class="mono">{{ selectedTransaction.requestMethod }}</span></p>
             <p><strong>Status Code:</strong> <span class="mono">{{ selectedTransaction.statusCode }}</span></p>
@@ -209,12 +213,13 @@ const selectRow = (id: string) => {
 }
 /* Width distribution metrics */
 .traffic-table th:nth-child(1) { width: 60px; }
-.traffic-table th:nth-child(2) { width: 180px; }
+.traffic-table th:nth-child(2) { width: 170px; }
 .traffic-table th:nth-child(3) { width: 20%; }
 .traffic-table th:nth-child(4) { width: 20%; }
-.traffic-table th:nth-child(5) { width: 70px; }
-.traffic-table th:nth-child(6) { width: 20%; }
-.traffic-table th:nth-child(7) { width: 60px; }
+.traffic-table th:nth-child(5) { width: 20%; }
+.traffic-table th:nth-child(6) { width: 60px; }
+.traffic-table th:nth-child(7) { width: 15%; }
+.traffic-table th:nth-child(8) { width: 60px; }
 
 .traffic-table td { padding: 8px 10px; border-bottom: 1px solid #2d2d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .traffic-table tbody tr:hover { background-color: #2a2a2a; }
@@ -223,8 +228,9 @@ const selectRow = (id: string) => {
 .empty-row { text-align: center; color: #666; padding: 40px !important; font-style: italic; }
 .cell-time { color: #858585; font-family: monospace; }
 .cell-inbound { color: #e3e3e3; font-family: monospace; }
+.cell-target-host { color: #e3e3e3; font-family: monospace; }
+.cell-request-uri { color: #e3e3e3; font-family: monospace; }
 .cell-method { color: #e3e3e3; font-family: monospace; }
-.cell-target { color: #e3e3e3; font-family: monospace; }
 .cell-duration { font-family: monospace; text-align: right; padding-right: 15px !important; }
 
 /* Side panel layout styles */

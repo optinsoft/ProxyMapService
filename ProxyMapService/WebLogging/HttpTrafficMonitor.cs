@@ -24,21 +24,28 @@ namespace ProxyMapService.WebLogging
 
             var inbound = loggersProvider.GetInbound();
             var route = loggersProvider.GetRoute();
+            var targetHost = loggersProvider.GetTargetHost();
             var headers = e.Headers;
 
             if (!e.Response)
             {
                 var id = loggersProvider.GetRequestId();
-                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id, inbound, route) is HttpRequestDto requestDto)
+                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id) is HttpRequestDto requestDto)
                 {
+                    requestDto.Inbound = inbound;
+                    requestDto.Route = route;
+                    requestDto.TargetHost = targetHost;
                     websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
                 }
             }
             else
             {
                 var id = loggersProvider.GetResponseId();
-                if (HttpHeaderParser.ParseResponseRawHeaders(headers, id, inbound, route) is HttpResponseDto responseDto)
+                if (HttpHeaderParser.ParseResponseRawHeaders(headers, id) is HttpResponseDto responseDto)
                 {
+                    responseDto.Inbound = inbound;
+                    responseDto.Route = route;
+                    responseDto.TargetHost = targetHost;
                     websocketLogService.QueueMessage(new HttpResponseMessageEntry(responseDto));
                 }
             }

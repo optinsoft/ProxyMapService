@@ -8,6 +8,7 @@
         public string? StatusCode { get; set; }
         public string? StatusText { get; set; }
         public string? Route { get; set; }
+        public string? TargetHost { get; set; }
         public string? StatusLine { get; set; }
         public Dictionary<string, string> Headers { get; set; } = [];
 

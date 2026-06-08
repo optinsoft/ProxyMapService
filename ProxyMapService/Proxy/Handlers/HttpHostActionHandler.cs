@@ -30,15 +30,13 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            if (context.Http?.HTTPTargetHost == null || context.Http.HTTPTargetHost.Hostname.Length == 0)
+            if (context.Host.Hostname.Length == 0) // context.Host must be initialized in InitializeHandler
             {
                 context.Logger.LogNoHost();
                 context.ProxyCounters.SessionsCounter?.OnNoHost(context);
                 await HttpProto.HttpReplyBadRequest(context);
                 return HandleStep.Terminate;
             }
-
-            context.Host = context.Http.HTTPTargetHost;
 
             GetContextHostAction(context);
 

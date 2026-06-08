@@ -13,6 +13,7 @@ export interface HttpRequestEntry {
   requestURI: string;
   requestMethod: string;
   route: string;
+  targetHost: string;
   headers: Record<string, string>;
 }
 
@@ -23,6 +24,7 @@ export interface HttpResponseEntry {
   statusCode: string;
   statusText: string;
   route: string;
+  targetHost: string;
   headers: Record<string, string>;
 }
 
@@ -34,6 +36,7 @@ export interface MergedTrafficEntry {
   requestURI: string;
   requestMethod: string;
   route: string;
+  targetHost: string;
   statusCode: number | null;
   statusText: string;
   durationMs: number | null;

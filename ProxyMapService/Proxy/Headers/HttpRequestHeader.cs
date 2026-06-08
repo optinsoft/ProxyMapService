@@ -7,14 +7,14 @@ namespace ProxyMapService.Proxy.Headers
 {
     public class HttpRequestHeader
     {
-        public HttpRequestHeader(byte[] array, IHttpLoggersProvider? httpLoggersProvider)
+        public HttpRequestHeader(byte[] array, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse = null)
         {
-            Parse(this, array, httpLoggersProvider);
+            Parse(this, array, httpLoggersProvider, onParse);
         }
 
-        public HttpRequestHeader(string[] strings, IHttpLoggersProvider? httpLoggersProvider)
+        public HttpRequestHeader(string[] strings, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse = null)
         {
-            Parse(this, strings, httpLoggersProvider);
+            Parse(this, strings, httpLoggersProvider, onParse);
         }
 
         public bool BadRequest { get; private set; }
@@ -34,13 +34,13 @@ namespace ProxyMapService.Proxy.Headers
             return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
         }
 
-        private static void Parse(HttpRequestHeader self, byte[] array, IHttpLoggersProvider? httpLoggersProvider)
+        private static void Parse(HttpRequestHeader self, byte[] array, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-            Parse(self, strings, httpLoggersProvider);
+            Parse(self, strings, httpLoggersProvider, onParse);
         }
 
-        private static void Parse(HttpRequestHeader self, string[] strings, IHttpLoggersProvider? httpLoggersProvider)
+        private static void Parse(HttpRequestHeader self, string[] strings, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse)
         {
             self.BadRequest = false;
             try
@@ -60,6 +60,7 @@ namespace ProxyMapService.Proxy.Headers
             {
                 self.BadRequest = true;
             }
+            onParse?.Invoke(self);
             httpLoggersProvider?.RequestHeadersLogger.OnHttpHeader(httpLoggersProvider, strings);
         }
 

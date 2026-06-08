@@ -8,5 +8,6 @@
         string GetResponseId();
         string? GetInbound();
         string? GetRoute();
+        string? GetTargetHost();
     }
 }

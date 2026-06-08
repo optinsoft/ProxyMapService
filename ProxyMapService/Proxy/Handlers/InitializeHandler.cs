@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
@@ -26,7 +28,13 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         case 0x00:
                             context.InboundType = ProxyType.Http;
-                            context.Http = new HttpRequestHeader(requestHeaderBytes, context);
+                            context.Http = new HttpRequestHeader(requestHeaderBytes, context, onParse: (header) => {
+                                if (header.HTTPTargetHost != null)
+                                {
+                                    //initialize context.Host before logging HttpRequestHeader
+                                    context.Host = header.HTTPTargetHost;
+                                }
+                            });
                             if (context.Http.BadRequest)
                             {
                                 context.Logger.LogHttpBadRequest();
