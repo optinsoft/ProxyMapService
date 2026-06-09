@@ -25,6 +25,7 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
     const duration = (resTime && reqTime) ? (resTime - reqTime) : null
 
     const routeDisplay = res?.route || req.route || '-'
+    const targetHostDisplay = res?.targetHost || req.targetHost || '-'
 
     return {
       id: req.id,
@@ -33,7 +34,7 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       requestURI: req.requestURI,
       requestMethod: req.requestMethod.toUpperCase(),
       route: routeDisplay,
-      targetHost: res?.targetHost ?? req.targetHost,
+      targetHost: targetHostDisplay,
       statusCode: res ? parseInt(res.statusCode, 10) : null,
       statusText: res ? res.statusText : '',
       durationMs: duration,

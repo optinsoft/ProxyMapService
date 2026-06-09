@@ -157,6 +157,7 @@ namespace ProxyMapService.Proxy.Sessions
         }
         string? IHttpLoggersProvider.GetTargetHost()
         {
+            if (Host.Hostname.Length == 0) return null;
             return $"{Host.Hostname}:{Host.Port}";
         }
 
