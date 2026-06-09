@@ -1,8 +1,10 @@
 ﻿using ProxyMapService.Proxy.Cache;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Http;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
@@ -23,8 +25,17 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && context.OutgoingStream != null && !context.Token.IsCancellationRequested)
             {
-                using SslStream? incomingSslStream = context.Ssl ? new(context.IncomingStream) : null;
-                using SslStream? outgoingSslStream = context.UpstreamSsl ? new(context.OutgoingStream) : null;
+                using SslStream? incomingSslStream = context.DecryptSSL ? context.SslMode switch {
+                    SslMode.Yes => new(context.IncomingStream),
+                    SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
+                    _ => null
+                } : null;
+                using SslStream? outgoingSslStream = context.DecryptSSL ? context.UpstreamSslMode switch
+                {
+                    SslMode.Yes => new(context.OutgoingStream),
+                    SslMode.Auto => NetworkSecurityHelper.IsStandardTlsPort(context.Host.Port) ? new(context.OutgoingStream) : null,
+                    _ => null
+                } : null;
 
                 using CountingStream? incomingSslCountingStream =
                     incomingSslStream != null

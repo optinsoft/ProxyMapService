@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Http;
@@ -20,7 +21,12 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && !context.Token.IsCancellationRequested)
             {
-                using SslStream? incomingSslStream = context.Ssl ? new(context.IncomingStream) : null;
+                using SslStream? incomingSslStream = context.DecryptSSL ? context.SslMode switch
+                {
+                    SslMode.Yes => new(context.IncomingStream),
+                    SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
+                    _ => null
+                } : null;
 
                 string subjectName = $"CN=*.{context.Host.OriginalHostname}";
                 X509Certificate2? serverCertificate = context.ServerCertificate;

@@ -113,7 +113,7 @@ namespace ProxyMapService.Proxy.Sessions
             {
                 using var context = new SessionContext(
                     inboundEndpoint, incomingClient, incomingEndPoint, 
-                    mapping, mapping.Listen.Ssl, serverCertificate, caCertificate,
+                    mapping, serverCertificate, caCertificate,
                     proxyProvider, proxyAuthenticator, usernameParameterResolver,
                     hostRules, cacheRules, cacheManager, userAgent,
                     sslClientConfig, sslServerConfig,

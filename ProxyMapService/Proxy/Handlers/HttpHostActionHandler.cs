@@ -40,6 +40,11 @@ namespace ProxyMapService.Proxy.Handlers
 
             GetContextHostAction(context);
 
+            if (context.Http?.HTTPVerb != "CONNECT")
+            {
+                context.SslMode = SslMode.No;
+            }
+
             switch (context.HostAction)
             {
                 case ActionEnum.Allow:

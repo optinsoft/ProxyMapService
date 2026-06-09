@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Sessions;
+using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Counters
 {
@@ -95,6 +96,32 @@ namespace ProxyMapService.Proxy.Counters
         {
             if (disposing) stream.Dispose();
             base.Dispose(disposing);
+        }
+
+        public async Task<bool> IsTLS(CancellationToken cancellationToken = default)
+        {
+            if (stream is not NetworkStream networkStream)
+            {
+                return false;
+            }
+
+            Socket socket = networkStream.Socket;
+            byte[] peekBuffer = new byte[2];
+
+            int bytesRead = await socket.ReceiveAsync(
+                new ArraySegment<byte>(peekBuffer),
+                SocketFlags.Peek,
+                cancellationToken
+            );
+
+            if (bytesRead < 2)
+            {
+                return false;
+            }
+
+            bool isTls = peekBuffer[0] == 0x16 && peekBuffer[1] == 0x03;
+
+            return isTls;
         }
     }
 }

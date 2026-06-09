@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Network;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace ProxyMapService.Proxy.Configurations
@@ -36,8 +37,9 @@ namespace ProxyMapService.Proxy.Configurations
         public ActionEnum Action { get; set; }
         public string? OverrideHostName { get; set; }
         public int? OverrideHostPort { get; set; }
-        public bool? Ssl { get; set; }
-        public bool? UpstreamSsl { get; set; }
+        public bool? DecryptSSL { get; set; }
+        public SslMode? SslMode { get; set; }
+        public SslMode? UpstreamSslMode { get; set; }
         public string? CertificatePath { 
             get => _certificatePath; 
             set

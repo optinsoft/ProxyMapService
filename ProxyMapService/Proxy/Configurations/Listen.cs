@@ -29,6 +29,8 @@
 
         public bool RejectHttpProxy { get; set; }
         public int StickyProxyLifetime {  get; set; }
-        public bool Ssl { get; set; }
+        public bool DecryptSSL { get; set; }
+        public SslMode SslMode { get; private set; } = SslMode.Auto;
+        public SslMode UpstreamSslMode { get; private set; } = SslMode.Auto;
     }
 }

@@ -20,14 +20,17 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.Host.OverridePort(hostRule.OverrideHostPort.Value);
                 }
-                if (hostRule.Ssl != null)
+                if (hostRule.DecryptSSL != null)
                 {
-                    context.Ssl = (bool)hostRule.Ssl;
-                    context.UpstreamSsl = context.Ssl;
+                    context.DecryptSSL = hostRule.DecryptSSL.Value;
                 }
-                if (hostRule.UpstreamSsl != null)
+                if (hostRule.SslMode != null)
                 {
-                    context.UpstreamSsl = (bool)hostRule.UpstreamSsl;
+                    context.SslMode = hostRule.SslMode.Value;
+                }
+                if (hostRule.UpstreamSslMode != null)
+                {
+                    context.UpstreamSslMode = hostRule.UpstreamSslMode.Value;
                 }
                 if (hostRule.ServerCertificate != null)
                 {

@@ -28,8 +28,9 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
-        public bool Ssl { get; set; }
-        public bool UpstreamSsl { get; set; }
+        public bool DecryptSSL { get;set; }
+        public SslMode SslMode { get; set; }
+        public SslMode UpstreamSslMode { get; set; }
         public SslClientOptionsConfig SslClientConfig { get; private set; }
         public SslServerOptionsConfig SslServerConfig { get; private set; }
         public X509Certificate2? ServerCertificate { get; set; }
@@ -160,7 +161,7 @@ namespace ProxyMapService.Proxy.Sessions
         }
 
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
-            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, bool ssl, 
+            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, 
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
@@ -174,8 +175,9 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingClient = new TcpClient();
             OutgoingEndPoint = null;
             Mapping = mapping;
-            Ssl = ssl;
-            UpstreamSsl = ssl;
+            DecryptSSL = mapping.Listen.DecryptSSL;
+            SslMode = mapping.Listen.SslMode;
+            UpstreamSslMode = mapping.Listen.UpstreamSslMode;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;
             ProxyProvider = proxyProvider;
