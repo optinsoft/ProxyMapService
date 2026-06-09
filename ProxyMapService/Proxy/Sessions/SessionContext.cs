@@ -130,14 +130,15 @@ namespace ProxyMapService.Proxy.Sessions
         }
         string? IHttpLoggersProvider.GetRoute()
         {
+            string cachePrefix = CachedReply ? "(cache) " : "";
             switch (ProxyServer?.ProxyType)
             {
                 case ProxyType.Http:
-                    return $"http://{ProxyServer.Host}:{ProxyServer.Port}";
+                    return $"{cachePrefix}http://{ProxyServer.Host}:{ProxyServer.Port}";
                 case ProxyType.Socks4:
-                    return $"socks4://{ProxyServer.Host}:{ProxyServer.Port}";
+                    return $"{cachePrefix}socks4://{ProxyServer.Host}:{ProxyServer.Port}";
                 case ProxyType.Socks5:
-                    return $"socks5://{ProxyServer.Host}:{ProxyServer.Port}";
+                    return $"{cachePrefix}socks5://{ProxyServer.Host}:{ProxyServer.Port}";
                 default:
                     break;
             }
@@ -145,11 +146,11 @@ namespace ProxyMapService.Proxy.Sessions
             switch (HostAction)
             {
                 case ActionEnum.Allow:
-                    return "proxy";
+                    return $"{cachePrefix}proxy";
                 case ActionEnum.Bypass:
-                    return "direct";
+                    return $"{cachePrefix}direct";
                 case ActionEnum.File:
-                    return "file";
+                    return $"{cachePrefix}file";
                 default:
                     //ActionEnum.Deny
                     return "deny";
