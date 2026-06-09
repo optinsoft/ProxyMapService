@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Cache;
+﻿using Microsoft.Extensions.Caching.Memory;
+using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
@@ -388,10 +389,11 @@ namespace ProxyMapService.Proxy.Handlers
                                         }
                                     }
                                 }
-                                if (requestCacheEntry != null)
+                                using var cacheFileStream = requestCacheEntry != null ? GetCacheEntryFileStream(requestCacheEntry) : null;
+                                if (requestCacheEntry != null && cacheFileStream != null)
                                 {
                                     selfState.ResetReadHeaders = true;
-                                    await ReplyCacheFile(requestCacheEntry, source, context);
+                                    await ReplyCacheFile(requestCacheEntry, cacheFileStream, source, context);
                                 }
                                 else
                                 {
@@ -480,15 +482,11 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        private static async Task ReplyCacheFile(CacheEntry cacheEntry, CountingStream incomingStream, SessionContext context)
+        private static async Task ReplyCacheFile(CacheEntry cacheEntry, FileStream cacheFileStream, CountingStream incomingStream, SessionContext context)
         {
-            using var cacheFileStream = GetCacheEntryFileStream(cacheEntry);
-            if (cacheFileStream != null)
-            {
-                context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheEntry, cacheFileStream);
-                context.Logger.LogResponseFromCache(cacheFileStream.Name);
-            }
+            context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
+            await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheEntry, cacheFileStream);
+            context.Logger.LogResponseFromCache(cacheFileStream.Name);
         }
     }
 }
