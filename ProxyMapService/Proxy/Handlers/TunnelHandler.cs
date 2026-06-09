@@ -486,7 +486,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (cacheFileStream != null)
             {
                 context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheFileStream);
+                await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheEntry, cacheFileStream);
                 context.Logger.LogResponseFromCache(cacheFileStream.Name);
             }
         }

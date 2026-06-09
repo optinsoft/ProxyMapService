@@ -25,15 +25,6 @@ namespace ProxyMapService.Proxy.Handlers
             return await context.CacheManager.GetAsync($"{hostname}:{port}", requestUrl, context.RequestCacheRules);
         }
 
-        protected static async Task<FileStream?> GetCacheFileStream(SessionContext context)
-        {
-            var cacheEntry = await GetCacheEntry(context);
-            if (cacheEntry == null)
-                return null;
-
-            return GetCacheEntryFileStream(cacheEntry);
-        }
-
         protected static FileStream? GetCacheEntryFileStream(CacheEntry cacheEntry)
         {
             var fileStream = new FileStream(

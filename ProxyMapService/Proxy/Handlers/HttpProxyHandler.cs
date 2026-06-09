@@ -71,22 +71,26 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context.Http == null ? context : null);
 
-                    using FileStream? cacheFileStream = await GetCacheFileStream(context);
-                    if (cacheFileStream != null)
+                    var cacheEntry = await GetCacheEntry(context);
+                    if (cacheEntry != null)
                     {
-                        context.RequestTunnelState.ResetReadHeaders = true;
-                        context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                        if (context.Socks4 != null)
+                        using FileStream? cacheFileStream = GetCacheEntryFileStream(cacheEntry);
+                        if (cacheFileStream != null)
                         {
-                            await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestGranted);
+                            context.RequestTunnelState.ResetReadHeaders = true;
+                            context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
+                            if (context.Socks4 != null)
+                            {
+                                await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestGranted);
+                            }
+                            if (context.Socks5 != null)
+                            {
+                                await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
+                            }
+                            await HttpProto.HttpReplyCacheFileStream(context, cacheEntry, cacheFileStream);
+                            context.Logger.LogResponseFromCache(cacheFileStream.Name);
+                            return HandleStep.Tunnel;
                         }
-                        if (context.Socks5 != null)
-                        {
-                            await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
-                        }
-                        await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
-                        context.Logger.LogResponseFromCache(cacheFileStream.Name);
-                        return HandleStep.Tunnel;
                     }
 
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);

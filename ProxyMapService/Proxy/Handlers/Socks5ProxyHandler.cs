@@ -119,13 +119,21 @@ namespace ProxyMapService.Proxy.Handlers
                                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                                 {
                                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes, null);
-                                    using FileStream? cacheFileStream = await GetCacheFileStream(context);
-                                    if (cacheFileStream != null)
+                                    var cacheEntry = await GetCacheEntry(context);
+                                    if (cacheEntry != null)
                                     {
-                                        context.RequestTunnelState.ResetReadHeaders = true;
-                                        context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                                        await HttpProto.HttpReplyCacheFileStream(context, cacheFileStream);
-                                        context.Logger.LogResponseFromCache(cacheFileStream.Name);
+                                        using FileStream? cacheFileStream = GetCacheEntryFileStream(cacheEntry);
+                                        if (cacheFileStream != null)
+                                        {
+                                            context.RequestTunnelState.ResetReadHeaders = true;
+                                            context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
+                                            await HttpProto.HttpReplyCacheFileStream(context, cacheEntry, cacheFileStream);
+                                            context.Logger.LogResponseFromCache(cacheFileStream.Name);
+                                        }
+                                        else
+                                        {
+                                            await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                                        }
                                     }
                                     else
                                     {

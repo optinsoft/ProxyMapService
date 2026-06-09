@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using ProxyMapService.Proxy.Cache;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
 using System.Text.Json;
@@ -269,13 +270,29 @@ namespace ProxyMapService.Proxy.Proto
         }
 
         public static async Task HttpReplyCacheFileStream(SessionContext context, CountingStream? incomingStream,
-            FileStream fileStream)
+            CacheEntry cacheEntry, FileStream fileStream)
         {
             if (incomingStream == null) return;
             var oldCached = context.CachedReply;
             context.CachedReply = true;
             try
             {
+                var headerLength = cacheEntry.HeaderLength;
+                if (headerLength > 0)
+                {
+                    IHttpLoggersProvider httpLoggersProvider = context;
+
+                    byte[] headerBuffer = new byte[headerLength];
+                    
+                    await fileStream.ReadExactlyAsync(headerBuffer, 0, headerLength, context.Token);
+                    
+                    string headerString = Encoding.UTF8.GetString(headerBuffer);
+                    string[] headers = headerString.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
+
+                    httpLoggersProvider.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
+
+                    await incomingStream.WriteAsync(headerBuffer.AsMemory(0, headerLength), context.Token);
+                }
                 await fileStream.CopyToAsync(incomingStream, context.Token);
             }
             finally
@@ -284,9 +301,9 @@ namespace ProxyMapService.Proxy.Proto
             }
         }
 
-        public static async Task HttpReplyCacheFileStream(SessionContext context, FileStream fileStream)
+        public static async Task HttpReplyCacheFileStream(SessionContext context, CacheEntry cacheEntry, FileStream fileStream)
         {
-            await HttpReplyCacheFileStream(context, context.IncomingStream, fileStream);
+            await HttpReplyCacheFileStream(context, context.IncomingStream, cacheEntry, fileStream);
         }
 
         public static async Task SendHttpRequest(Stream? outgoingStream, byte[] requestBytes, CancellationToken token)
