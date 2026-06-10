@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
-using ProxyMapService.Proxy.Counters;
-using ProxyMapService.Proxy.Headers;
+﻿using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;

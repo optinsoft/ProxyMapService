@@ -14,10 +14,15 @@ namespace ProxyMapService.Proxy.Handlers
                 var response = new
                 { 
                     SessionId = context.UsernameParameterResolver.CurrentSessionId,
-                    ExpiresAt = context.UsernameParameterResolver.CurrentSessionExpiresAt?.ToUniversalTime(),
+                    ExpiresAt = context.UsernameParameterResolver.CurrentSessionExpiresAt.HasValue ? $"{context.UsernameParameterResolver.CurrentSessionExpiresAt.Value.ToUniversalTime():R}" : null,
                     Expired = context.UsernameParameterResolver.CurrentSessionExpired,
                 };
-                await HttpProto.HttpReplyJson(context, response);
+                string[] headers = [
+                    $"X-Session-Id: \"{response.SessionId}\"",
+                    $"X-Expires-At: {response.ExpiresAt ?? "null"}",
+                    $"X-Expired: {response.Expired}"
+                ];
+                await HttpProto.HttpReplyJson(context, response, headers);
             }
             return HandleStep.Terminate;
         }

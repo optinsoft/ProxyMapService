@@ -11,7 +11,7 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy
 {
-    public class ProxyMapper(ProxyMapping mapping, List<HostRule> hostRules, 
+    public class ProxyMapper(ProxyMapping mapping, SessionAPIConfig sessionAPI, List<HostRule> hostRules, 
         List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
         SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
         ProxyCounters proxyCounters, ILogger serviceLogger, ILogger sessionLogger, 
@@ -81,7 +81,7 @@ namespace ProxyMapService.Proxy
             UsernameParameterResolver usernameParameterResolver = new();
 
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
-                await Session.Run(inboundEndPoint, client, mapping, 
+                await Session.Run(inboundEndPoint, client, mapping, sessionAPI,
                     proxyProvider, proxyAuthenticator, usernameParameterResolver,
                     hostRules, cacheRules, cacheManager, userAgent, 
                     sslClientConfig, sslServerConfig,

@@ -193,8 +193,8 @@ namespace ProxyMapService.Proxy.Proto
             await incomingStream.WriteAsync(textBytes, token);
         }
 
-        public static async Task HttpReplyJson(Stream? incomingStream, object data, JsonSerializerOptions serializerOptions, 
-            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
+        public static async Task HttpReplyJson(Stream? incomingStream, object data, string[]? customHeaders, 
+            JsonSerializerOptions serializerOptions, IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
             if (incomingStream == null) return;
 
@@ -205,7 +205,8 @@ namespace ProxyMapService.Proxy.Proto
                 $"Date: {DateTime.UtcNow:R}",
                 "Connection: close",
                 $"Content-Length: {jsonBytes.Length}",
-                "Content-Type: application/json; charset=utf-8"
+                "Content-Type: application/json; charset=utf-8",
+                .. (customHeaders ?? [])
             ];
 
             httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
@@ -226,17 +227,34 @@ namespace ProxyMapService.Proxy.Proto
         public static async Task HttpReplyJson(Stream? incomingStream, object data, 
             IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
         {
-            await HttpReplyJson(incomingStream, data, SnakeCaseOptions, httpLoggersProvider, token);
+            await HttpReplyJson(incomingStream, data, null, SnakeCaseOptions, httpLoggersProvider, token);
         }
 
         public static async Task HttpReplyJson(SessionContext context, object data, JsonSerializerOptions serializerOptions)
         {
-            await HttpReplyJson(context.IncomingStream, data, serializerOptions, context, context.Token);
+            await HttpReplyJson(context.IncomingStream, data, null, serializerOptions, context, context.Token);
         }
 
         public static async Task HttpReplyJson(SessionContext context, object data)
         {
-            await HttpReplyJson(context.IncomingStream, data, SnakeCaseOptions, context, context.Token);
+            await HttpReplyJson(context.IncomingStream, data, null, SnakeCaseOptions, context, context.Token);
+        }
+
+        public static async Task HttpReplyJson(Stream? incomingStream, object data, string[]? customHeaders,
+            IHttpLoggersProvider? httpLoggersProvider, CancellationToken token)
+        {
+            await HttpReplyJson(incomingStream, data, customHeaders, SnakeCaseOptions, httpLoggersProvider, token);
+        }
+
+        public static async Task HttpReplyJson(SessionContext context, object data, string[]? customHeaders, 
+            JsonSerializerOptions serializerOptions)
+        {
+            await HttpReplyJson(context.IncomingStream, data, customHeaders, serializerOptions, context, context.Token);
+        }
+
+        public static async Task HttpReplyJson(SessionContext context, object data, string[]? customHeaders)
+        {
+            await HttpReplyJson(context.IncomingStream, data, customHeaders, SnakeCaseOptions, context, context.Token);
         }
 
         public static async Task HttpReplyFileStream(Stream? incomingStream, FileStream fileStream,

@@ -71,7 +71,7 @@ namespace ProxyMapService.Proxy.Sessions
         #endregion
 
         public static async Task Run(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
-            ProxyMapping mapping, IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
+            ProxyMapping mapping, SessionAPIConfig sessionAPI, IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
             IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
@@ -113,7 +113,7 @@ namespace ProxyMapService.Proxy.Sessions
             {
                 using var context = new SessionContext(
                     inboundEndpoint, incomingClient, incomingEndPoint, 
-                    mapping, serverCertificate, caCertificate,
+                    mapping, sessionAPI, serverCertificate, caCertificate,
                     proxyProvider, proxyAuthenticator, usernameParameterResolver,
                     hostRules, cacheRules, cacheManager, userAgent,
                     sslClientConfig, sslServerConfig,

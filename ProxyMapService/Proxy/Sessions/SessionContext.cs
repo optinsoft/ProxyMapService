@@ -4,13 +4,10 @@ using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
-using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
-using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
-using ProxyMapService.Proxy.Socks;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -28,6 +25,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
+        public SessionAPIConfig SessionAPI { get; set; }
         public bool DecryptSSL { get;set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
@@ -163,7 +161,7 @@ namespace ProxyMapService.Proxy.Sessions
         }
 
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
-            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, 
+            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, SessionAPIConfig sessionAPI, 
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
@@ -177,6 +175,7 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingClient = new TcpClient();
             OutgoingEndPoint = null;
             Mapping = mapping;
+            SessionAPI = sessionAPI;
             DecryptSSL = mapping.Listen.DecryptSSL;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;

@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 
@@ -10,7 +11,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.Http?.HTTPVerb == "GET" && context.Http?.HTTPTargetHost == null)
+            if (context.Http?.HTTPVerb == "GET" && IsSessionAPIHost(context.SessionAPI, context.Http?.HTTPTargetHost))
             {
                 if (context.Http?.HTTPTargetPath == "/session/")
                 {
@@ -65,6 +66,22 @@ namespace ProxyMapService.Proxy.Handlers
         public static HttpHostActionHandler Instance()
         {
             return Self;
+        }
+
+        private static bool IsSessionAPIHost(SessionAPIConfig config, HostAddress? host)
+        {
+            if (!config.Enabled)
+            {
+                return false;
+            }
+            if (string.IsNullOrEmpty(config.Domain))
+            {
+                return host == null || host.Hostname.Length == 0;
+            }
+            else
+            {
+                return config.Domain.Equals(host?.Hostname);
+            }
         }
     }
 }

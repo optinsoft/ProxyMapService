@@ -140,6 +140,7 @@ namespace ProxyMapService.Services
             }
 
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
+            var sessionAPI = _configuration.GetSection("SessionAPI").Get<SessionAPIConfig>() ?? new SessionAPIConfig();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
             var sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
@@ -162,7 +163,7 @@ namespace ProxyMapService.Services
             List<Task> tasks = [];
             foreach (var mapping in proxyMappings)
             {
-                tasks.Add(new ProxyMapper(mapping, _hostRules, _cacheRules, _cacheManager,
+                tasks.Add(new ProxyMapper(mapping, sessionAPI, _hostRules, _cacheRules, _cacheManager,
                     userAgent, sslClientOptions, sslServerOptions, _proxyCounters,
                     _logger, _sessionLogger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
