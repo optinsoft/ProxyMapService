@@ -77,8 +77,9 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             await context.IncomingStream.WriteAsync(responseHeaderBytes, context.Token);
                         }
+                        return HandleStep.Tunnel;
                     }
-                    return HandleStep.Tunnel;
+                    // if responseHeaderBytes == null then responseSocks4 == null, return RequestRejectedOrFailed error and terminate
                 }
 
                 if (responseSocks4 != null)

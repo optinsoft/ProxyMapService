@@ -15,6 +15,8 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.ProxyCounters.SessionsCounter?.OnHostProxified(context);
 
+            context.UsernameParameterResolver.PopulateContext(context);
+
             context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
 
             try

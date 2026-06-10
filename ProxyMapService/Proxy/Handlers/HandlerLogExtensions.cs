@@ -332,6 +332,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "The HTTP request method is not allowed: {method}")]
         public static partial void LogHttpMethodNotAllowed(this ILogger logger, string? method);
 
+        [LoggerMessage(
+            EventId = 1286,
+            Level = LogLevel.Warning,
+            Message = "Not found: {path}")]
+        public static partial void LogHttpNotFound(this ILogger logger, string? path);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

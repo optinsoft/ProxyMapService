@@ -1,12 +1,18 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 
 namespace ProxyMapService.Proxy.Handlers
 {
     public class BaseHostActionHandler
     {
-        protected static void GetContextHostAction(SessionContext context)
+        protected static void GetContextHostAction(SessionContext context, bool httpMode)
         {
+            if (IsSessionAPIHost(context.SessionAPI, context.Host))
+            {
+                context.HostAction = SessionActionEnum.SessionAPI;
+                return;
+            }
             HostRule? hostRule = HostRule.FindRule(context.Host, context.HostRules);
             ActionEnum hostAction = hostRule?.Action ?? ActionEnum.Allow;
             context.HostAction = hostAction;
@@ -26,7 +32,10 @@ namespace ProxyMapService.Proxy.Handlers
                 }
                 if (hostRule.SslMode != null)
                 {
-                    context.SslMode = hostRule.SslMode.Value;
+                    if (!httpMode)
+                    {
+                        context.SslMode = hostRule.SslMode.Value;
+                    }
                 }
                 if (hostRule.UpstreamSslMode != null)
                 {
@@ -51,6 +60,22 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.ProxyServer = hostRule.ProxyServer;
                 }
+            }
+        }
+
+        protected static bool IsSessionAPIHost(SessionAPIConfig config, HostAddress? host)
+        {
+            if (!config.Enabled)
+            {
+                return false;
+            }
+            if (string.IsNullOrEmpty(config.Domain))
+            {
+                return host == null || host.Hostname.Length == 0;
+            }
+            else
+            {
+                return config.Domain.Equals(host?.Hostname);
             }
         }
     }

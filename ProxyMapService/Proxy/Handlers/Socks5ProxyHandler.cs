@@ -100,8 +100,9 @@ namespace ProxyMapService.Proxy.Handlers
                             {
                                 await context.IncomingStream.WriteAsync(socks5Reply, context.Token);
                             }
+                            return HandleStep.Tunnel;
                         }
-                        return HandleStep.Tunnel;
+                        // if socks5Reply == null then status == Socks5Status.GeneralFailure, return error and terminate
                     }
 
                     if (status == Socks5Status.Succeeded)
@@ -161,7 +162,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             if (context.Socks5 != null)
             {
-                await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
+                await Socks5Proto.Socks5ReplyStatus(context, status != Socks5Status.Succeeded ? status : Socks5Status.GeneralFailure);
             }
 
             return HandleStep.Terminate;

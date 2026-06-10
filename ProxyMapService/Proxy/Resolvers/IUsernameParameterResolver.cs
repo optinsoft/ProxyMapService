@@ -8,8 +8,8 @@ namespace ProxyMapService.Proxy.Resolvers
         string CurrentSessionId { get; }
         DateTime? CurrentSessionExpiresAt {  get; }
         bool CurrentSessionExpired { get; }
-        string GenerateSessionId(SessionContext context, string pattern);
+        string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList);
+        void PopulateContext(SessionContext context);
         void ResetSessionId();
-        string? ResolveParameterValue(SessionContext context, UsernameParameter? parameter);
     }
 }

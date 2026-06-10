@@ -21,12 +21,12 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && !context.Token.IsCancellationRequested)
             {
-                using SslStream? incomingSslStream = context.DecryptSSL ? context.SslMode switch
+                using SslStream? incomingSslStream = context.SslMode switch
                 {
                     SslMode.Yes => new(context.IncomingStream),
                     SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
                     _ => null
-                } : null;
+                };
 
                 string subjectName = $"CN=*.{context.Host.OriginalHostname}";
                 X509Certificate2? serverCertificate = context.ServerCertificate;
@@ -68,7 +68,25 @@ namespace ProxyMapService.Proxy.Handlers
                     context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
                 }
 
-                return await HandleRequest(context, incomingSslCountingStream ?? context.IncomingStream, incomingSslStream != null);
+                var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
+
+                var http = context.Http;
+                if (http == null || (incomingSslStream != null && http.HTTPVerb == "CONNECT"))
+                {
+                    await ReadHttpRequest(context, incomingStream);
+                    if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
+                    {
+                        http = context.RequestHeader;
+                    }
+                    else
+                    {
+                        context.Logger.LogHttpBadRequest();
+                        await HttpProto.HttpReplyBadRequest(incomingStream, context, context.Token);
+                        return HandleStep.Terminate;
+                    }
+                }
+
+                return await HandleRequest(context, incomingStream, http);
             }
             return HandleStep.Terminate;
         }
@@ -105,24 +123,8 @@ namespace ProxyMapService.Proxy.Handlers
             } while (bytesRead > 0 && !token.IsCancellationRequested);
         }
 
-        private static async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, bool incomingSsl)
+        protected virtual async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, HttpRequestHeader http)
         {
-            var http = context.Http;
-            if (http == null || (incomingSsl && http.HTTPVerb == "CONNECT"))
-            {
-                await ReadHttpRequest(context, incomingStream);
-                if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
-                {
-                    http = context.RequestHeader;
-                }
-                else
-                {
-                    context.Logger.LogHttpBadRequest();
-                    await HttpProto.HttpReplyBadRequest(incomingStream, context, context.Token);
-                    return HandleStep.Terminate;
-                }
-            }
-
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);

@@ -108,9 +108,9 @@ namespace ProxyMapService.Proxy.Configurations
 
     public enum ActionEnum
     {
-        Allow,
-        Deny,
-        Bypass,
-        File
+        Allow = 0,
+        Deny = 1,
+        Bypass = 2,
+        File = 3
     }
 }

@@ -47,7 +47,54 @@ namespace ProxyMapService.Proxy.Resolvers
             }
         }
 
-        public string GenerateSessionId(SessionContext context, string pattern)
+        public string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList)
+        {
+            if (username == null) return null;
+            if (parameterList != null)
+            {
+                foreach (var p in parameterList)
+                {
+                    string? value = ResolveParameterValue(context, p);
+                    if (!String.IsNullOrEmpty(value))
+                    {
+                        if (p.Name != "account")
+                        {
+                            username += $"-{p.Name}-{value}";
+                        }
+                    }
+                }
+            }
+            return username;
+        }
+
+        public void PopulateContext(SessionContext context)
+        {
+            context.SessionTime = context.Mapping.Listen.StickyProxyLifetime;
+            if (context.Mapping.Authentication.SetAuthentication)
+            {
+                ResolveAuthenticationUserParameters(context);
+            }
+            else if (context.Mapping.Listen.StickyProxyLifetime > 0)
+            {
+                ResolveSessionTime(context);
+                ResolveSessionId(context);
+            }
+            if (context.SessionId == null && context.SessionTime > 0)
+            {
+                context.SessionId = GenerateSessionId(context, "^[A-Za-z]{8}");
+            }
+        }
+
+        public void ResetSessionId()
+        {
+            lock (_lock)
+            {
+                _currentSessionId = string.Empty;
+                _currentSessionExpiresAt = null;
+            }
+        }
+
+        private string GenerateSessionId(SessionContext context, string pattern)
         {
             var newId = GenerateValue(pattern);
             lock (_lock)
@@ -62,16 +109,7 @@ namespace ProxyMapService.Proxy.Resolvers
             return newId;
         }
 
-        public void ResetSessionId()
-        {
-            lock (_lock)
-            {
-                _currentSessionId = string.Empty;
-                _currentSessionExpiresAt = null;
-            }
-        }
-
-        public string? ResolveParameterValue(SessionContext context, UsernameParameter? parameter)
+        private string? ResolveParameterValue(SessionContext context, UsernameParameter? parameter)
         {
             if (parameter == null)
             {
@@ -114,13 +152,36 @@ namespace ProxyMapService.Proxy.Resolvers
                 }
                 if (parameter.SessionTime)
                 {
-                    if (int.TryParse(value, out var time)) 
-                    { 
+                    if (int.TryParse(value, out var time))
+                    {
                         context.SessionTime = time;
                     }
                 }
             }
             return value;
+        }
+
+        private void ResolveSessionId(SessionContext context)
+        {
+            ResolveParameterValue(context, context.Mapping.Authentication.UsernameParameters.SessionId);
+        }
+
+        private void ResolveSessionTime(SessionContext context)
+        {
+            ResolveParameterValue(context, context.Mapping.Authentication.UsernameParameters.SessionTime);
+        }
+
+        private void ResolveAuthenticationUserParameters(SessionContext context)
+        {
+            // Resolve SessionTime first (before SessionId)
+            ResolveSessionTime(context);
+            foreach (var p in context.Mapping.Authentication.UsernameParameters)
+            {
+                if (!p.SessionTime) // Skip already resolved SessionTime
+                {
+                    ResolveParameterValue(context, p);
+                }
+            }
         }
 
         private static string GenerateValue(string pattern)

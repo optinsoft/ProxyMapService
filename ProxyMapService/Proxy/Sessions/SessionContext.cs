@@ -65,7 +65,7 @@ namespace ProxyMapService.Proxy.Sessions
                 _host.Assign(value);
             }
         }
-        public ActionEnum? HostAction { get; set; }
+        public SessionAction? HostAction { get; set; }
         public ProxyServer? ProxyServer { get; set; }
         public bool Proxified { get; set; }
         public bool Bypassed { get; set; }
@@ -141,16 +141,18 @@ namespace ProxyMapService.Proxy.Sessions
                     break;
             }
             if (HostAction == null) return null;
-            switch (HostAction)
+            switch (HostAction.Value.ActionValue)
             {
-                case ActionEnum.Allow:
+                case SessionActionEnum.Allow:
                     return $"{cachePrefix}proxy";
-                case ActionEnum.Bypass:
+                case SessionActionEnum.Bypass:
                     return $"{cachePrefix}direct";
-                case ActionEnum.File:
+                case SessionActionEnum.File:
                     return $"{cachePrefix}file";
+                case SessionActionEnum.SessionAPI:
+                    return $"{cachePrefix}session api";
                 default:
-                    //ActionEnum.Deny
+                    //SessionActionEnum.Deny
                     return "deny";
             }
         }

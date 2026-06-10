@@ -1,8 +1,6 @@
-﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
-using System;
 using System.Text;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;

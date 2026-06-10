@@ -1,5 +1,4 @@
-﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using ProxyMapService.Proxy.Proto;
 
@@ -21,18 +20,20 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.Host = context.Socks5.Host;
 
-            GetContextHostAction(context);
+            GetContextHostAction(context, false);
 
-            switch (context.HostAction)
+            switch (context.HostAction?.ActionValue)
             {
-                case ActionEnum.Allow:
+                case SessionActionEnum.Allow:
                     return HandleStep.Proxy;
-                case ActionEnum.Bypass:
+                case SessionActionEnum.Bypass:
                     return HandleStep.Socks5Bypass;
-                case ActionEnum.File:
+                case SessionActionEnum.File:
                     return HandleStep.Socks5File;
+                case SessionActionEnum.SessionAPI:
+                    return HandleStep.Socks5SessionAPI;
                 default:
-                    //ActionEnum.Deny
+                    //SessionActionEnum.Deny
                     context.Logger.LogHostRejected(context.Host.Hostname, context.Host.Port);
                     context.ProxyCounters.SessionsCounter?.OnHostRejected(context);
                     await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.ConnectionNotAllowed);

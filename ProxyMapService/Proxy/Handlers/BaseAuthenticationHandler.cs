@@ -4,56 +4,15 @@ namespace ProxyMapService.Proxy.Handlers
 {
     public class BaseAuthenticationHandler
     {
-        private static void ResolveSessionId(SessionContext context)
-        {
-            context.UsernameParameterResolver.ResolveParameterValue(context, context.Mapping.Authentication.UsernameParameters.SessionId);
-        }
-
-        private static void ResolveSessionTime(SessionContext context)
-        {
-            context.UsernameParameterResolver.ResolveParameterValue(context, context.Mapping.Authentication.UsernameParameters.SessionTime);
-        }
-
-        private static void ResolveAuthenticationUserParameters(SessionContext context)
-        {
-            // Resolve SessionTime first (before SessionId)
-            ResolveSessionTime(context);
-            foreach (var p in context.Mapping.Authentication.UsernameParameters)
-            {
-                if (!p.SessionTime) // Skip already resolved SessionTime
-                {
-                    context.UsernameParameterResolver.ResolveParameterValue(context, p);
-                }
-            }
-        }
-
-        private static void PopulateContext(SessionContext context)
-        {
-            context.SessionTime = context.Mapping.Listen.StickyProxyLifetime;
-            if (context.Mapping.Authentication.SetAuthentication)
-            {
-                ResolveAuthenticationUserParameters(context);
-            }
-            else if (context.Mapping.Listen.StickyProxyLifetime > 0)
-            {
-                ResolveSessionTime(context);
-                ResolveSessionId(context);
-            }
-            if (context.SessionId == null && context.SessionTime > 0)
-            {
-                context.SessionId = context.UsernameParameterResolver.GenerateSessionId(context, "^[A-Za-z]{8}");
-            }
-        }
-
         protected static void OnAuthenticationNotRequired(SessionContext context)
         {
-            PopulateContext(context);
+            //context.UsernameParameterResolver.PopulateContext(context);
             context.ProxyCounters.SessionsCounter?.OnAuthenticationNotRequired(context);
         }
 
         protected static void OnAuthenticated(SessionContext context)
         {
-            PopulateContext(context);
+            //context.UsernameParameterResolver.PopulateContext(context);
             context.ProxyCounters.SessionsCounter?.OnAuthenticated(context);
         }
 

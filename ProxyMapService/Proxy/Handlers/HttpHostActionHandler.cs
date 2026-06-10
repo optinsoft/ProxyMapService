@@ -1,5 +1,4 @@
 ﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 
@@ -11,19 +10,20 @@ namespace ProxyMapService.Proxy.Handlers
 
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.Http?.HTTPVerb == "GET" && IsSessionAPIHost(context.SessionAPI, context.Http?.HTTPTargetHost))
+            var httpMode = context.Http?.HTTPVerb != "CONNECT";
+
+            if (httpMode)
             {
-                if (context.Http?.HTTPTargetPath == "/session/")
+                context.SslMode = SslMode.No;
+                // context.Host must be initialized in InitializeHandler
+                if (IsSessionAPIHost(context.SessionAPI, context.Host))
                 {
-                    return HandleStep.GetSession;
-                }
-                if (context.Http?.HTTPTargetPath == "/session/reset")
-                {
-                    return HandleStep.ResetSession;
+                    context.HostAction = SessionActionEnum.SessionAPI;
+                    return HandleStep.HttpSessionAPI;
                 }
             }
 
-            if (context.Mapping.Listen.RejectHttpProxy && context.Http?.HTTPVerb != "CONNECT")
+            if (context.Mapping.Listen.RejectHttpProxy && httpMode)
             {
                 context.Logger.LogHttpForwardingRejected();
                 context.ProxyCounters.SessionsCounter?.OnHttpRejected(context);
@@ -31,7 +31,8 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            if (context.Host.Hostname.Length == 0) // context.Host must be initialized in InitializeHandler
+            // context.Host must be initialized in InitializeHandler
+            if (context.Host.Hostname.Length == 0)
             {
                 context.Logger.LogNoHost();
                 context.ProxyCounters.SessionsCounter?.OnNoHost(context);
@@ -39,23 +40,20 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            GetContextHostAction(context);
+            GetContextHostAction(context, httpMode);
 
-            if (context.Http?.HTTPVerb != "CONNECT")
+            switch (context.HostAction?.ActionValue)
             {
-                context.SslMode = SslMode.No;
-            }
-
-            switch (context.HostAction)
-            {
-                case ActionEnum.Allow:
+                case SessionActionEnum.Allow:
                     return HandleStep.Proxy;
-                case ActionEnum.Bypass:
+                case SessionActionEnum.Bypass:
                     return HandleStep.HttpBypass;
-                case ActionEnum.File:
+                case SessionActionEnum.File:
                     return HandleStep.HttpFile;
+                case SessionActionEnum.SessionAPI:
+                    return HandleStep.HttpSessionAPI;
                 default:
-                    //ActionEnum.Deny
+                    //SessionActionEnum.Deny
                     context.Logger.LogHostRejected(context.Host.Hostname, context.Host.Port);
                     context.ProxyCounters.SessionsCounter?.OnHostRejected(context);
                     await HttpProto.HttpReplyForbidden(context);
@@ -66,22 +64,6 @@ namespace ProxyMapService.Proxy.Handlers
         public static HttpHostActionHandler Instance()
         {
             return Self;
-        }
-
-        private static bool IsSessionAPIHost(SessionAPIConfig config, HostAddress? host)
-        {
-            if (!config.Enabled)
-            {
-                return false;
-            }
-            if (string.IsNullOrEmpty(config.Domain))
-            {
-                return host == null || host.Hostname.Length == 0;
-            }
-            else
-            {
-                return config.Domain.Equals(host?.Hostname);
-            }
         }
     }
 }

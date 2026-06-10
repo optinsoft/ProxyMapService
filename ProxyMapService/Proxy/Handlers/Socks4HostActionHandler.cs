@@ -1,5 +1,4 @@
-﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 
@@ -21,18 +20,20 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.Host = context.Socks4.Host;
 
-            GetContextHostAction(context);
+            GetContextHostAction(context, false);
 
-            switch (context.HostAction)
+            switch (context.HostAction?.ActionValue)
             {
-                case ActionEnum.Allow:
+                case SessionActionEnum.Allow:
                     return HandleStep.Proxy;
-                case ActionEnum.Bypass:
+                case SessionActionEnum.Bypass:
                     return HandleStep.Socks4Bypass;
-                case ActionEnum.File:
+                case SessionActionEnum.File:
                     return HandleStep.Socks4File;
+                case SessionActionEnum.SessionAPI:
+                    return HandleStep.Socks4SessionAPI;
                 default:
-                    //ActionEnum.Deny
+                    //SessionActionEnum.Deny
                     context.Logger.LogHostRejected(context.Host.Hostname, context.Host.Port);
                     context.ProxyCounters.SessionsCounter?.OnHostRejected(context);
                     await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
