@@ -14,6 +14,11 @@ const emit = defineEmits<{
 
 const selectedId = ref<string | null>(null)
 
+const inspectorWidth = ref(420)
+
+const isResizing = ref(false)
+
+
 // Match requests and responses by unique ID
 const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
   return props.requests.map(req => {
@@ -59,6 +64,30 @@ const getStatusClass = (status: number | null): string => {
 const selectRow = (id: string) => {
   // Toggle selection closed if clicked again, otherwise open details
   selectedId.value = selectedId.value === id ? null : id
+}
+const startResize = (e: MouseEvent) => {
+  isResizing.value = true
+
+  const startX = e.clientX
+  const startWidth = inspectorWidth.value
+
+  const onMove = (ev: MouseEvent) => {
+    const delta = startX - ev.clientX
+
+    inspectorWidth.value = Math.min(
+      800,
+      Math.max(250, startWidth + delta)
+    )
+  }
+
+  const onUp = () => {
+    isResizing.value = false
+    window.removeEventListener('mousemove', onMove)
+    window.removeEventListener('mouseup', onUp)
+  }
+
+  window.addEventListener('mousemove', onMove)
+  window.addEventListener('mouseup', onUp)
 }
 </script>
 
@@ -121,8 +150,19 @@ const selectRow = (id: string) => {
         </table>
       </div>
 
+      <!-- splitter between the Main log table grid and the headers inspector sidebar -->
+      <div
+        v-if="selectedTransaction"
+        class="splitter"
+        @mousedown="startResize"
+      ></div>
+
       <!-- Right side: Headers inspector sidebar (Appears only when a row is clicked) -->
-      <div v-if="selectedTransaction" class="details-sidebar">
+      <div 
+        v-if="selectedTransaction" 
+        class="details-sidebar"
+        :style="{ width: `${inspectorWidth}px` }"
+      >
         <div class="sidebar-header">
           <h4>Transaction Inspector</h4>
           <button class="btn-close" @click="selectedId = null">✕</button>
@@ -234,14 +274,22 @@ const selectRow = (id: string) => {
 .cell-method { color: #e3e3e3; font-family: monospace; }
 .cell-duration { font-family: monospace; text-align: right; padding-right: 15px !important; }
 
+.splitter {
+  width: 5px;
+  cursor: col-resize;
+  background: #2d2d2d;
+  flex-shrink: 0;
+}
+
+.splitter:hover {
+  background: #007acc;
+}
+
 /* Side panel layout styles */
 .details-sidebar {
-  width: 420px;
-  background-color: #252526;
-  border-left: 1px solid #2d2d2d;
-  display: flex;
-  flex-direction: column;
-  z-index: 5;
+  min-width: 250px;
+  max-width: 800px;
+  flex-shrink: 0;  
 }
 .sidebar-header {
   display: flex;
