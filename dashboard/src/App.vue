@@ -187,7 +187,8 @@ body {
   background-color: #1a1a1a; border-bottom: 1px solid #2d2d2d; padding: 12px 20px;
 }
 .header-container {
-  max-width: 1200px; margin: 0 auto;
+  max-width: 100%; /* 1200px; */
+  margin: 0 auto;
   display: flex; justify-content: space-between; align-items: center;
 }
 .logo { margin: 0; font-size: 1.3rem; color: #4caf50; font-weight: 700; }
@@ -200,7 +201,9 @@ body {
 }
 .btn-logout:hover { background-color: #bd2130; }
 
-.app-content { max-width: 1200px; margin: 25px auto; padding: 0 20px; }
+.app-content { 
+  max-width: 100%; /* 1200px; */
+  margin: 25px auto; padding: 0 20px; }
 .log-section { margin-top: 25px; }
 .section-title { color: #666; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: bold; }
 
