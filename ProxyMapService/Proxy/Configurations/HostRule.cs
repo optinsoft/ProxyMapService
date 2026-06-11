@@ -1,6 +1,5 @@
 ﻿using ProxyMapService.Proxy.Network;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace ProxyMapService.Proxy.Configurations
