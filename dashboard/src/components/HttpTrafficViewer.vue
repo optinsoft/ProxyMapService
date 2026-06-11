@@ -290,6 +290,7 @@ const startResize = (e: MouseEvent) => {
   min-width: 250px;
   max-width: 800px;
   flex-shrink: 0;  
+  overflow: scroll;
 }
 .sidebar-header {
   display: flex;
