@@ -20,6 +20,27 @@ const activeTab = ref<'logs' | 'network'>('logs')
 
 let connection: signalR.HubConnection | null = null
 
+const fetchLogHistory = async () => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';    
+    const response = await fetch(`${baseUrl}/EventLog/recent`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${currentToken.value}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch logs history. Error: ${response.status}`);
+    }
+    
+    const history: LogEntry[] = await response.json();    
+    logs.value = history;
+  } catch (err) {
+    console.error('Error loading log history:', err);
+  }
+}
+
 const startSignalR = () => {
   if (connection) {
     connection.stop()
@@ -53,13 +74,25 @@ const startSignalR = () => {
     responses.value.push(data)
     if (responses.value.length > 200) responses.value.shift()
   })
+
+  connection.onreconnected(async (connectionId) => {
+    console.log('Reconnected! Fetching missed logs...')
+    await fetchLogHistory()
+  })
   
-  connection.start()
+  fetchLogHistory()
     .then(() => {
-      isConnected.value = true
-      console.log('SignalR Connected.')
+      if (connection) {
+        return connection.start();
+      }
     })
-    .catch(err => console.error('SignalR Connection Error: ', err))
+    .then(() => {
+      isConnected.value = true;
+      console.log('SignalR Connected.');
+    })
+    .catch(err => {
+      console.error('SignalR Connection Error: ', err);
+    });
 }
 
 watch(currentToken, (newToken) => {
@@ -97,7 +130,30 @@ const startExpiryCheck = () => {
 }
 
 const clearLogs = (): void => {
-  logs.value = []
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
+
+  fetch(`${baseUrl}/EventLog/clear`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${currentToken.value}` 
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Failed to clear logs on server');
+    }
+    return response.json()
+  })
+  .then((data: { success: boolean; message: string }) => {
+    if (data.success) {
+      logs.value = []
+      console.log(data.message)
+    }
+  })
+  .catch(err => {
+    console.error('Error clearing logs:', err);
+  });
 }
 
 const clearNetworkData = () => {

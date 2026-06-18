@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Models;
 using ProxyMapService.Responses;
-using System.Linq;
 
 namespace ProxyMapService.Controllers
 {
