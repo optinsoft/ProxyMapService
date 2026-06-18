@@ -45,6 +45,7 @@ builder.Services.AddSingleton<IProxyService, ProxyService>();
 builder.Services.AddHostedService<ProxyBackgroundService>();
 
 builder.Services.AddSingleton<ILogStorage, MemoryLogStorage>();
+builder.Services.AddSingleton<IHttpTrafficStorage, MemoryTrafficStorage>();
 
 builder.Services.AddCors(options =>
 {

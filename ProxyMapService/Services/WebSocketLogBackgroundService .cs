@@ -12,16 +12,19 @@ namespace ProxyMapService.Services
         private readonly IHubContext<LogHub> _hubContext;
         private readonly ILogger<WebSocketLogBackgroundService> _internalLogger;
         private readonly ILogStorage _logStorage;
+        private readonly IHttpTrafficStorage _httpTrafficStorage;
 
         public WebSocketLogBackgroundService(
             IHubContext<LogHub> hubContext, 
             ILogger<WebSocketLogBackgroundService> internalLogger,
             ILogStorage logStorage,
+            IHttpTrafficStorage httpTrafficStorage, 
             IOptions<WebSocketMonitoringOptions> options)
         {
             _hubContext = hubContext;
             _internalLogger = internalLogger;
             _logStorage = logStorage;
+            _httpTrafficStorage = httpTrafficStorage;
 
             int capacity = options.Value.QueueCapacity;
 
@@ -52,10 +55,12 @@ namespace ProxyMapService.Services
                             break;
 
                         case HttpRequestMessageEntry request:
+                            _httpTrafficStorage.AddEntry(request);
                             await _hubContext.Clients.All.SendAsync("HttpRequest", request.Dto, stoppingToken);
                             break;
 
                         case HttpResponseMessageEntry response:
+                            _httpTrafficStorage.AddEntry(response);
                             await _hubContext.Clients.All.SendAsync("HttpResponse", response.Dto, stoppingToken);
                             break;
                     }

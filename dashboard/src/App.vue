@@ -41,6 +41,28 @@ const fetchLogHistory = async () => {
   }
 }
 
+const fetchTrafficHistory = async () => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';    
+    const response = await fetch(`${baseUrl}/TrafficMonitor/recent`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${currentToken.value}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch traffic history. Error: ${response.status}`);
+    }
+    
+    const history: { requests: HttpRequestEntry[], responses: HttpResponseEntry[] } = await response.json();    
+    requests.value = history.requests;
+    responses.value = history.responses;
+  } catch (err) {
+    console.error('Error loading log history:', err);
+  }
+}
+
 const startSignalR = () => {
   if (connection) {
     connection.stop()
@@ -75,12 +97,24 @@ const startSignalR = () => {
     if (responses.value.length > 200) responses.value.shift()
   })
 
-  connection.onreconnected(async (connectionId) => {
-    console.log('Reconnected! Fetching missed logs...')
-    await fetchLogHistory()
+  connection.onreconnected((connectionId) => {
+    console.log('Reconnected! Fetching missed entries...')
+    Promise.all([
+      fetchLogHistory(),
+      fetchTrafficHistory()  
+    ])
+      .then(() => {
+        console.log('All missed entries successfully reloaded.');
+      })
+      .catch(err => {
+        console.error('Failed to reload entries after reconnect:', err);
+      });    
   })
-  
-  fetchLogHistory()
+
+  Promise.all([
+    fetchLogHistory(),
+    fetchTrafficHistory()
+  ])
     .then(() => {
       if (connection) {
         return connection.start();
@@ -92,7 +126,7 @@ const startSignalR = () => {
     })
     .catch(err => {
       console.error('SignalR Connection Error: ', err);
-    });
+    })
 }
 
 watch(currentToken, (newToken) => {
@@ -157,8 +191,31 @@ const clearLogs = (): void => {
 }
 
 const clearNetworkData = () => {
-  requests.value = []; 
-  responses.value = [] 
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
+
+  fetch(`${baseUrl}/TrafficMonitor/clear`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${currentToken.value}` 
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Failed to clear traffic history on server');
+    }
+    return response.json()
+  })
+  .then((data: { success: boolean; message: string }) => {
+    if (data.success) {
+      requests.value = []
+      responses.value = [] 
+      console.log(data.message)
+    }
+  })
+  .catch(err => {
+    console.error('Error clearing traffic history:', err);
+  });
 }
 
 onMounted(() => {

@@ -14,7 +14,7 @@ namespace ProxyMapService.WebLogging
 
             _logs.Enqueue(log);
             
-            int maxCount = _settings.EventLog.MaxCount;
+            int maxCount = _settings.EventLog.MaxEntries;
 
             while (_logs.Count > maxCount)
             {

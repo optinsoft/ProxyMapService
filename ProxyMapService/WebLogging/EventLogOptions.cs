@@ -3,6 +3,6 @@
     public class EventLogOptions
     {
         public bool Enabled { get; set; } = false;
-        public int MaxCount { get; set; } = 500;
+        public int MaxEntries { get; set; } = 500;
     }
 }
