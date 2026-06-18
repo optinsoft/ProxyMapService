@@ -9,7 +9,7 @@ namespace ProxyMapService.Controllers
     [Authorize]
     [Route("[controller]")]
     [ApiController]
-    public class TrafficMonitorController(IHttpTrafficStorage httpTrafficStorage) : ControllerBase
+    public class TrafficHistoryController(IHttpTrafficStorage httpTrafficStorage) : ControllerBase
     {
         [HttpGet("recent")]
         public ActionResult<HttpTrafficHistoryResponse> GetRecent()

@@ -44,7 +44,7 @@ const fetchLogHistory = async () => {
 const fetchTrafficHistory = async () => {
   try {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';    
-    const response = await fetch(`${baseUrl}/TrafficMonitor/recent`, {
+    const response = await fetch(`${baseUrl}/TrafficHistory/recent`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${currentToken.value}`
@@ -193,7 +193,7 @@ const clearLogs = (): void => {
 const clearNetworkData = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
 
-  fetch(`${baseUrl}/TrafficMonitor/clear`, {
+  fetch(`${baseUrl}/TrafficHistory/clear`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
