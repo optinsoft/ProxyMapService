@@ -177,6 +177,7 @@ const startResize = (e: MouseEvent) => {
             <p><strong>Request Method:</strong> <span class="mono">{{ selectedTransaction.requestMethod }}</span></p>
             <p><strong>Status Code:</strong> <span class="mono">{{ selectedTransaction.statusCode }}</span></p>
             <p><strong>Status Text:</strong> <span class="mono">{{ selectedTransaction.statusText }}</span></p>
+            <p><strong>Time:</strong> <span class="mono">{{ selectedTransaction.timestamp }}</span></p>
             <p><strong>Duration (ms):</strong> <span class="mono">{{ selectedTransaction.durationMs }}</span></p>
           </div>
 
