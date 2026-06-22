@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using ProxyMapService.Proxy.Cache;
+﻿using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
@@ -295,6 +294,7 @@ namespace ProxyMapService.Proxy.Handlers
                             {
                                 context.RequestHeader = null;
                                 context.ResponseHeader = null;
+                                context.ChunkedTracker = null;
                             }
                             readHeaders = selfState.Response ? context.ResponseHeader == null : context.RequestHeader == null;
                         }
@@ -334,6 +334,11 @@ namespace ProxyMapService.Proxy.Handlers
                                         context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4, context);
                                         if (!context.ResponseHeader.BadResponse)
                                         {
+                                            if (context.ResponseHeader.TransferEncodingChunked)
+                                            {
+                                                context.ChunkedTracker = new ChunkedBodyTracker(context.Logger);
+                                                context.ChunkedTracker.TryAppend(headerAndBody.BodyBytes);
+                                            }
                                             if (CreateResponseCacheFileStream(context))
                                             {
                                                 if (context.ResponseCacheFileStream != null)
@@ -375,6 +380,7 @@ namespace ProxyMapService.Proxy.Handlers
                                         LogTunnelBodyRead(context.Logger,
                                             selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                                     }
+                                    context.ChunkedTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                                     if (context.ResponseCacheFileStream != null)
                                     {
                                         Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");
@@ -423,6 +429,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 LogTunnelBodyRead(context.Logger,
                                     selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                             }
+                            context.ChunkedTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                             if (context.ResponseCacheFileStream != null)
                             {
                                 Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");

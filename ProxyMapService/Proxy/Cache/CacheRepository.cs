@@ -35,11 +35,29 @@ namespace ProxyMapService.Proxy.Cache
                     header_length INTEGER,
                     content_length INTEGER,
                     content_type TEXT,
+                    file_size INTEGER,
                     created_at TEXT,
                     last_access TEXT
                 );
                 """;
             await cmd.ExecuteNonQueryAsync();
+
+            cmd = conn.CreateCommand();
+            cmd.CommandText =
+                """
+                SELECT COUNT(*) FROM pragma_table_info('cache_entries') WHERE name = 'file_size';
+                """;
+            var result = await cmd.ExecuteScalarAsync();
+
+            if (Convert.ToInt32(result) == 0)
+            {
+                cmd = conn.CreateCommand();
+                cmd.CommandText =
+                    """
+                    ALTER TABLE cache_entries ADD COLUMN file_size INTEGER;
+                    """;
+                await cmd.ExecuteNonQueryAsync();
+            }
         }
 
         public async Task InsertAsync(CacheEntry entry)
@@ -52,9 +70,9 @@ namespace ProxyMapService.Proxy.Cache
             cmd.CommandText =
                 """
                 INSERT OR REPLACE INTO cache_entries
-                (key,host,url,etag,cache_control,date,expires,last_modified,header_length,content_length,content_type,created_at,last_access)
+                (key,host,url,etag,cache_control,date,expires,last_modified,header_length,content_length,content_type,file_size,created_at,last_access)
                 VALUES
-                ($key,$host,$url,$etag,$cache_control,$date,$expires,$last_modified,$hlen,$len,$type,$created,$access)
+                ($key,$host,$url,$etag,$cache_control,$date,$expires,$last_modified,$hlen,$len,$type,$fsize,$created,$access)
                 """;
 
             cmd.Parameters.AddWithValue("$key", entry.Key);
@@ -68,6 +86,7 @@ namespace ProxyMapService.Proxy.Cache
             cmd.Parameters.AddWithValue("$hlen", entry.HeaderLength);
             cmd.Parameters.AddWithValue("$len", entry.ContentLength);
             cmd.Parameters.AddWithValue("$type", entry.ContentType ?? "");
+            cmd.Parameters.AddWithValue("$fsize", entry.FileSize);
             cmd.Parameters.AddWithValue("$created", entry.CreatedAt);
             cmd.Parameters.AddWithValue("$access", entry.LastAccess);
 
@@ -91,7 +110,8 @@ namespace ProxyMapService.Proxy.Cache
             cmd.CommandText =
                 """
                 SELECT key,host,url,etag,cache_control,date,expires,last_modified,
-                          header_length,content_length,content_type,created_at,last_access
+                          header_length,content_length,content_type,file_size,
+                          created_at,last_access
                 FROM cache_entries
                 WHERE key=$key
                 """;
@@ -120,8 +140,9 @@ namespace ProxyMapService.Proxy.Cache
                 HeaderLength = reader.GetInt32(8),
                 ContentLength = reader.GetInt64(9),
                 ContentType = reader.GetString(10),
-                CreatedAt = reader.GetDateTime(11),
-                LastAccess = reader.GetDateTime(12)
+                FileSize = reader.IsDBNull(11) ? null : reader.GetInt64(11),
+                CreatedAt = reader.GetDateTime(12),
+                LastAccess = reader.GetDateTime(13)
             };
         }
 

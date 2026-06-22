@@ -24,6 +24,8 @@ namespace ProxyMapService.Proxy.Headers
         public string? StatusText { get; private set; }
         public long? ContentLength { get; private set; }
         public string? ContentType { get; private set; }
+        public string? TransferEncoding { get; private set; }
+        public bool TransferEncodingChunked { get; private set; }
         public string? ETag { get; private set; }
         public string? CacheControl { get; private set; }
         public string? Date {  get; private set; }
@@ -45,6 +47,8 @@ namespace ProxyMapService.Proxy.Headers
             self.StatusText = GetStatusText(strings);
             self.ContentLength = GetContentLength(strings);
             self.ContentType = GetSingleHeaderValue(strings, "content-type:");
+            self.TransferEncoding = GetSingleHeaderValue(strings, "transfer-encoding:");
+            self.TransferEncodingChunked = self.TransferEncoding != null && string.Equals("chunked", self.TransferEncoding, StringComparison.OrdinalIgnoreCase);
             self.ETag = GetFirstHeaderValue(strings, "etag:");
             self.CacheControl = GetCommaSeparatedHeaderValues(strings, "cache-control:");
             self.Date = GetSingleHeaderValue(strings, "date:");

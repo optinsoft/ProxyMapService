@@ -11,6 +11,7 @@
         public string? Expires { get; set; }
         public string? LastModified { get; set; }
         public string FilePath { get; set; } = default!;
+        public long? FileSize { get; set; }
         public int HeaderLength { get; set; }
         public long ContentLength { get; set; }
         public string? ContentType { get; set; }

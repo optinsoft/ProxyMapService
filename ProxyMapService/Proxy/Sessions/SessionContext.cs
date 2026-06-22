@@ -5,6 +5,7 @@ using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.Resolvers;
@@ -18,6 +19,7 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly HostAddress _host;
         private HttpRequestHeader? _requestHeader;
         private HttpResponseHeader? _responseHeader;
+        private ChunkedBodyTracker? _chunkedTracker;
         private List<CacheRule> _requestCacheRules;
         private string? _requestId;
 
@@ -98,6 +100,14 @@ namespace ProxyMapService.Proxy.Sessions
             set
             {
                 _responseHeader = value;
+            }
+        }
+        public ChunkedBodyTracker? ChunkedTracker
+        {
+            get => _chunkedTracker;
+            set
+            {
+                _chunkedTracker = value;
             }
         }
         public CacheEntry? ResponseCacheEntry { get; set; }

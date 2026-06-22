@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Http;
+using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Text;
@@ -101,6 +102,10 @@ namespace ProxyMapService.Proxy.Handlers
                         context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes, context);
                         if (!context.ResponseHeader.BadResponse)
                         {
+                            if (context.ResponseHeader.TransferEncodingChunked)
+                            {
+                                context.ChunkedTracker = new ChunkedBodyTracker(context.Logger);
+                            }
                             if (CreateResponseCacheFileStream(context))
                             {
                                 if (context.ResponseCacheFileStream != null)
