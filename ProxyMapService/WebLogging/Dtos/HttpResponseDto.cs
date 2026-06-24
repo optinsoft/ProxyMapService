@@ -11,6 +11,5 @@
         public string? TargetHost { get; set; }
         public string? StatusLine { get; set; }
         public Dictionary<string, string> Headers { get; set; } = [];
-
     }
 }

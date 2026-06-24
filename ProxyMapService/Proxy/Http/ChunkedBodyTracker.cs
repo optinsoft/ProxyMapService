@@ -3,7 +3,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class ChunkedBodyTracker(ILogger logger)
+    public class ChunkedBodyTracker(ILogger logger) : IBodyTracker
     {
         private enum State
         {

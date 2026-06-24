@@ -104,7 +104,11 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             if (context.ResponseHeader.TransferEncodingChunked)
                             {
-                                context.ChunkedTracker = new ChunkedBodyTracker(context.Logger);
+                                context.ResponseBodyTracker = new ChunkedBodyTracker(context.Logger);
+                            }
+                            else
+                            {
+                                context.ResponseBodyTracker = new BodyTracker(context.Logger, context.ResponseHeader.ContentLength ?? 0);
                             }
                             if (CreateResponseCacheFileStream(context))
                             {

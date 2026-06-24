@@ -19,7 +19,7 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly HostAddress _host;
         private HttpRequestHeader? _requestHeader;
         private HttpResponseHeader? _responseHeader;
-        private ChunkedBodyTracker? _chunkedTracker;
+        private IBodyTracker? _responseBodyTracker;
         private List<CacheRule> _requestCacheRules;
         private string? _requestId;
 
@@ -102,12 +102,12 @@ namespace ProxyMapService.Proxy.Sessions
                 _responseHeader = value;
             }
         }
-        public ChunkedBodyTracker? ChunkedTracker
+        public IBodyTracker? ResponseBodyTracker
         {
-            get => _chunkedTracker;
+            get => _responseBodyTracker;
             set
             {
-                _chunkedTracker = value;
+                _responseBodyTracker = value;
             }
         }
         public CacheEntry? ResponseCacheEntry { get; set; }

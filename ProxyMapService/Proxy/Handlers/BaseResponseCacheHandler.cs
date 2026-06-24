@@ -90,32 +90,15 @@ namespace ProxyMapService.Proxy.Handlers
                 var responseCacheFileSize = context.ResponseCacheFileStream.Length;
                 if (context.ResponseCacheEntry != null)
                 {
-                    if (context.ResponseHeader?.TransferEncodingChunked == true)
+                    Debug.Assert(context.ResponseBodyTracker != null, "!!! Response body parser is null !!!");
+                    if (context.ResponseBodyTracker != null)
                     {
-                        Debug.Assert(context.ChunkedTracker != null, "!!! Chunked body parser is null !!!");
-                        if (context.ChunkedTracker != null)
+                        Debug.Assert(!context.ResponseBodyTracker.Failed, "!!! Response body parse failed !!!");
+                        if (context.ResponseBodyTracker.Completed)
                         {
-                            Debug.Assert(!context.ChunkedTracker.Failed, "!!! Chunked body parse failed !!!");
-                            if (context.ChunkedTracker.Completed)
-                            {
-                                context.DisposeResponseCacheFileStream();
-                                context.ResponseCacheEntry.FileSize = responseCacheFileSize;
-                                await context.CacheManager.WriteAsync(context.ResponseCacheEntry);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        var diff = responseCacheFileSize - (context.ResponseCacheEntry.HeaderLength + context.ResponseCacheEntry.ContentLength);
-                        if (diff >= 0)
-                        {
-                            Debug.Assert(diff == 0, "!!! Wrong cache file size !!!");
                             context.DisposeResponseCacheFileStream();
-                            if (diff == 0)
-                            {
-                                context.ResponseCacheEntry.FileSize = responseCacheFileSize;
-                                await context.CacheManager.WriteAsync(context.ResponseCacheEntry);
-                            }
+                            context.ResponseCacheEntry.FileSize = responseCacheFileSize;
+                            await context.CacheManager.WriteAsync(context.ResponseCacheEntry);
                         }
                     }
                 }
