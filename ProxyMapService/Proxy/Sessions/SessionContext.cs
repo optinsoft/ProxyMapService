@@ -115,8 +115,10 @@ namespace ProxyMapService.Proxy.Sessions
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
         public bool CachedReply { get; set; }
 
-        IHttpHeadersLogger IHttpLoggersProvider.RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
-        IHttpHeadersLogger IHttpLoggersProvider.ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
+        IHttpHeadersLogger? IHttpLoggersProvider.RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
+        IHttpHeadersLogger? IHttpLoggersProvider.ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
+        IHttpBodyLogger? IHttpLoggersProvider.RequestBodyLogger { get => ProxyCounters.HttpRequestBodyLogger; }
+        IHttpBodyLogger? IHttpLoggersProvider.ResponseBodyLogger { get => ProxyCounters.HttpResponseBodyLogger; }
         string IHttpLoggersProvider.GetRequestId()
         {
             _requestId = Guid.NewGuid().ToString();

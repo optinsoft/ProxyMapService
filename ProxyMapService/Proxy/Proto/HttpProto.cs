@@ -15,7 +15,7 @@ namespace ProxyMapService.Proxy.Proto
             string[] headers = [
                 "HTTP/1.1 200 Connection established"
             ];
-            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
+            httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, headers);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, token);
@@ -44,7 +44,7 @@ namespace ProxyMapService.Proxy.Proto
                 headers.Add("Content-Type: text/html; charset=UTF-8");
             }
             headers.Add($"Content-Length: {contentBytes.Length}");
-            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, [.. headers]);
+            httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, [.. headers]);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
             byte[] bytes = contentBytes.Length > 0 ? new byte[headerBytes.Length + contentBytes.Length] : headerBytes;
@@ -184,7 +184,7 @@ namespace ProxyMapService.Proxy.Proto
                 "Content-Type: text/plain; charset=utf-8"
             ];
 
-            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider,headers);
+            httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider,headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -209,7 +209,7 @@ namespace ProxyMapService.Proxy.Proto
                 .. (customHeaders ?? [])
             ];
 
-            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
+            httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -273,7 +273,7 @@ namespace ProxyMapService.Proxy.Proto
                 $"Content-Type: {contentType}"
             ];
 
-            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
+            httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -307,7 +307,7 @@ namespace ProxyMapService.Proxy.Proto
                     string headerString = Encoding.UTF8.GetString(headerBuffer);
                     string[] headers = headerString.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
 
-                    httpLoggersProvider.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, headers);
+                    httpLoggersProvider.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, headers);
 
                     await incomingStream.WriteAsync(headerBuffer.AsMemory(0, headerLength), context.Token);
                 }

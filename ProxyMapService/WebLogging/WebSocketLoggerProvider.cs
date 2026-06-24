@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Options;
-using ProxyMapService.Services;
 
 namespace ProxyMapService.WebLogging
 {

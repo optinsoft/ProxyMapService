@@ -15,4 +15,8 @@ namespace ProxyMapService.WebLogging
     public record HttpRequestMessageEntry(HttpRequestDto Dto) : WebSocketMessageEntry;
 
     public record HttpResponseMessageEntry(HttpResponseDto Dto) : WebSocketMessageEntry;
+
+    public record HttpRequestBodyEntry(HttpBodyDto Dto) : WebSocketMessageEntry;
+
+    public record HttpResponseBodyEntry(HttpBodyDto Dto) : WebSocketMessageEntry;
 }

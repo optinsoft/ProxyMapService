@@ -19,9 +19,9 @@ namespace ProxyMapService.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
         private readonly ILogger _sessionLogger;
-        private readonly ProxyCounters _proxyCounters = new();
-        private readonly HostsCounter _hostsCounter = new();
-        private readonly BytesLogger? _bytesLogger = null;
+        private readonly ProxyCounters _proxyCounters;
+        private readonly HostsCounter _hostsCounter;
+        private readonly BytesLogger _bytesLogger;
         private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;
         private CancellationTokenSource _cts = new();
@@ -49,6 +49,8 @@ namespace ProxyMapService.Services
             _configuration = configuration;
             _logger = logger;
             _sessionLogger = loggerFactory.CreateLogger("ProxySession");
+            _proxyCounters = new ProxyCounters();
+            _hostsCounter = new HostsCounter();
             _bytesLogger = new BytesLogger(_sessionLogger);
             var HostStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("Enabled") ?? false;
             if (HostStatsEnabled)
@@ -97,15 +99,30 @@ namespace ProxyMapService.Services
             var LogHttpRequestHeaders = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogHttpRequestHeaders") ?? false;
             if (LogHttpRequestHeaders)
             {
+                _proxyCounters.HttpRequestHeadersLogger ??= new HttpHeadersLogger(false);
                 _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += _bytesLogger.LogHttpHeaders;
             }
             var LogHttpResponseHeaders = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogHttpResponseHeaders") ?? false;
             if (LogHttpResponseHeaders)
             {
+                _proxyCounters.HttpResponseHeadersLogger ??= new HttpHeadersLogger(true);
                 _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += _bytesLogger.LogHttpHeaders;
             }
-            _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
-            _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
+            var monitoringOptions = _configuration.GetSection("WebSocketMonitoring")?.Get<WebSocketMonitoringOptions>();
+            if (monitoringOptions != null && monitoringOptions.TrafficMonitor.Enabled)
+            {
+                _proxyCounters.HttpRequestHeadersLogger ??= new HttpHeadersLogger(false);
+                _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
+                _proxyCounters.HttpResponseHeadersLogger ??= new HttpHeadersLogger(true);
+                _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
+                if (monitoringOptions?.TrafficMonitor.LogBody == true)
+                {
+                    _proxyCounters.HttpRequestBodyLogger ??= new HttpBodyLogger(false);
+                    _proxyCounters.HttpRequestBodyLogger.HttpBodyHandler += httpTrafficMonitor.LogHttpBody;
+                    _proxyCounters.HttpResponseBodyLogger ??= new HttpBodyLogger(true);
+                    _proxyCounters.HttpResponseBodyLogger.HttpBodyHandler += httpTrafficMonitor.LogHttpBody;
+                }
+            }
             _logger.LogInformation(
                 "[ProxyService.{}] Service is created at {}.",
                 _serviceId,

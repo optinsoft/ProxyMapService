@@ -1,22 +1,74 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.AspNetCore.Routing;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Services;
 using ProxyMapService.WebLogging.Dtos;
+using System.Reflection.PortableExecutable;
+using System.Text;
 
 namespace ProxyMapService.WebLogging
 {
     public class HttpTrafficMonitor(
-        WebSocketLogBackgroundService websocketLogService,
-        IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : IHttpTrafficMonitor
+        WebSocketLogBackgroundService websocketLogService) : IHttpTrafficMonitor
     {
-        void IHttpTrafficMonitor.LogHttpHeaders(object? sender, HttpHeadersEventArgs e)
+        void IHttpTrafficMonitor.LogHttpBody(object? sender, HttpBodyEventArgs e)
         {
-            var currentOptions = monitoringOptions.CurrentValue;
-            if (!currentOptions.TrafficMonitor.Enabled)
+            if (sender is not IHttpLoggersProvider loggersProvider)
             {
                 return;
             }
 
+            var id = e.Response ? loggersProvider.GetResponseId() : loggersProvider.GetRequestId();
+            var contentKind = GetContentKind(e.ContentType);
+
+            var bodyDto = new HttpBodyDto
+            {
+                Id = id,
+                Length = e.BodyLength,
+                ContentType = e.ContentType,
+                ContentKind = contentKind
+            };
+
+            var bytes = e.BodyStream?.ToArray() ?? [];
+
+            switch (contentKind)
+            {
+                case HttpBodyContentKind.Json:
+                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
+                    break;
+
+                case HttpBodyContentKind.Xml:
+                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
+                    break;
+
+                case HttpBodyContentKind.Html:
+                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
+                    break;
+
+                case HttpBodyContentKind.Text:
+                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
+                    break;
+
+                case HttpBodyContentKind.Image:
+                    bodyDto.BinaryContentBase64 = Convert.ToBase64String(bytes);
+                    break;
+
+                default:
+                    bodyDto.BinaryContentBase64 = Convert.ToBase64String(bytes);
+                    break;
+            }
+
+            if (!e.Response)
+            {
+                websocketLogService.QueueMessage(new HttpRequestBodyEntry(bodyDto));
+            }
+            else
+            {
+                websocketLogService.QueueMessage(new HttpResponseBodyEntry(bodyDto));
+            }
+        }
+
+        void IHttpTrafficMonitor.LogHttpHeaders(object? sender, HttpHeadersEventArgs e)
+        {
             if (sender is not IHttpLoggersProvider loggersProvider)
             {
                 return;
@@ -49,6 +101,51 @@ namespace ProxyMapService.WebLogging
                     websocketLogService.QueueMessage(new HttpResponseMessageEntry(responseDto));
                 }
             }
+        }
+        
+        private static HttpBodyContentKind GetContentKind(string? contentType)
+        {
+            if (string.IsNullOrWhiteSpace(contentType))
+            {
+                return HttpBodyContentKind.Binary;
+            }
+
+            var mediaType = contentType
+                .Split(';', 2)[0]
+                .Trim()
+                .ToLowerInvariant();
+
+            if (mediaType.Contains("json"))
+            {
+                return HttpBodyContentKind.Json;
+            }
+
+            if (mediaType is "application/xml" or "text/xml")
+            {
+                return HttpBodyContentKind.Xml;
+            }
+
+            if (mediaType.EndsWith("+xml"))
+            {
+                return HttpBodyContentKind.Xml;
+            }
+
+            if (mediaType == "text/html")
+            {
+                return HttpBodyContentKind.Html;
+            }
+
+            if (mediaType.StartsWith("image/"))
+            {
+                return HttpBodyContentKind.Image;
+            }
+
+            if (mediaType.StartsWith("text/"))
+            {
+                return HttpBodyContentKind.Text;
+            }
+
+            return HttpBodyContentKind.Binary;
         }
     }
 }

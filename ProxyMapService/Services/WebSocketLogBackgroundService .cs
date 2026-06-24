@@ -63,6 +63,17 @@ namespace ProxyMapService.Services
                             _httpTrafficStorage.AddEntry(response);
                             await _hubContext.Clients.All.SendAsync("HttpResponse", response.Dto, stoppingToken);
                             break;
+
+                        case HttpRequestBodyEntry body:
+                            _httpTrafficStorage.AddEntry(body);
+                            await _hubContext.Clients.All.SendAsync("HttpRequestBody", body.Dto, stoppingToken);
+                            break;
+
+                        case HttpResponseBodyEntry body:
+                            _httpTrafficStorage.AddEntry(body);
+                            await _hubContext.Clients.All.SendAsync("HttpResponseBody", body.Dto, stoppingToken);
+                            break;
+
                     }
                 }
                 catch (Exception ex)

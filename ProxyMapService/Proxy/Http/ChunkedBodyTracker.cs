@@ -1,9 +1,10 @@
-﻿using System.Globalization;
+﻿using ProxyMapService.Proxy.Counters;
+using System.Globalization;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class ChunkedBodyTracker(ILogger logger) : IBodyTracker
+    public class ChunkedBodyTracker(ILogger logger, string? contentType, IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate) : IBodyTracker
     {
         private enum State
         {
@@ -30,9 +31,14 @@ namespace ProxyMapService.Proxy.Http
         private State _state = State.ReadChunkSize;
         private long _chunkBytesRemaining;
 
+        private long _bodyLength;
+        private readonly MemoryStream? _bodyStream = shouldAccumulate ? new() : null;
+
         public bool Completed => _state == State.Completed;
 
         public bool Failed => _state == State.Failed;
+
+        public long BodyLength => _bodyLength;
 
         public bool TryAppend(ReadOnlySpan<byte> data)
         {
@@ -167,12 +173,16 @@ namespace ProxyMapService.Proxy.Http
 
             if (available >= _chunkBytesRemaining)
             {
+                _bodyLength += _chunkBytesRemaining;
+                _bodyStream?.Write(data.Slice(pos, (int)_chunkBytesRemaining));
                 pos += (int)_chunkBytesRemaining;
                 _chunkBytesRemaining = 0;
                 _state = State.ReadChunkDataCRLF;
             }
             else
             {
+                _bodyLength += available;
+                _bodyStream?.Write(data.Slice(pos, available));
                 _chunkBytesRemaining -= available;
                 pos = data.Length;
             }
@@ -229,6 +239,7 @@ namespace ProxyMapService.Proxy.Http
                     if (_lineLength == 2)
                     {
                         _state = State.Completed;
+                        bodyLogger?.OnCompleted(context, contentType, _bodyLength, _bodyStream);
                         return pos;
                     }
 

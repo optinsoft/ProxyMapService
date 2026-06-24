@@ -56,7 +56,7 @@ namespace ProxyMapService.Proxy.Headers
             self.LastModified = GetSingleHeaderValue(strings, "last-modified:");
             self.Headers = strings;
             onParse?.Invoke(self);
-            httpLoggersProvider?.ResponseHeadersLogger.OnHttpHeader(httpLoggersProvider, strings);
+            httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, strings);
         }
 
         private static string GetHTTPProtocol(IEnumerable<string> strings)

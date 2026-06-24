@@ -336,11 +336,22 @@ namespace ProxyMapService.Proxy.Handlers
                                         {
                                             if (context.ResponseHeader.TransferEncodingChunked)
                                             {
-                                                context.ResponseBodyTracker = new ChunkedBodyTracker(context.Logger);
+                                                context.ResponseBodyTracker = new ChunkedBodyTracker(
+                                                    context.Logger,
+                                                    context.ResponseHeader.ContentType,
+                                                    (context as IHttpLoggersProvider).ResponseBodyLogger, 
+                                                    context,
+                                                    (context as IHttpLoggersProvider).ResponseBodyLogger != null);
                                             }
                                             else
                                             {
-                                                context.ResponseBodyTracker = new BodyTracker(context.Logger, context.ResponseHeader.ContentLength ?? 0);
+                                                context.ResponseBodyTracker = new BodyTracker(
+                                                    context.Logger,
+                                                    context.ResponseHeader.ContentType,
+                                                    context.ResponseHeader.ContentLength ?? 0, 
+                                                    (context as IHttpLoggersProvider).ResponseBodyLogger, 
+                                                    context,
+                                                    (context as IHttpLoggersProvider).ResponseBodyLogger != null);
                                             }
                                             context.ResponseBodyTracker.TryAppend(headerAndBody.BodyBytes);
                                             if (CreateResponseCacheFileStream(context))
