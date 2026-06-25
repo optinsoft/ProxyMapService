@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Routing;
-using ProxyMapService.Proxy.Counters;
+﻿using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Services;
 using ProxyMapService.WebLogging.Dtos;
-using System.Reflection.PortableExecutable;
 using System.Text;
 
 namespace ProxyMapService.WebLogging
@@ -57,13 +55,13 @@ namespace ProxyMapService.WebLogging
                     break;
             }
 
-            if (!e.Response)
+            if (e.Response)
             {
-                websocketLogService.QueueMessage(new HttpRequestBodyEntry(bodyDto));
+                websocketLogService.QueueMessage(new HttpResponseBodyEntry(bodyDto));
             }
             else
             {
-                websocketLogService.QueueMessage(new HttpResponseBodyEntry(bodyDto));
+                websocketLogService.QueueMessage(new HttpRequestBodyEntry(bodyDto));
             }
         }
 
@@ -79,18 +77,7 @@ namespace ProxyMapService.WebLogging
             var targetHost = loggersProvider.GetTargetHost();
             var headers = e.Headers;
 
-            if (!e.Response)
-            {
-                var id = loggersProvider.GetRequestId();
-                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id) is HttpRequestDto requestDto)
-                {
-                    requestDto.Inbound = inbound;
-                    requestDto.Route = route;
-                    requestDto.TargetHost = targetHost;
-                    websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
-                }
-            }
-            else
+            if (e.Response)
             {
                 var id = loggersProvider.GetResponseId();
                 if (HttpHeaderParser.ParseResponseRawHeaders(headers, id) is HttpResponseDto responseDto)
@@ -99,6 +86,17 @@ namespace ProxyMapService.WebLogging
                     responseDto.Route = route;
                     responseDto.TargetHost = targetHost;
                     websocketLogService.QueueMessage(new HttpResponseMessageEntry(responseDto));
+                }
+            }
+            else
+            {
+                var id = loggersProvider.GetRequestId();
+                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id) is HttpRequestDto requestDto)
+                {
+                    requestDto.Inbound = inbound;
+                    requestDto.Route = route;
+                    requestDto.TargetHost = targetHost;
+                    websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
                 }
             }
         }
@@ -120,6 +118,11 @@ namespace ProxyMapService.WebLogging
                 return HttpBodyContentKind.Json;
             }
 
+            if (mediaType.StartsWith("image/"))
+            {
+                return HttpBodyContentKind.Image;
+            }
+
             if (mediaType is "application/xml" or "text/xml")
             {
                 return HttpBodyContentKind.Xml;
@@ -133,11 +136,6 @@ namespace ProxyMapService.WebLogging
             if (mediaType == "text/html")
             {
                 return HttpBodyContentKind.Html;
-            }
-
-            if (mediaType.StartsWith("image/"))
-            {
-                return HttpBodyContentKind.Image;
             }
 
             if (mediaType.StartsWith("text/"))
