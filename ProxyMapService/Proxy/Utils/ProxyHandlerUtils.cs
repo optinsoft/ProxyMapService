@@ -1,16 +1,15 @@
-﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Sessions;
 
-namespace ProxyMapService.Proxy.Handlers
+namespace ProxyMapService.Proxy.Utils
 {
-    public class BaseProxyHandler : BaseResponseCacheHandler
+    public static class ProxyHandlerUtils
     {
-        protected static string? GetContextProxyUsernameWithParameters(SessionContext context)
+        public static string? GetContextProxyUsernameWithParameters(SessionContext context)
         {
             return context.UsernameParameterResolver.GetUsernameWithParameters(context, context.ProxyServer?.Username, context.ProxyServer?.UsernameParameters);
         }
 
-        protected static string? GetContextAuthenticationUsernameWithParameters(SessionContext context)
+        public static string? GetContextAuthenticationUsernameWithParameters(SessionContext context)
         {
             return context.UsernameParameterResolver.GetUsernameWithParameters(context, context.Mapping.Authentication.Username, context.Mapping.Authentication.UsernameParameters);
         }

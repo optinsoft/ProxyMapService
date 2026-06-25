@@ -2,10 +2,11 @@
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using System.Net.Sockets;
+using static ProxyMapService.Proxy.Utils.CacheUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public partial class HttpBypassHandler: BaseResponseCacheHandler, IHandler
+    public partial class HttpBypassHandler: IHandler
     {
         private static readonly HttpBypassHandler Self = new();
 

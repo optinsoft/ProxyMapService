@@ -1,10 +1,11 @@
 ﻿using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using ProxyMapService.Proxy.Proto;
+using static ProxyMapService.Proxy.Utils.HostUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5HostActionHandler : BaseHostActionHandler, IHandler
+    public class Socks5HostActionHandler : IHandler
     {
         private static readonly Socks5HostActionHandler Self = new();
 

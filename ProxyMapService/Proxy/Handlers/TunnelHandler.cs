@@ -13,10 +13,11 @@ using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using static ProxyMapService.Proxy.Utils.CacheUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public partial class TunnelHandler : BaseResponseCacheHandler, IHandler
+    public partial class TunnelHandler : IHandler
     {
         private static readonly TunnelHandler Self = new();
         private const int BufferSize = 8192;

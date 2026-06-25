@@ -1,10 +1,10 @@
-﻿using ProxyMapService.Proxy.Counters;
-using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
+using static ProxyMapService.Proxy.Utils.AuthenticationUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5AuthenticationHandler : BaseAuthenticationHandler, IHandler
+    public class Socks5AuthenticationHandler : IHandler
     {
         private static readonly Socks5AuthenticationHandler Self = new();
 

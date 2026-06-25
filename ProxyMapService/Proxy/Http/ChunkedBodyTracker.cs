@@ -13,8 +13,7 @@ namespace ProxyMapService.Proxy.Http
             ReadChunkDataCRLF,
             ReadTrailers,
             Completed,
-            Failed,
-            Disposed
+            Failed
         }
 
         private const int MaxChunkHeaderLength = 256;
@@ -43,9 +42,6 @@ namespace ProxyMapService.Proxy.Http
 
         public bool TryAppend(ReadOnlySpan<byte> data)
         {
-            if (_state == State.Disposed)
-                throw new ObjectDisposedException(nameof(BodyTracker));
-
             if (Completed)
                 return true;
 
@@ -243,10 +239,7 @@ namespace ProxyMapService.Proxy.Http
                     if (_lineLength == 2)
                     {
                         _state = State.Completed;
-                        if (bodyLogger != null)
-                        {
-                            bodyLogger.OnCompleted(context, contentType, _bodyLength, _bodyStream);
-                        }
+                        bodyLogger?.OnCompleted(context, contentType, _bodyLength, _bodyStream);
                         return pos;
                     }
 
@@ -259,11 +252,22 @@ namespace ProxyMapService.Proxy.Http
 
         public void Dispose()
         {
-            if (_state == State.Disposed)
-                return;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            _state = State.Disposed;
-            _bodyStream?.Dispose();
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_bodyStream != null)
+                {
+                    using (_bodyStream)
+                    {
+                    }
+                    _bodyStream = null;
+                }
+            }
         }
     }
 }

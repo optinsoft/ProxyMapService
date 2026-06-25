@@ -1,27 +1,27 @@
 ﻿using ProxyMapService.Proxy.Sessions;
 
-namespace ProxyMapService.Proxy.Handlers
+namespace ProxyMapService.Proxy.Utils
 {
-    public class BaseAuthenticationHandler
+    public static class AuthenticationUtils
     {
-        protected static void OnAuthenticationNotRequired(SessionContext context)
+        public static void OnAuthenticationNotRequired(SessionContext context)
         {
             //context.UsernameParameterResolver.PopulateContext(context);
             context.ProxyCounters.SessionsCounter?.OnAuthenticationNotRequired(context);
         }
 
-        protected static void OnAuthenticated(SessionContext context)
+        public static void OnAuthenticated(SessionContext context)
         {
             //context.UsernameParameterResolver.PopulateContext(context);
             context.ProxyCounters.SessionsCounter?.OnAuthenticated(context);
         }
 
-        protected static void OnAuthenticationRequired(SessionContext context)
+        public static void OnAuthenticationRequired(SessionContext context)
         {
             context.ProxyCounters.SessionsCounter?.OnAuthenticationRequired(context);
         }
 
-        protected static void OnAuthenticationInvalid(SessionContext context)
+        public static void OnAuthenticationInvalid(SessionContext context)
         {
             context.ProxyCounters.SessionsCounter?.OnAuthenticationInvalid(context);
         }

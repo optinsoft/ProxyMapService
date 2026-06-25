@@ -101,6 +101,7 @@ namespace ProxyMapService.Proxy.Sessions
                 _responseHeader = value;
             }
         }
+        public IBodyTracker? RequestBodyTracker { get; set; }
         public IBodyTracker? ResponseBodyTracker { get; set; }
         public CacheEntry? ResponseCacheEntry { get; set; }
         public FileStream? ResponseCacheFileStream { get; set; }
@@ -291,6 +292,7 @@ namespace ProxyMapService.Proxy.Sessions
                 IncomingHeaderStream.Dispose();
                 OutgoingHeaderStream.Dispose();
                 DisposeResponseCacheFileStream();
+                RequestBodyTracker?.Dispose();
                 ResponseBodyTracker?.Dispose();
             }
         }

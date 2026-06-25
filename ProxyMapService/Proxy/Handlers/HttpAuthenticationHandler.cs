@@ -1,10 +1,11 @@
 ﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
+using static ProxyMapService.Proxy.Utils.AuthenticationUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class HttpAuthenticationHandler : BaseAuthenticationHandler, IHandler
+    public class HttpAuthenticationHandler : IHandler
     {
         private static readonly HttpAuthenticationHandler Self = new();
 

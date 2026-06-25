@@ -3,11 +3,11 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
 using System.Diagnostics;
 
-namespace ProxyMapService.Proxy.Handlers
+namespace ProxyMapService.Proxy.Utils
 {
-    public class BaseResponseCacheHandler
+    public static class CacheUtils
     {
-        protected static async Task<CacheEntry?> GetCacheEntry(SessionContext context)
+        public static async Task<CacheEntry?> GetCacheEntry(SessionContext context)
         {
             if (context.RequestCacheRules.Count == 0)
                 return null;
@@ -25,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
             return await context.CacheManager.GetAsync($"{hostname}:{port}", requestUrl, context.RequestCacheRules);
         }
 
-        protected static FileStream? GetCacheEntryFileStream(CacheEntry cacheEntry)
+        public static FileStream? GetCacheEntryFileStream(CacheEntry cacheEntry)
         {
             var fileStream = new FileStream(
                 cacheEntry.FilePath,
@@ -46,7 +46,7 @@ namespace ProxyMapService.Proxy.Handlers
             return fileStream;
         }
 
-        protected static bool CreateResponseCacheFileStream(SessionContext context)
+        public static bool CreateResponseCacheFileStream(SessionContext context)
         {
             if (context.RequestCacheRules.Count == 0)
                 return false;
@@ -64,7 +64,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (context.ResponseHeader?.StatusCode != "200")
                 return false;
 
-            if (context.ResponseHeader.ContentLength  == null || context.ResponseHeader.ContentLength < 0)
+            if (context.ResponseHeader.ContentLength == null || context.ResponseHeader.ContentLength < 0)
                 return false;
 
             var cacheRule = CacheRule.FindCacheContentTypeRule(context.ResponseHeader.ContentType, context.RequestCacheRules);
@@ -83,7 +83,7 @@ namespace ProxyMapService.Proxy.Handlers
             return true;
         }
 
-        protected static async Task HandleEndOfResponseCacheFileStream(SessionContext context)
+        public static async Task HandleEndOfResponseCacheFileStream(SessionContext context)
         {
             if (context.ResponseCacheFileStream != null)
             {

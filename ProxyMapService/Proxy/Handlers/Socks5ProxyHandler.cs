@@ -1,13 +1,14 @@
-﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Headers;
+﻿using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Text;
+using static ProxyMapService.Proxy.Utils.ProxyHandlerUtils;
+using static ProxyMapService.Proxy.Utils.CacheUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5ProxyHandler : BaseProxyHandler, IHandler
+    public class Socks5ProxyHandler : IHandler
     {
         private static readonly Socks5ProxyHandler Self = new();
 

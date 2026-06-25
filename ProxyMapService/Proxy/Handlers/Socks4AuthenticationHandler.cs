@@ -1,10 +1,11 @@
 ﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
+using static ProxyMapService.Proxy.Utils.AuthenticationUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks4AuthenticationHandler : BaseAuthenticationHandler, IHandler
+    public class Socks4AuthenticationHandler : IHandler
     {
         private static readonly Socks4AuthenticationHandler Self = new();
 

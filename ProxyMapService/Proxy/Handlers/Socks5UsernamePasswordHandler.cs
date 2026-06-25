@@ -1,10 +1,11 @@
 ﻿using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Proto;
+using static ProxyMapService.Proxy.Utils.AuthenticationUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class Socks5UsernamePasswordHandler : BaseAuthenticationHandler, IHandler
+    public class Socks5UsernamePasswordHandler : IHandler
     {
         private static readonly Socks5UsernamePasswordHandler Self = new();
 

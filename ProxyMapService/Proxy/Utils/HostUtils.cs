@@ -2,11 +2,11 @@
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 
-namespace ProxyMapService.Proxy.Handlers
+namespace ProxyMapService.Proxy.Utils
 {
-    public class BaseHostActionHandler
+    public static class HostUtils
     {
-        protected static void GetContextHostAction(SessionContext context, bool httpMode)
+        public static void GetContextHostAction(SessionContext context, bool httpMode)
         {
             if (IsSessionAPIHost(context.SessionAPI, context.Host))
             {
@@ -54,8 +54,8 @@ namespace ProxyMapService.Proxy.Handlers
                     context.CacheRules = hostRule.HostCacheRules;
                 }
             }
-            if (hostAction == ActionEnum.Allow && hostRule != null) 
-            {                
+            if (hostAction == ActionEnum.Allow && hostRule != null)
+            {
                 if (hostRule.ProxyServer != null)
                 {
                     context.ProxyServer = hostRule.ProxyServer;
@@ -63,7 +63,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        protected static bool IsSessionAPIHost(SessionAPIConfig config, HostAddress? host)
+        public static bool IsSessionAPIHost(SessionAPIConfig config, HostAddress? host)
         {
             if (!config.Enabled)
             {

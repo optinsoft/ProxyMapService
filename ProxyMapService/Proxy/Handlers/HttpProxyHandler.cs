@@ -6,10 +6,12 @@ using ProxyMapService.Proxy.Socks;
 using System.Text;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
+using static ProxyMapService.Proxy.Utils.ProxyHandlerUtils;
+using static ProxyMapService.Proxy.Utils.CacheUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class HttpProxyHandler : BaseProxyHandler, IHandler
+    public class HttpProxyHandler : IHandler
     {
         private static readonly HttpProxyHandler Self = new();
 

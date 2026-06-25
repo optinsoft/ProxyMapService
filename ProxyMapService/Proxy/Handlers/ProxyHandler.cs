@@ -5,7 +5,7 @@ using ProxyMapService.Proxy.Socks;
 
 namespace ProxyMapService.Proxy.Handlers
 {
-    public class ProxyHandler : BaseProxyHandler, IHandler
+    public class ProxyHandler : IHandler
     {
         private static readonly ProxyHandler Self = new();
 
