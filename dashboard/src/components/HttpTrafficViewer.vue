@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { HttpRequestEntry, HttpResponseEntry, MergedTrafficEntry } from '../types/log'
+import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry } from '../types/log'
+import HttpBodyViewer from './HttpBodyViewer.vue'
 
 const props = defineProps<{
   requests: HttpRequestEntry[],
   responses: HttpResponseEntry[],
+  requestBodies: HttpBodyEntry[],
+  responseBodies: HttpBodyEntry[],
   isConnected: boolean
 }>()
 
@@ -18,11 +21,16 @@ const inspectorWidth = ref(420)
 
 const isResizing = ref(false)
 
+const activeTab = ref<'request' | 'response'>('request')
 
 // Match requests and responses by unique ID
 const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
-  return props.requests.map(req => {
-    const res = props.responses.find(r => r.id === req.id)
+  const responsesMap = new Map(props.responses.map(r => [r.id, r]))
+  const reqBodiesMap = new Map(props.requestBodies.map(b => [b.id, b]))
+  const resBodiesMap = new Map(props.responseBodies.map(b => [b.id, b]))
+  
+  return props.requests.map(req => {    
+    const res = responsesMap.get(req.id)
     
     // Parse timestamp calculations
     const reqTime = new Date(req.timestamp).getTime()
@@ -31,6 +39,9 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
 
     const routeDisplay = res?.route || req.route || '-'
     const targetHostDisplay = res?.targetHost || req.targetHost || '-'
+
+    const requestBody = reqBodiesMap.get(req.id) || null
+    const responseBody = resBodiesMap.get(req.id) || null
 
     return {
       id: req.id,
@@ -44,7 +55,9 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       statusText: res ? res.statusText : '',
       durationMs: duration,
       requestHeaders: req.headers || {},
-      responseHeaders: res?.headers || {}
+      responseHeaders: res?.headers || {},
+      requestBody,
+      responseBody
     }
   })
 })
@@ -168,7 +181,7 @@ const startResize = (e: MouseEvent) => {
           <button class="btn-close" @click="selectedId = null">✕</button>
         </div>
         
-        <div class="sidebar-content">
+        <div class="sidebar-content">          
           <div class="info-block">
             <p><strong>Inbound:</strong> <span class="mono">{{ selectedTransaction.inbound }}</span></p>
             <p><strong>Route:</strong> <span class="mono">{{ selectedTransaction.route }}</span></p>
@@ -181,37 +194,79 @@ const startResize = (e: MouseEvent) => {
             <p><strong>Duration (ms):</strong> <span class="mono">{{ selectedTransaction.durationMs }}</span></p>
           </div>
 
-          <!-- Section A: Request Headers -->
-          <h5 class="headers-title">Request Headers</h5>
-          <div class="headers-grid">
-            <div v-if="Object.keys(selectedTransaction.requestHeaders).length === 0" class="no-headers">
-              No request headers found
-            </div>
-            <div 
-              v-for="(value, key) in selectedTransaction.requestHeaders" 
-              :key="key" 
-              class="header-row"
+          <div class="tabs">
+            <button
+              :class="{ active: activeTab === 'request' }"
+              @click="activeTab = 'request'"
             >
-              <span class="header-key">{{ key }}:</span>
-              <span class="header-val" :title="value">{{ value }}</span>
-            </div>
-          </div>
+              Request
+            </button>
 
-          <!-- Section B: Response Headers -->
-          <h5 class="headers-title">Response Headers</h5>
-          <div class="headers-grid">
-            <div v-if="Object.keys(selectedTransaction.responseHeaders).length === 0" class="no-headers">
-              No response headers found
-            </div>
-            <div 
-              v-for="(value, key) in selectedTransaction.responseHeaders" 
-              :key="key" 
-              class="header-row"
+            <button
+              :class="{ active: activeTab === 'response' }"
+              @click="activeTab = 'response'"
             >
-              <span class="header-key">{{ key }}:</span>
-              <span class="header-val" :title="value">{{ value }}</span>
-            </div>
+              Response
+            </button>
           </div>
+          
+          <template v-if="activeTab === 'request'">
+            <!-- Section A: Request Headers & Body -->
+            <h5 class="headers-title">Request Headers</h5>
+            <div class="headers-grid">
+              <div v-if="Object.keys(selectedTransaction.requestHeaders).length === 0" class="no-headers">
+                No request headers found
+              </div>
+              <div 
+                v-for="(value, key) in selectedTransaction.requestHeaders" 
+                :key="key" 
+                class="header-row"
+              >
+                <span class="header-key">{{ key }}:</span>
+                <span class="header-val" :title="value">{{ value }}</span>
+              </div>
+            </div>
+            <h5 class="headers-title">Request Body</h5>
+            <HttpBodyViewer
+              v-if="selectedTransaction.requestBody"
+              :body="selectedTransaction.requestBody"
+            />
+            <div
+              v-else
+              class="no-headers"
+            >
+              No request body
+            </div>            
+          </template>
+
+          <template v-else>
+            <!-- Section B: Response Headers & Body -->
+            <h5 class="headers-title">Response Headers</h5>
+            <div class="headers-grid">
+              <div v-if="Object.keys(selectedTransaction.responseHeaders).length === 0" class="no-headers">
+                No response headers found
+              </div>
+              <div 
+                v-for="(value, key) in selectedTransaction.responseHeaders" 
+                :key="key" 
+                class="header-row"
+              >
+                <span class="header-key">{{ key }}:</span>
+                <span class="header-val" :title="value">{{ value }}</span>
+              </div>
+            </div>
+            <h5 class="headers-title">Response Body</h5>
+            <HttpBodyViewer
+              v-if="selectedTransaction.responseBody"
+              :body="selectedTransaction.responseBody"
+            />
+            <div
+              v-else
+              class="no-headers"
+            >
+              No response body
+            </div>            
+          </template>
         </div>
       </div>
     </div>
@@ -306,7 +361,7 @@ const startResize = (e: MouseEvent) => {
 .btn-close:hover { color: #fff; }
 
 .sidebar-content { flex: 1; overflow-y: auto; padding: 15px; font-size: 12px; }
-.info-block { margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+.info-block { padding-bottom: 10px; }
 .info-block p { margin: 4px 0; color: #aaa; }
 .mono { font-family: monospace; color: #fff; }
 
@@ -320,4 +375,24 @@ const startResize = (e: MouseEvent) => {
 
 /* Badges */
 .method-badge { padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 10px; color: #fff; font-family: monospace; }
+
+.tabs {
+  display: flex;
+  margin-bottom: 12px;
+  gap: 4px;
+}
+
+.tabs button {
+  flex: 1;
+  border: 1px solid #3c3c3c;
+  background: #252526;
+  color: #ccc;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  background: #094771;
+  color: white;
+}
 </style>

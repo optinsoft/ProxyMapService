@@ -6,11 +6,13 @@ import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
 import HttpTrafficViewer from './components/HttpTrafficViewer.vue'
 import { isTokenExpired } from './utils/jwt'
-import type { LogEntry, HttpRequestEntry, HttpResponseEntry } from './types/log'
+import type { LogEntry, HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, HttpHistoryDto } from './types/log'
 
 const logs = ref<LogEntry[]>([])
 const requests = ref<HttpRequestEntry[]>([])
 const responses = ref<HttpResponseEntry[]>([])
+const requestBodies = ref<HttpBodyEntry[]>([])
+const responseBodies = ref<HttpBodyEntry[]>([])
 const isConnected = ref<boolean>(false)
 
 const currentToken = ref<string>('')
@@ -55,9 +57,11 @@ const fetchTrafficHistory = async () => {
       throw new Error(`Failed to fetch traffic history. Error: ${response.status}`);
     }
     
-    const history: { requests: HttpRequestEntry[], responses: HttpResponseEntry[] } = await response.json();    
+    const history: HttpHistoryDto = await response.json();    
     requests.value = history.requests;
     responses.value = history.responses;
+    requestBodies.value = history.requestBodies;
+    responseBodies.value = history.responseBodies;
   } catch (err) {
     console.error('Error loading log history:', err);
   }
@@ -89,12 +93,22 @@ const startSignalR = () => {
 
   connection.on('HttpRequest', (data: HttpRequestEntry) => {
     requests.value.push(data)
-    if (requests.value.length > 200) requests.value.shift()
+    if (requests.value.length > 500) requests.value.shift()
   })  
 
   connection.on('HttpResponse', (data: HttpResponseEntry) => {
     responses.value.push(data)
-    if (responses.value.length > 200) responses.value.shift()
+    if (responses.value.length > 500) responses.value.shift()
+  })
+
+  connection.on('HttpRequestBody', (data: HttpBodyEntry) => {
+    requestBodies.value.push(data)
+    if (requestBodies.value.length > 500) requestBodies.value.shift()
+  })
+
+  connection.on('HttpResponseBody', (data: HttpBodyEntry) => {
+    responseBodies.value.push(data)
+    if (requestBodies.value.length > 500) responseBodies.value.shift()
   })
 
   connection.onreconnected((connectionId) => {
@@ -277,6 +291,8 @@ onUnmounted(() => {
           v-if="activeTab === 'network'" 
           :requests="requests" 
           :responses="responses"
+          :request-bodies="requestBodies"
+          :response-bodies="responseBodies"
           :isConnected="isConnected"
           @clear-network="clearNetworkData"
         />          
