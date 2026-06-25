@@ -18,7 +18,7 @@ const isConnected = ref<boolean>(false)
 const currentToken = ref<string>('')
 let expiryCheckTimer: ReturnType<typeof setInterval> | null = null
 
-const activeTab = ref<'logs' | 'network'>('logs')
+const activeTab = ref<'stats' | 'logs' | 'network'>('stats')
 
 let connection: signalR.HubConnection | null = null
 
@@ -263,11 +263,13 @@ onUnmounted(() => {
     <LoginForm v-if="!currentToken" @login-success="onLoginSuccess" />
 
     <div v-if="currentToken" class="dashboard-layout">
-      <section class="dashboard-section">
-        <div class="section-title">ProxyMapService Performance Metrics</div>
-        <ProxyStats :token="currentToken" />
-      </section>
       <div class="tab-navigation">
+        <button 
+          :class="['tab-btn', { active: activeTab === 'stats' }]" 
+          @click="activeTab = 'stats'"
+        >
+          📊 Stats
+        </button>  
         <button 
           :class="['tab-btn', { active: activeTab === 'logs' }]" 
           @click="activeTab = 'logs'"
@@ -282,6 +284,11 @@ onUnmounted(() => {
         </button>              
       </div>
       <div class="tab-view-content">
+        <div class="stats-div" v-if="activeTab === 'stats'">
+          <div class="stats-title">ProxyMapService Performance Metrics</div>
+          <ProxyStats             
+            :token="currentToken" />
+        </div>
         <LogViewer 
           v-if="activeTab === 'logs'" 
           :logs="logs" 
@@ -308,17 +315,28 @@ onUnmounted(() => {
 </template>
 
 <style>
+html, body {
+  height: 100%;
+}
 body {
-  margin: 0; background-color: #121212; color: #ffffff;
+  margin: 0; 
+  display: flex;
+  flex-direction: column;  
+  background-color: #121212; 
+  color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 .app-header {
-  background-color: #1a1a1a; border-bottom: 1px solid #2d2d2d; padding: 12px 20px;
+  background-color: #1a1a1a; 
+  border-bottom: 1px solid #2d2d2d; 
+  padding: 12px 20px;
 }
 .header-container {
   max-width: 100%; /* 1200px; */
   margin: 0 auto;
-  display: flex; justify-content: space-between; align-items: center;
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
 }
 .logo { margin: 0; font-size: 1.3rem; color: #4caf50; font-weight: 700; }
 
@@ -332,7 +350,10 @@ body {
 
 .app-content { 
   max-width: 100%; /* 1200px; */
-  margin: 25px auto; padding: 0 20px; }
+  margin: 25px auto; 
+  padding: 0 20px; 
+}
+
 .log-section { margin-top: 25px; }
 .section-title { color: #666; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: bold; }
 
@@ -381,5 +402,11 @@ body {
   border-top-left-radius: 0px !important;
   /* border-top-right-radius: 0px !important; */
   border: 1px solid #4caf50;
+}
+.stats-title { color: #666; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: bold; }
+.stats-div {
+  padding-left: 1rem;
+  padding-top: 1rem;
+  padding-right: 1rem;
 }
 </style>

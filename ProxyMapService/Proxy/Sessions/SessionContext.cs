@@ -19,7 +19,6 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly HostAddress _host;
         private HttpRequestHeader? _requestHeader;
         private HttpResponseHeader? _responseHeader;
-        private IBodyTracker? _responseBodyTracker;
         private List<CacheRule> _requestCacheRules;
         private string? _requestId;
 
@@ -102,14 +101,7 @@ namespace ProxyMapService.Proxy.Sessions
                 _responseHeader = value;
             }
         }
-        public IBodyTracker? ResponseBodyTracker
-        {
-            get => _responseBodyTracker;
-            set
-            {
-                _responseBodyTracker = value;
-            }
-        }
+        public IBodyTracker? ResponseBodyTracker { get; set; }
         public CacheEntry? ResponseCacheEntry { get; set; }
         public FileStream? ResponseCacheFileStream { get; set; }
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
@@ -299,6 +291,7 @@ namespace ProxyMapService.Proxy.Sessions
                 IncomingHeaderStream.Dispose();
                 OutgoingHeaderStream.Dispose();
                 DisposeResponseCacheFileStream();
+                ResponseBodyTracker?.Dispose();
             }
         }
     }

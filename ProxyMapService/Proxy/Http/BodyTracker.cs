@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Counters;
+using System.IO;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -8,13 +9,14 @@ namespace ProxyMapService.Proxy.Http
         {
             ReadData,
             Completed,
-            Failed
+            Failed,
+            Disposed
         }
 
         private State _state = State.ReadData;
 
         private long _bodyLength;
-        private readonly MemoryStream? _bodyStream = shouldAccumulate ? new() : null;
+        private MemoryStream? _bodyStream = shouldAccumulate ? new() : null;
 
         public bool Completed => _state == State.Completed;
 
@@ -24,6 +26,9 @@ namespace ProxyMapService.Proxy.Http
 
         public bool TryAppend(ReadOnlySpan<byte> data)
         {
+            if (_state == State.Disposed)
+                throw new ObjectDisposedException(nameof(BodyTracker));
+
             if (Completed)
                 return true;
 
@@ -48,10 +53,22 @@ namespace ProxyMapService.Proxy.Http
             if (_bodyLength >= contentLength)
             {
                 _state = State.Completed;
-                bodyLogger?.OnCompleted(context, contentType, _bodyLength, _bodyStream);
+                if (bodyLogger != null)
+                {
+                    bodyLogger.OnCompleted(context, contentType, _bodyLength, _bodyStream);
+                }
             }
 
             return true;
+        }
+
+        public void Dispose()
+        {
+            if (_state == State.Disposed)
+                return;
+
+            _state = State.Disposed;
+            _bodyStream?.Dispose();
         }
     }
 }
