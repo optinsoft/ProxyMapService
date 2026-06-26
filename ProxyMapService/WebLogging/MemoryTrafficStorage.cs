@@ -23,11 +23,11 @@ namespace ProxyMapService.WebLogging
             }
         }
 
-        public HttpTrafficHistoryResponse GetRecentEntries()
+        public HttpTrafficHistoryDto GetRecentEntries()
         {
             var snapshot = _entries.ToArray();
 
-            return new HttpTrafficHistoryResponse
+            return new HttpTrafficHistoryDto
             {
                 Requests = snapshot
                     .OfType<HttpRequestMessageEntry>()

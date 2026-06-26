@@ -9,6 +9,7 @@ using ProxyMapService.Proxy.Ssl;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -116,6 +117,10 @@ namespace ProxyMapService.Proxy.Handlers
                         if (headerBytes != null && headerBytes.Length > 0)
                         {
                             context.RequestHeader = new HttpRequestHeader(headerBytes, context);
+                            if (!context.RequestHeader.BadRequest)
+                            {
+                                CreateRequestBodyTracker(context, null);
+                            }
                         }
                         return;
                     }

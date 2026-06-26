@@ -34,7 +34,8 @@ export type HttpBodyEntry =
   | HttpHtmlBodyEntry
   | HttpTextBodyEntry
   | HttpImageBodyEntry
-  | HttpBinaryBodyEntry;
+  | HttpBinaryBodyEntry
+  | HttpFormUrlEncodedBodyEntry;
 
 interface HttpBodyBaseEntry {
   id: string;
@@ -48,7 +49,8 @@ export enum HttpContentKind {
   Html = 2,
   Text = 3,
   Image = 4,
-  Binary = 5
+  Binary = 5,
+  FormUrlEncoded = 6
 }
 
 export interface HttpJsonBodyEntry
@@ -85,6 +87,12 @@ export interface HttpBinaryBodyEntry
   extends HttpBodyBaseEntry {
   contentKind: HttpContentKind.Binary;
   binaryContentBase64: string;
+}
+
+export interface HttpFormUrlEncodedBodyEntry
+  extends HttpBodyBaseEntry {
+  contentKind: HttpContentKind.FormUrlEncoded;
+  content: string;
 }
 
 // Unified state for display row mapping

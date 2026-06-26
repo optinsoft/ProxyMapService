@@ -8,6 +8,7 @@ using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 using static ProxyMapService.Proxy.Utils.ProxyHandlerUtils;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
+using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -73,6 +74,11 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context.Http == null ? context : null);
 
+                    if (!context.RequestHeader.BadRequest)
+                    {
+                        CreateRequestBodyTracker(context, null);
+                    }
+
                     var cacheEntry = await GetCacheEntry(context);
                     if (cacheEntry != null)
                     {
@@ -105,25 +111,7 @@ namespace ProxyMapService.Proxy.Handlers
                         context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes, context);
                         if (!context.ResponseHeader.BadResponse)
                         {
-                            if (context.ResponseHeader.TransferEncodingChunked)
-                            {
-                                context.ResponseBodyTracker = new ChunkedBodyTracker(
-                                    context.Logger,
-                                    context.ResponseHeader.ContentType,
-                                    (context as IHttpLoggersProvider).ResponseBodyLogger, 
-                                    context,
-                                    (context as IHttpLoggersProvider).ResponseBodyLogger != null);
-                            }
-                            else
-                            {
-                                context.ResponseBodyTracker = new BodyTracker(
-                                    context.Logger, 
-                                    context.ResponseHeader.ContentType,
-                                    context.ResponseHeader.ContentLength ?? 0, 
-                                    (context as IHttpLoggersProvider).ResponseBodyLogger, 
-                                    context,
-                                    (context as IHttpLoggersProvider).ResponseBodyLogger != null);
-                            }
+                            CreateResponseBodyTracker(context, null);
                             if (CreateResponseCacheFileStream(context))
                             {
                                 if (context.ResponseCacheFileStream != null)

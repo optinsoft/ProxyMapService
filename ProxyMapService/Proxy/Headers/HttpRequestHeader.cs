@@ -25,6 +25,9 @@ namespace ProxyMapService.Proxy.Headers
         public string? HTTPProtocol { get; private set; }
         public HostAddress? Host { get; private set; }
         public long? ContentLength { get; private set; }
+        public string? ContentType { get; private set; }
+        public string? TransferEncoding { get; private set; }
+        public bool TransferEncodingChunked { get; private set; }
         public string? ProxyAuthorization { get; private set; }
         public string? Accept { get; private set; }
         public string[]? Headers { get; private set; }
@@ -52,8 +55,11 @@ namespace ProxyMapService.Proxy.Headers
                 self.HTTPProtocol = GetHTTPProtocol(strings);
                 self.Host = GetHostAddress(strings);
                 self.ContentLength = GetContentLength(strings);
+                self.ContentType = GetSingleHeaderValue(strings, "content-type:");
+                self.TransferEncoding = GetSingleHeaderValue(strings, "transfer-encoding:");
+                self.TransferEncodingChunked = self.TransferEncoding != null && string.Equals("chunked", self.TransferEncoding, StringComparison.OrdinalIgnoreCase);
                 self.ProxyAuthorization = GetBasicProxyAuthorization(strings);
-                self.Accept = GetHeaderValue(strings, "accept:");
+                self.Accept = GetSingleHeaderValue(strings, "accept:");
                 self.Headers = strings;
             }
             catch (UriFormatException)
@@ -207,7 +213,7 @@ namespace ProxyMapService.Proxy.Headers
                 .Trim();
         }
         
-        private static string? GetHeaderValue(IEnumerable<string> strings, string key)
+        private static string? GetSingleHeaderValue(IEnumerable<string> strings, string key)
         {
             return strings
                 .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))

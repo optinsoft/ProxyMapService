@@ -5,6 +5,7 @@ import HtmlBodyViewer from './HtmlBodyViewer.vue';
 import TextBodyViewer from './TextBodyViewer.vue';
 import ImageBodyViewer from './ImageBodyViewer.vue';
 import BinaryBodyViewer from './BinaryBodyViewer.vue';
+import FormUrlEncodedBodyViewer from './FormUrlEncodedBodyViewer.vue';
 
 import { type HttpBodyEntry, HttpContentKind } from '@/types/log';
 
@@ -32,6 +33,11 @@ defineProps<{
 
   <TextBodyViewer
     v-else-if="body.contentKind === HttpContentKind.Text"
+    :body="body"
+  />
+
+  <FormUrlEncodedBodyViewer
+    v-else-if="body.contentKind === HttpContentKind.FormUrlEncoded"
     :body="body"
   />
 

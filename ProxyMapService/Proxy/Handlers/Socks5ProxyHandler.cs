@@ -5,6 +5,7 @@ using ProxyMapService.Proxy.Socks;
 using System.Text;
 using static ProxyMapService.Proxy.Utils.ProxyHandlerUtils;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
+using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -121,6 +122,10 @@ namespace ProxyMapService.Proxy.Handlers
                                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                                 {
                                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes, null);
+                                    if (!context.RequestHeader.BadRequest)
+                                    {
+                                        CreateRequestBodyTracker(context, null);
+                                    }
                                     var cacheEntry = await GetCacheEntry(context);
                                     if (cacheEntry != null)
                                     {

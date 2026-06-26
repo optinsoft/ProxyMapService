@@ -349,6 +349,7 @@ body {
 .btn-logout:hover { background-color: #bd2130; }
 
 .app-content { 
+  flex-grow: 1;
   max-width: 100%; /* 1200px; */
   margin: 25px auto; 
   padding: 0 20px; 

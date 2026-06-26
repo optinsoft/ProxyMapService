@@ -9,14 +9,4 @@
         public string? Content { get; set; }
         public string? BinaryContentBase64 { get; set; }
     }
-
-    public enum HttpBodyContentKind
-    {
-        Json,
-        Xml,
-        Html,
-        Text,
-        Image,
-        Binary
-    }
 }

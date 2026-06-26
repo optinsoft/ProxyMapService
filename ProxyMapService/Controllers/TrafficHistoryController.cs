@@ -12,7 +12,7 @@ namespace ProxyMapService.Controllers
     public class TrafficHistoryController(IHttpTrafficStorage httpTrafficStorage) : ControllerBase
     {
         [HttpGet("recent")]
-        public ActionResult<HttpTrafficHistoryResponse> GetRecent()
+        public ActionResult<HttpTrafficHistoryDto> GetRecent()
         {
             var history = httpTrafficStorage.GetRecentEntries();
             return Ok(history);

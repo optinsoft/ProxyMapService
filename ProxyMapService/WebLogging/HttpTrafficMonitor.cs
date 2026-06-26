@@ -15,7 +15,12 @@ namespace ProxyMapService.WebLogging
                 return;
             }
 
-            var id = e.Response ? loggersProvider.GetResponseId() : loggersProvider.GetRequestId();
+            if (e.BodyLength == 0)
+            {
+                return;
+            }
+
+            var id = e.Response ? loggersProvider.GetResponseBodyId() : loggersProvider.GetRequestBodyId();
             var contentKind = GetContentKind(e.ContentType);
 
             var bodyDto = new HttpBodyDto
@@ -43,6 +48,10 @@ namespace ProxyMapService.WebLogging
                     break;
 
                 case HttpBodyContentKind.Text:
+                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
+                    break;
+
+                case HttpBodyContentKind.FormUrlEncoded:
                     bodyDto.Content = Encoding.UTF8.GetString(bytes);
                     break;
 
@@ -116,6 +125,16 @@ namespace ProxyMapService.WebLogging
             if (mediaType.Contains("json"))
             {
                 return HttpBodyContentKind.Json;
+            }
+
+            if (mediaType == "application/x-www-form-urlencoded")
+            {
+                return HttpBodyContentKind.FormUrlEncoded;
+            }
+            
+            if (mediaType.StartsWith("multipart/form-data"))
+            {
+                return HttpBodyContentKind.MultipartFormData;
             }
 
             if (mediaType.StartsWith("image/"))

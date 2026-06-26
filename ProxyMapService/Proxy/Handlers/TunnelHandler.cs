@@ -14,6 +14,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
+using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -295,7 +296,8 @@ namespace ProxyMapService.Proxy.Handlers
                             {
                                 context.RequestHeader = null;
                                 context.ResponseHeader = null;
-                                context.ResponseBodyTracker = null;
+                                context.DisposeRequestBodyTracker();
+                                context.DisposeResponseBodyTracker();
                             }
                             readHeaders = selfState.Response ? context.ResponseHeader == null : context.RequestHeader == null;
                         }
@@ -335,26 +337,7 @@ namespace ProxyMapService.Proxy.Handlers
                                         context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4, context);
                                         if (!context.ResponseHeader.BadResponse)
                                         {
-                                            if (context.ResponseHeader.TransferEncodingChunked)
-                                            {
-                                                context.ResponseBodyTracker = new ChunkedBodyTracker(
-                                                    context.Logger,
-                                                    context.ResponseHeader.ContentType,
-                                                    (context as IHttpLoggersProvider).ResponseBodyLogger, 
-                                                    context,
-                                                    (context as IHttpLoggersProvider).ResponseBodyLogger != null);
-                                            }
-                                            else
-                                            {
-                                                context.ResponseBodyTracker = new BodyTracker(
-                                                    context.Logger,
-                                                    context.ResponseHeader.ContentType,
-                                                    context.ResponseHeader.ContentLength ?? 0, 
-                                                    (context as IHttpLoggersProvider).ResponseBodyLogger, 
-                                                    context,
-                                                    (context as IHttpLoggersProvider).ResponseBodyLogger != null);
-                                            }
-                                            context.ResponseBodyTracker.TryAppend(headerAndBody.BodyBytes);
+                                            CreateResponseBodyTracker(context, headerAndBody.BodyBytes);
                                             if (CreateResponseCacheFileStream(context))
                                             {
                                                 if (context.ResponseCacheFileStream != null)
@@ -370,6 +353,10 @@ namespace ProxyMapService.Proxy.Handlers
                                     {
                                         Debug.Assert(context.ResponseHeader == null, "!!! HTTP Response Header is not null !!!");
                                         context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines, context);
+                                        if (!context.RequestHeader.BadRequest)
+                                        {
+                                            CreateRequestBodyTracker(context, headerAndBody.BodyBytes);
+                                        }
                                         requestCacheEntry = await GetCacheEntry(context);
                                         if (context.Host.Overwritten)
                                         {
@@ -396,19 +383,26 @@ namespace ProxyMapService.Proxy.Handlers
                                         LogTunnelBodyRead(context.Logger,
                                             selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                                     }
-                                    context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
-                                    if (context.ResponseCacheFileStream != null)
+                                    if (selfState.Response)
                                     {
-                                        Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");
-                                        if (context.ResponseCacheEntry != null)
+                                        context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
+                                        if (context.ResponseCacheFileStream != null)
                                         {
-                                            await context.ResponseCacheFileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                                            await HandleEndOfResponseCacheFileStream(context);
+                                            Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");
+                                            if (context.ResponseCacheEntry != null)
+                                            {
+                                                await context.ResponseCacheFileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                                                await HandleEndOfResponseCacheFileStream(context);
+                                            }
+                                            else
+                                            {
+                                                context.DisposeResponseCacheFileStream();
+                                            }
                                         }
-                                        else
-                                        {
-                                            context.DisposeResponseCacheFileStream();
-                                        }
+                                    }
+                                    else
+                                    {
+                                        context.RequestBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                                     }
                                 }
                                 using var cacheFileStream = requestCacheEntry != null ? GetCacheEntryFileStream(requestCacheEntry) : null;
@@ -445,19 +439,26 @@ namespace ProxyMapService.Proxy.Handlers
                                 LogTunnelBodyRead(context.Logger,
                                     selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                             }
-                            context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
-                            if (context.ResponseCacheFileStream != null)
+                            if (selfState.Response)
                             {
-                                Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");
-                                if (context.ResponseCacheEntry != null)
+                                context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
+                                if (context.ResponseCacheFileStream != null)
                                 {
-                                    await context.ResponseCacheFileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
-                                    await HandleEndOfResponseCacheFileStream(context);
+                                    Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");
+                                    if (context.ResponseCacheEntry != null)
+                                    {
+                                        await context.ResponseCacheFileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+                                        await HandleEndOfResponseCacheFileStream(context);
+                                    }
+                                    else
+                                    {
+                                        context.DisposeResponseCacheFileStream();
+                                    }
                                 }
-                                else
-                                {
-                                    context.DisposeResponseCacheFileStream();
-                                }
+                            }
+                            else
+                            {
+                                context.RequestBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                             }
                             if (sendCounter.IsLogSending)
                             {

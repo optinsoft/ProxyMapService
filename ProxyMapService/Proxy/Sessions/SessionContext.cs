@@ -119,7 +119,18 @@ namespace ProxyMapService.Proxy.Sessions
         }
         string IHttpLoggersProvider.GetResponseId()
         {
-            return _requestId ?? Guid.NewGuid().ToString();
+            _requestId ??= Guid.NewGuid().ToString();
+            return _requestId;
+        }
+        string IHttpLoggersProvider.GetRequestBodyId()
+        {
+            _requestId ??= Guid.NewGuid().ToString();
+            return _requestId;
+        }
+        string IHttpLoggersProvider.GetResponseBodyId()
+        {
+            _requestId ??= Guid.NewGuid().ToString();
+            return _requestId;
         }
         string? IHttpLoggersProvider.GetInbound()
         {
@@ -276,6 +287,28 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
+        public void DisposeRequestBodyTracker()
+        {
+            if (RequestBodyTracker != null)
+            {
+                using (RequestBodyTracker)
+                {
+                }
+                RequestBodyTracker = null;
+            }
+        }
+
+        public void DisposeResponseBodyTracker()
+        {
+            if (ResponseBodyTracker != null)
+            {
+                using (ResponseBodyTracker)
+                {
+                }
+                ResponseBodyTracker = null;
+            }
+        }
+
         public void Dispose()
         {
             Dispose(true);
@@ -292,8 +325,8 @@ namespace ProxyMapService.Proxy.Sessions
                 IncomingHeaderStream.Dispose();
                 OutgoingHeaderStream.Dispose();
                 DisposeResponseCacheFileStream();
-                RequestBodyTracker?.Dispose();
-                ResponseBodyTracker?.Dispose();
+                DisposeRequestBodyTracker();
+                DisposeRequestBodyTracker();
             }
         }
     }

@@ -8,6 +8,8 @@
         IHttpBodyLogger? ResponseBodyLogger { get; }
         string GetRequestId();
         string GetResponseId();
+        string GetRequestBodyId();
+        string GetResponseBodyId();
         string? GetInbound();
         string? GetRoute();
         string? GetTargetHost();
