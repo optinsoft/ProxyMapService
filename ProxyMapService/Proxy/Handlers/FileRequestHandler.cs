@@ -82,7 +82,7 @@ namespace ProxyMapService.Proxy.Handlers
                     else
                     {
                         context.Logger.LogHttpBadRequest();
-                        await HttpProto.HttpReplyBadRequest(incomingStream, context, context.Token);
+                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
                         return HandleStep.Terminate;
                     }
                 }
@@ -133,7 +133,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
-                await HttpProto.HttpReplyMethodNotAllowed(incomingStream, context, context.Token);
+                await HttpProto.HttpReplyMethodNotAllowed(context, incomingStream);
                 return HandleStep.Terminate;
             }
 
@@ -142,11 +142,11 @@ namespace ProxyMapService.Proxy.Handlers
             if (fileStream == null)
             {
                 context.Logger.LogHttpFileNotFound(http.HTTPTargetPath);
-                await HttpProto.HttpReplyNotFound(incomingStream, context, context.Token);
+                await HttpProto.HttpReplyNotFound(context, incomingStream);
                 return HandleStep.Terminate;
             }
 
-            await HttpProto.HttpReplyFileStream(incomingStream, fileStream, context, context.Token);
+            await HttpProto.HttpReplyFileStream(context, incomingStream, fileStream);
 
             context.Logger.LogResponseFromFile(fileStream.Name);
 

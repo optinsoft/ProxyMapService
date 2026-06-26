@@ -31,7 +31,7 @@ namespace ProxyMapService.WebLogging
                 ContentKind = contentKind
             };
 
-            var bytes = e.BodyStream?.ToArray() ?? [];
+            var bytes = e.BodyBytes ?? [];
 
             switch (contentKind)
             {

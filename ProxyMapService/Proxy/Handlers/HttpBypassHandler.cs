@@ -21,6 +21,22 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.OutgoingEndPoint = await context.Host.GetIPEndPoint();
             }
+            catch (SocketException ex)
+            {
+                context.Logger.LogHostError(ex.Message, context.Host.Hostname);
+                context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+                switch (ex.SocketErrorCode)
+                {
+                    case SocketError.TimedOut:
+                    case SocketError.TryAgain:
+                        await HttpProto.HttpReplyGatewayTimeout(context, $"SocketError {ex.SocketErrorCode}");
+                        break;
+                    default:
+                        await HttpProto.HttpReplyBadGateway(context, $"SocketError {ex.SocketErrorCode}");
+                        break;
+                }
+                return HandleStep.Terminate;
+            }
             catch (Exception ex)
             {
                 context.Logger.LogHostError(ex.Message, context.Host.Hostname);

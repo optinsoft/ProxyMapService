@@ -18,7 +18,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
-                await HttpProto.HttpReplyMethodNotAllowed(incomingStream, context, context.Token);
+                await HttpProto.HttpReplyMethodNotAllowed(context, incomingStream);
                 return HandleStep.Terminate;
             }
 
@@ -39,7 +39,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
 
             context.Logger.LogHttpNotFound(http.HTTPTargetPath);
-            await HttpProto.HttpReplyNotFound(incomingStream, context, context.Token);
+            await HttpProto.HttpReplyNotFound(context, incomingStream);
             return HandleStep.Terminate;
         }
 
@@ -57,7 +57,7 @@ namespace ProxyMapService.Proxy.Handlers
                 $"X-Expires-At: {response.ExpiresAt ?? "null"}",
                 $"X-Expired: {response.Expired}"
             ];
-            await HttpProto.HttpReplyJson(incomingStream, response, headers, context, context.Token);
+            await HttpProto.HttpReplyJson(context, incomingStream, response, headers);
         }
 
         private static async Task NewSession(SessionContext context, Stream incomingStream)
@@ -75,7 +75,7 @@ namespace ProxyMapService.Proxy.Handlers
                 $"X-Expires-At: {response.ExpiresAt ?? "null"}",
                 $"X-Expired: {response.Expired}"
             ];
-            await HttpProto.HttpReplyJson(incomingStream, response, headers, context, context.Token);
+            await HttpProto.HttpReplyJson(context, incomingStream, response, headers);
         }
 
         private static async Task ResetSession(SessionContext context, Stream incomingStream)
@@ -85,7 +85,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 Success = true,
             };
-            await HttpProto.HttpReplyJson(incomingStream, response, context, context.Token);
+            await HttpProto.HttpReplyJson(context, incomingStream, response);
         }
     }
 }
