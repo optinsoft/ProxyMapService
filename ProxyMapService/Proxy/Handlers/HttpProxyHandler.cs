@@ -103,6 +103,11 @@ namespace ProxyMapService.Proxy.Handlers
 
                     await HttpProto.SendHttpRequest(context, httpRequestBytes);
 
+                    if (http.HTTPVerb != "CONNECT")
+                    {
+                        return HandleStep.Tunnel;
+                    }
+
                     var responseHeaderBytes = await context.OutgoingHeaderStream.ReadHeaderBytes(context.OutgoingStream, context.Token);
 
                     if (responseHeaderBytes != null)
