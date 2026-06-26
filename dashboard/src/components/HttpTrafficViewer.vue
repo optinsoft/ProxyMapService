@@ -291,7 +291,7 @@ const startResize = (e: MouseEvent) => {
 .http-traffic-viewer {
   display: flex;
   flex-direction: column;
-  height: 82vh;
+  height: calc(100vh - 140px);
   background-color: #1e1e1e;
   border-radius: 8px;
   overflow: hidden;

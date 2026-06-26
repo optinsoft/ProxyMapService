@@ -94,7 +94,7 @@ const handleClear = (): void => {
 .log-viewer {
   display: flex;
   flex-direction: column;
-  height: 82vh;
+  height: calc(100vh - 140px);
   font-family: 'Courier New', Courier, monospace;
   background-color: #1e1e1e;
   color: #d4d4d4;
