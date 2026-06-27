@@ -21,48 +21,8 @@ namespace ProxyMapService.WebLogging
             }
 
             var id = e.Response ? loggersProvider.GetResponseBodyId() : loggersProvider.GetRequestBodyId();
-            var contentKind = GetContentKind(e.ContentType);
 
-            var bodyDto = new HttpBodyDto
-            {
-                Id = id,
-                Length = e.BodyLength,
-                ContentType = e.ContentType,
-                ContentKind = contentKind
-            };
-
-            var bytes = e.BodyBytes ?? [];
-
-            switch (contentKind)
-            {
-                case HttpBodyContentKind.Json:
-                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
-                    break;
-
-                case HttpBodyContentKind.Xml:
-                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
-                    break;
-
-                case HttpBodyContentKind.Html:
-                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
-                    break;
-
-                case HttpBodyContentKind.Text:
-                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
-                    break;
-
-                case HttpBodyContentKind.FormUrlEncoded:
-                    bodyDto.Content = Encoding.UTF8.GetString(bytes);
-                    break;
-
-                case HttpBodyContentKind.Image:
-                    bodyDto.BinaryContentBase64 = Convert.ToBase64String(bytes);
-                    break;
-
-                default:
-                    bodyDto.BinaryContentBase64 = Convert.ToBase64String(bytes);
-                    break;
-            }
+            var bodyDto = HttpBodyParser.ParseBody(id, e.BodyLength, e.ContentType, e.BodyBytes ?? []);
 
             if (e.Response)
             {
@@ -108,61 +68,6 @@ namespace ProxyMapService.WebLogging
                     websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
                 }
             }
-        }
-        
-        private static HttpBodyContentKind GetContentKind(string? contentType)
-        {
-            if (string.IsNullOrWhiteSpace(contentType))
-            {
-                return HttpBodyContentKind.Binary;
-            }
-
-            var mediaType = contentType
-                .Split(';', 2)[0]
-                .Trim()
-                .ToLowerInvariant();
-
-            if (mediaType.Contains("json"))
-            {
-                return HttpBodyContentKind.Json;
-            }
-
-            if (mediaType == "application/x-www-form-urlencoded")
-            {
-                return HttpBodyContentKind.FormUrlEncoded;
-            }
-            
-            if (mediaType.StartsWith("multipart/form-data"))
-            {
-                return HttpBodyContentKind.MultipartFormData;
-            }
-
-            if (mediaType.StartsWith("image/"))
-            {
-                return HttpBodyContentKind.Image;
-            }
-
-            if (mediaType is "application/xml" or "text/xml")
-            {
-                return HttpBodyContentKind.Xml;
-            }
-
-            if (mediaType.EndsWith("+xml"))
-            {
-                return HttpBodyContentKind.Xml;
-            }
-
-            if (mediaType == "text/html")
-            {
-                return HttpBodyContentKind.Html;
-            }
-
-            if (mediaType.StartsWith("text/"))
-            {
-                return HttpBodyContentKind.Text;
-            }
-
-            return HttpBodyContentKind.Binary;
-        }
+        }        
     }
 }
