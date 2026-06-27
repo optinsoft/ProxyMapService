@@ -28,19 +28,26 @@ export interface HttpResponseEntry {
   headers: Record<string, string>;
 }
 
-export type HttpBodyEntry =
+export type HttpBodyEntry = HttpMultipartPartEntry & {
+  id: string;
+};
+
+export type HttpMultipartPartEntry =
   | HttpJsonBodyEntry
   | HttpXmlBodyEntry
   | HttpHtmlBodyEntry
   | HttpTextBodyEntry
   | HttpImageBodyEntry
   | HttpBinaryBodyEntry
-  | HttpFormUrlEncodedBodyEntry;
+  | HttpFormUrlEncodedBodyEntry
+  | HttpMultipartBodyEntry;
 
-interface HttpBodyBaseEntry {
+interface HttpMultipartPartBaseEntry {
   id: string;
   length: number;
   contentType?: string | null;
+  name?: string | null;
+  fileName?: string | null;
 }
 
 export enum HttpContentKind {
@@ -50,49 +57,56 @@ export enum HttpContentKind {
   Text = 3,
   Image = 4,
   Binary = 5,
-  FormUrlEncoded = 6
+  FormUrlEncoded = 6,
+  MultipartFormData = 7
 }
 
 export interface HttpJsonBodyEntry
-  extends HttpBodyBaseEntry {
+  extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Json;
   content: string;
 }
 
 export interface HttpXmlBodyEntry
-  extends HttpBodyBaseEntry {
+  extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Xml;
   content: string;
 }
 
 export interface HttpHtmlBodyEntry
-  extends HttpBodyBaseEntry {
+  extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Html;
   content: string;
 }
 
 export interface HttpTextBodyEntry
-  extends HttpBodyBaseEntry {
+  extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Text;
   content: string;
 }
 
 export interface HttpImageBodyEntry
-  extends HttpBodyBaseEntry {
+  extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Image;
   binaryContentBase64: string;
 }
 
 export interface HttpBinaryBodyEntry
-  extends HttpBodyBaseEntry {
+  extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Binary;
   binaryContentBase64: string;
 }
 
 export interface HttpFormUrlEncodedBodyEntry
-  extends HttpBodyBaseEntry {
+  extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.FormUrlEncoded;
   content: string;
+}
+
+export interface HttpMultipartBodyEntry 
+  extends HttpMultipartPartBaseEntry {
+  contentKind: HttpContentKind.MultipartFormData;
+  parts?: HttpMultipartPartEntry[] | null;
 }
 
 // Unified state for display row mapping

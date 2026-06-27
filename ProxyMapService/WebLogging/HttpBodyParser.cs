@@ -30,7 +30,15 @@ namespace ProxyMapService.WebLogging
                     break;
 
                 case HttpBodyContentKind.MultipartFormData:
-                    ParseMultipart(dto, bodyBytes);
+                    try
+                    {
+                        ParseMultipart(dto, bodyBytes);
+                    }
+                    catch
+                    {
+                        dto.ContentKind = HttpBodyContentKind.Text;
+                        dto.Content = Encoding.UTF8.GetString(bodyBytes);
+                    }
                     break;
 
                 case HttpBodyContentKind.Image:
@@ -43,7 +51,7 @@ namespace ProxyMapService.WebLogging
             return dto;
         }
 
-        private static void ParseMultipart(HttpMultipartBodyDto dto, byte[] bodyBytes)
+        private static void ParseMultipart(HttpMultipartBodyDto dto, byte[] multipartBytes)
         {
             var mediaType = MediaTypeHeaderValue.Parse(dto.ContentType);
             var boundary = HeaderUtilities.RemoveQuotes(mediaType.Boundary).Value;
@@ -53,7 +61,7 @@ namespace ProxyMapService.WebLogging
                 throw new InvalidOperationException("Multipart boundary is missing.");
             }
 
-            using var stream = new MemoryStream(bodyBytes);
+            using var stream = new MemoryStream(multipartBytes);
             
             var reader = new MultipartReader(boundary, stream);
 
@@ -91,7 +99,15 @@ namespace ProxyMapService.WebLogging
                         break;
 
                     case HttpBodyContentKind.MultipartFormData:
-                        ParseMultipart(part, bytes);
+                        try
+                        {
+                            ParseMultipart(part, bytes);
+                        }
+                        catch
+                        {
+                            part.ContentKind = HttpBodyContentKind.Text;
+                            part.Content = Encoding.UTF8.GetString(bytes);
+                        }
                         break;
 
                     case HttpBodyContentKind.Image:

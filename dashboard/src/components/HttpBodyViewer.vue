@@ -6,6 +6,7 @@ import TextBodyViewer from './TextBodyViewer.vue';
 import ImageBodyViewer from './ImageBodyViewer.vue';
 import BinaryBodyViewer from './BinaryBodyViewer.vue';
 import FormUrlEncodedBodyViewer from './FormUrlEncodedBodyViewer.vue';
+import MultipartBodyViewer from './MultipartBodyViewer.vue';
 
 import { type HttpBodyEntry, HttpContentKind } from '@/types/log';
 
@@ -15,7 +16,6 @@ defineProps<{
 </script>
 
 <template>
-
   <JsonBodyViewer
     v-if="body.contentKind === HttpContentKind.Json"
     :body="body"
@@ -38,6 +38,11 @@ defineProps<{
 
   <FormUrlEncodedBodyViewer
     v-else-if="body.contentKind === HttpContentKind.FormUrlEncoded"
+    :body="body"
+  />
+
+  <MultipartBodyViewer
+    v-else-if="body.contentKind === HttpContentKind.MultipartFormData"
     :body="body"
   />
 
