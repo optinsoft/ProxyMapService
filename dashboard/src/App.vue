@@ -5,7 +5,7 @@ import LoginForm from './components/LoginForm.vue'
 import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
 import HttpTrafficViewer from './components/HttpTrafficViewer.vue'
-import { isTokenExpired } from './utils/jwt'
+import { isTokenExpired, getTokenExpiration } from './utils/jwt'
 import type { LogEntry, HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, HttpHistoryDto } from './types/log'
 
 const logs = ref<LogEntry[]>([])
@@ -16,6 +16,7 @@ const responseBodies = ref<HttpBodyEntry[]>([])
 const isConnected = ref<boolean>(false)
 
 const currentToken = ref<string>('')
+const currentRefreshToken = ref<string>('')
 let expiryCheckTimer: ReturnType<typeof setInterval> | null = null
 
 const activeTab = ref<'stats' | 'logs' | 'network'>('stats')
@@ -154,27 +155,75 @@ watch(currentToken, (newToken) => {
 
 const onLogout = (): void => {
   localStorage.removeItem('TOKEN_ID')
+  localStorage.removeItem('REFRESH_TOKEN')
   currentToken.value = ''
+  currentRefreshToken.value = ''
   if (expiryCheckTimer) {
     clearInterval(expiryCheckTimer)
     expiryCheckTimer = null
   }  
 }
 
-const onLoginSuccess = (token: string): void => {
+const onLoginSuccess = (token: string, refreshToken?: string): void => {
   currentToken.value = token
+  currentRefreshToken.value = refreshToken || ''
   startExpiryCheck()
 }
 
 const startExpiryCheck = () => {
   if (expiryCheckTimer) clearInterval(expiryCheckTimer)
 
-  expiryCheckTimer = setInterval(() => {
+  expiryCheckTimer = setInterval(async () => {    
     if (isTokenExpired(currentToken.value)) {
-      console.warn('JWT Token has expired. Logging out automatically.')
       onLogout()
     }
+    else {
+      const expiresIn = getTokenExpiration(currentToken.value)
+      if (expiresIn < 5 * 60) {
+        await doRefreshToken(currentRefreshToken.value)
+      }
+    }
   }, 30000)
+}
+
+const doRefreshToken = async (refreshToken: string | null) => {
+  const refreshUrl = import.meta.env.VITE_REFRESH_URL;
+
+  if (!refreshUrl || !refreshToken)  {
+    return false
+  }
+
+  try {
+    const response = await fetch(refreshUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        refreshToken: refreshToken
+      }),
+    })
+
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      localStorage.setItem('TOKEN_ID', data.token)
+      localStorage.setItem('REFRESH_TOKEN', data.refreshToken)
+
+      currentToken.value = data.token
+      currentRefreshToken.value = data.refreshToken || ''
+
+      return true
+    }
+
+  } catch (error) {
+    console.error(error)
+  }
+
+  localStorage.removeItem('REFRESH_TOKEN')
+  currentRefreshToken.value = ''
+
+  return false
 }
 
 const clearLogs = (): void => {
@@ -232,14 +281,18 @@ const clearNetworkData = () => {
   });
 }
 
-onMounted(() => {
+onMounted(async () => {
   const savedToken = localStorage.getItem('TOKEN_ID')
+  const savedRefreshToken = localStorage.getItem('REFRESH_TOKEN')
   
   if (savedToken && !isTokenExpired(savedToken)) {
     currentToken.value = savedToken
+    currentRefreshToken.value = savedRefreshToken || ''
     startExpiryCheck()
   } else {
-    onLogout()
+    const ok = await doRefreshToken(savedRefreshToken)
+    if (!ok)
+      onLogout()
   }
 })
 

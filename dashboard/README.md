@@ -39,6 +39,9 @@ VITE_API_BASE_URL=http://localhost:5014
 # The endpoint used for JWT authentication requests
 VITE_LOGIN_URL=/api/login
 
+# The endpoint used for refreshing a JWT token
+VITE_REFRESH_URL=/api/refresh
+
 # Credentials required to access the dashboard in dev/mock mode
 LOGIN_USERNAME=test
 LOGIN_PASSWORD=test

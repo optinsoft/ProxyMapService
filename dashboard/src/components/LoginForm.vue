@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { isTokenExpired } from '../utils/jwt'
 
 const emit = defineEmits<{
-  (e: 'login-success', token: string): void
+  (e: 'login-success', token: string, refreshToken?: string): void
   (e: 'logout'): void
 }>()
 
@@ -37,12 +37,13 @@ const handleLogin = async (): Promise<void> => {
 
     if (response.ok && data.success) {
       localStorage.setItem('TOKEN_ID', data.token)
+      localStorage.setItem('REFRESH_TOKEN', data.refreshToken)
       isAuthenticated.value = true
       
       username.value = ''
       password.value = ''
       
-      emit('login-success', data.token)
+      emit('login-success', data.token, data.refreshToken)
     } else {
       errorMessage.value = data.message || 'Authorization error'
     }
@@ -56,6 +57,7 @@ const handleLogin = async (): Promise<void> => {
 
 const handleLogout = (): void => {
   localStorage.removeItem('TOKEN_ID')
+  localStorage.removeItem('REFRESH_TOKEN')
   isAuthenticated.value = false
   emit('logout')
 }

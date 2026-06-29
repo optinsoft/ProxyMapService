@@ -21,12 +21,17 @@ export function parseJwt(token: string): JwtPayload | null {
   }
 }
 
-export function isTokenExpired(token: string | null): boolean {
-  if (!token) return true;
-
+export function getTokenExpiration(token: string | null): number {
+  if (!token) return 0;
   const payload = parseJwt(token);
-  if (!payload || !payload.exp) return true;
-
+  if (!payload || !payload.exp) return 0;
   const currentTime = Math.floor(Date.now() / 1000); 
-  return payload.exp < currentTime;
+  return payload.exp - currentTime
 }
+
+export function isTokenExpired(token: string | null): boolean {
+  const expiresIn = getTokenExpiration(token)
+  if (!expiresIn) return true
+  return expiresIn <= 0
+}
+
