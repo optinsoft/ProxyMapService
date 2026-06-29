@@ -63,7 +63,8 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         if (jwtAuthEnabled)
@@ -116,8 +117,10 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    ViteLauncher.StartIfNeeded();
+    if (Environment.GetEnvironmentVariable("START_VITE") == "true")
+    {
+        ViteLauncher.StartIfNeeded();
+    }
 }
 
 app.UseCors(AllowAllCors);

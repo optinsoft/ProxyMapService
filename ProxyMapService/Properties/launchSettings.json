@@ -15,7 +15,8 @@
             "launchUrl": "http://localhost:5173/ProxyMapDashboard/",
             "applicationUrl": "http://localhost:5014",
             "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "START_VITE": "true"
             },
             "dotnetRunMessages": true
         },
