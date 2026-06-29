@@ -64,6 +64,7 @@ const iframeSrcDoc = computed(() => props.body.content);
   color: #ccc;
   padding: 8px;
   cursor: pointer;
+  max-width: 200px;
 }
 
 .tabs button.active {
