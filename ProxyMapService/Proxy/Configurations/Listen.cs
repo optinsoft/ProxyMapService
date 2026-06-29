@@ -27,9 +27,10 @@
             }
         }
 
-        public bool RejectHttpProxy { get; set; }
-        public int StickyProxyLifetime {  get; set; }
-        public bool DecryptSSL { get; set; }
+        public bool RejectHttpProxy { get; set; } = false;
+        public int StickyProxyLifetime { get; set; } = 0;
+        public ActionEnum Action { get; set; } = ActionEnum.Allow;
+        public bool DecryptSSL { get; set; } = false;
         public SslMode SslMode { get; set; } = SslMode.Auto;
         public SslMode UpstreamSslMode { get; set; } = SslMode.Auto;
     }

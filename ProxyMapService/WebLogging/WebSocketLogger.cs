@@ -64,7 +64,7 @@ namespace ProxyMapService.WebLogging
             _backgroundService.QueueMessage(logEntry);
         }
 
-        private static LogLevel? FindRule(System.Collections.Generic.IEnumerable<LoggerFilterRule> rules, string? provider, string? category)
+        private static LogLevel? FindRule(IEnumerable<LoggerFilterRule> rules, string? provider, string? category)
         {
             foreach (var rule in rules)
             {

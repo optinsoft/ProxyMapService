@@ -4,7 +4,8 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class ChunkedBodyTracker(ILogger logger, string? contentType, IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate) : IBodyTracker
+    public class ChunkedBodyTracker(ILogger logger, string? contentType, string? contentEncoding, 
+        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate) : IBodyTracker
     {
         private enum State
         {
@@ -239,7 +240,7 @@ namespace ProxyMapService.Proxy.Http
                     if (_lineLength == 2)
                     {
                         _state = State.Completed;
-                        bodyLogger?.OnCompleted(context, contentType, _bodyLength, _bodyStream);
+                        bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, _bodyStream);
                         return pos;
                     }
 

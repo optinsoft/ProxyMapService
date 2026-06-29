@@ -15,6 +15,7 @@ namespace ProxyMapService.Proxy.Utils
                     context.RequestBodyTracker = new ChunkedBodyTracker(
                         context.Logger,
                         context.RequestHeader.ContentType,
+                        context.RequestHeader.ContentEncoding,
                         (context as IHttpLoggersProvider).RequestBodyLogger,
                         context,
                         (context as IHttpLoggersProvider).RequestBodyLogger != null);
@@ -24,6 +25,7 @@ namespace ProxyMapService.Proxy.Utils
                     context.RequestBodyTracker = new BodyTracker(
                         context.Logger,
                         context.RequestHeader.ContentType,
+                        context.RequestHeader.ContentEncoding,
                         context.RequestHeader.ContentLength ?? 0,
                         (context as IHttpLoggersProvider).RequestBodyLogger,
                         context,
@@ -45,6 +47,7 @@ namespace ProxyMapService.Proxy.Utils
                     context.ResponseBodyTracker = new ChunkedBodyTracker(
                         context.Logger,
                         context.ResponseHeader.ContentType,
+                        context.ResponseHeader.ContentEncoding,
                         (context as IHttpLoggersProvider).ResponseBodyLogger,
                         context,
                         (context as IHttpLoggersProvider).ResponseBodyLogger != null);
@@ -54,6 +57,7 @@ namespace ProxyMapService.Proxy.Utils
                     context.ResponseBodyTracker = new BodyTracker(
                         context.Logger,
                         context.ResponseHeader.ContentType,
+                        context.ResponseHeader.ContentEncoding,
                         context.ResponseHeader.ContentLength ?? 0,
                         (context as IHttpLoggersProvider).ResponseBodyLogger,
                         context,

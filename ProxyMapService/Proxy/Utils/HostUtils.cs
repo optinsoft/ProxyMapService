@@ -14,7 +14,7 @@ namespace ProxyMapService.Proxy.Utils
                 return;
             }
             HostRule? hostRule = HostRule.FindRule(context.Host, context.HostRules);
-            ActionEnum hostAction = hostRule?.Action ?? ActionEnum.Allow;
+            ActionEnum hostAction = hostRule?.Action ?? context.Action;
             context.HostAction = hostAction;
             if (hostAction != ActionEnum.Deny && hostRule != null)
             {

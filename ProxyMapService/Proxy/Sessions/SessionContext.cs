@@ -27,6 +27,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
         public SessionAPIConfig SessionAPI { get; set; }
+        public ActionEnum Action { get; set; }
         public bool DecryptSSL { get;set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
@@ -194,6 +195,7 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingEndPoint = null;
             Mapping = mapping;
             SessionAPI = sessionAPI;
+            Action = mapping.Listen.Action;
             DecryptSSL = mapping.Listen.DecryptSSL;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;

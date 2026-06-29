@@ -2,7 +2,8 @@
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class BodyTracker(ILogger logger, string? contentType, long contentLength, IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate) : IBodyTracker
+    public class BodyTracker(ILogger logger, string? contentType, string? contentEncoding, long contentLength, 
+        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate) : IBodyTracker
     {
         private enum State
         {
@@ -48,7 +49,7 @@ namespace ProxyMapService.Proxy.Http
             if (_bodyLength >= contentLength)
             {
                 _state = State.Completed;
-                bodyLogger?.OnCompleted(context, contentType, _bodyLength, _bodyStream);
+                bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, _bodyStream);
             }
 
             return true;

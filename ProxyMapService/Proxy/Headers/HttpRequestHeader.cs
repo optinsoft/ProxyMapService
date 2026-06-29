@@ -26,6 +26,7 @@ namespace ProxyMapService.Proxy.Headers
         public HostAddress? Host { get; private set; }
         public long? ContentLength { get; private set; }
         public string? ContentType { get; private set; }
+        public string? ContentEncoding { get; private set; }
         public string? TransferEncoding { get; private set; }
         public bool TransferEncodingChunked { get; private set; }
         public string? ProxyAuthorization { get; private set; }
@@ -56,6 +57,7 @@ namespace ProxyMapService.Proxy.Headers
                 self.Host = GetHostAddress(strings);
                 self.ContentLength = GetContentLength(strings);
                 self.ContentType = GetSingleHeaderValue(strings, "content-type:");
+                self.ContentEncoding = GetSingleHeaderValue(strings, "content-encoding:");
                 self.TransferEncoding = GetSingleHeaderValue(strings, "transfer-encoding:");
                 self.TransferEncodingChunked = self.TransferEncoding != null && string.Equals("chunked", self.TransferEncoding, StringComparison.OrdinalIgnoreCase);
                 self.ProxyAuthorization = GetBasicProxyAuthorization(strings);

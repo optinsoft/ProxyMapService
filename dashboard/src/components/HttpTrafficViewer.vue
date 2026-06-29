@@ -88,7 +88,7 @@ const startResize = (e: MouseEvent) => {
     const delta = startX - ev.clientX
 
     inspectorWidth.value = Math.min(
-      800,
+      1200,
       Math.max(250, startWidth + delta)
     )
   }
@@ -358,7 +358,7 @@ const startResize = (e: MouseEvent) => {
 /* Side panel layout styles */
 .details-sidebar {
   min-width: 250px;
-  max-width: 800px;
+  max-width: 1200px;
   flex-shrink: 0;  
   overflow: scroll;
 }

@@ -1,7 +1,6 @@
 ﻿using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Services;
 using ProxyMapService.WebLogging.Dtos;
-using System.Text;
 
 namespace ProxyMapService.WebLogging
 {
@@ -22,7 +21,7 @@ namespace ProxyMapService.WebLogging
 
             var id = e.Response ? loggersProvider.GetResponseBodyId() : loggersProvider.GetRequestBodyId();
 
-            var bodyDto = HttpBodyParser.ParseBody(id, e.BodyLength, e.ContentType, e.BodyBytes ?? []);
+            var bodyDto = HttpBodyParser.ParseBody(id, e.BodyLength, e.ContentType, e.ContentEncoding, e.BodyBytes ?? []);
 
             if (e.Response)
             {
