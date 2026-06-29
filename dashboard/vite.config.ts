@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
       .setIssuedAt()
       .setIssuer(jwt_iss)
       .setAudience(jwt_aud)
-      .setExpirationTime('10m')
+      .setExpirationTime('1h')
       .sign(cryptoKey)
   }  
 
