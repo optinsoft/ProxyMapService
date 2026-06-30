@@ -186,16 +186,16 @@ const startExpiryCheck = () => {
     else {
       const expiresIn = getTokenExpiration(currentToken.value)
       if (expiresIn < thresholdSeconds) {
-        await doRefreshToken(currentRefreshToken.value)
+        await doRefreshToken(currentToken.value, currentRefreshToken.value)
       }
     }
   }, checkIntervalMs)
 }
 
-const doRefreshToken = async (refreshToken: string | null) => {
+const doRefreshToken = async (token: string | null, refreshToken: string | null) => {
   const refreshUrl = import.meta.env.VITE_REFRESH_URL;
 
-  if (!refreshUrl || !refreshToken)  {
+  if (!refreshUrl || !token || !refreshToken)  {
     return false
   }
 
@@ -206,7 +206,8 @@ const doRefreshToken = async (refreshToken: string | null) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        refreshToken: refreshToken
+        token,
+        refreshToken
       }),
     })
 
@@ -296,7 +297,7 @@ onMounted(async () => {
     currentRefreshToken.value = savedRefreshToken || ''
     startExpiryCheck()
   } else {
-    const ok = await doRefreshToken(savedRefreshToken)
+    const ok = await doRefreshToken(savedToken, savedRefreshToken)
     if (!ok)
       onLogout()
   }

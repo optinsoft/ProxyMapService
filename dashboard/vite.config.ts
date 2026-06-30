@@ -91,7 +91,7 @@ export default defineConfig(({ mode }) => {
               req.on('end', async () => {
                 res.setHeader('Content-Type', 'application/json')
                 try {
-                  const { refreshToken } = JSON.parse(body)
+                  const { token, refreshToken } = JSON.parse(body)
                   const stored = refreshTokens.get(refreshToken)
                   if (!stored) {
                     res.writeHead(401)
@@ -106,6 +106,38 @@ export default defineConfig(({ mode }) => {
                       message: 'Refresh token expired'
                     }))
                   }
+                  const cryptoKey = new TextEncoder().encode(jwt_secret)
+                  try {
+                    const { protectedHeader } = await jose.compactVerify(token, cryptoKey)
+                    if (protectedHeader.alg !== 'HS256') {
+                      throw new Error('Invalid algorithm')
+                    }
+                  }
+                  catch {
+                    res.writeHead(401)
+                    return res.end(JSON.stringify({
+                      message: 'Invalid access token'
+                    }))
+                  }
+                  const payload = jose.decodeJwt(token)
+                  if (payload.iss !== jwt_iss) {
+                    res.writeHead(401)
+                    return res.end(JSON.stringify({
+                      message: 'Invalid access token'
+                    }))
+                  }
+                  if (payload.aud !== jwt_aud) {
+                    res.writeHead(401)
+                    return res.end(JSON.stringify({
+                      message: 'Invalid access token'
+                    }))
+                  }
+                  if (payload.name !== stored.username) {
+                    res.writeHead(401)
+                    return res.end(JSON.stringify({
+                      message: 'Access token does not match refresh token'
+                    }))
+                  }                  
                   refreshTokens.delete(refreshToken)
                   const newRefreshToken = createRefreshToken(stored.username)
                   const accessToken = await createAccessToken(stored.username)
