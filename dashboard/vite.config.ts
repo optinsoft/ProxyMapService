@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
   const jwt_secret: string = env.JWT_SECRET || 'your_secret_key';
   const jwt_iss: string = env.JWT_ISS || 'your_issuer';
   const jwt_aud: string = env.JWT_AUD || 'your_audience';
+  const jwt_exp: string = env.JWT_EXP || '1h';
 
   const login_username: string = env.LOGIN_USERNAME || 'test';
   const login_password: string = env.LOGIN_PASSWORD || 'test';
@@ -28,7 +29,7 @@ export default defineConfig(({ mode }) => {
       .setIssuedAt()
       .setIssuer(jwt_iss)
       .setAudience(jwt_aud)
-      .setExpirationTime('1h')
+      .setExpirationTime(jwt_exp)
       .sign(cryptoKey)
   }  
 

@@ -173,17 +173,23 @@ const onLoginSuccess = (token: string, refreshToken?: string): void => {
 const startExpiryCheck = () => {
   if (expiryCheckTimer) clearInterval(expiryCheckTimer)
 
+  const thresholdSeconds = Number(import.meta.env.VITE_TOKEN_EXPIRY_THRESHOLD_SEC) || 300
+  const checkIntervalMs = Number(import.meta.env.VITE_TOKEN_CHECK_INTERVAL_MS) || 30000
+
+  console.log(`thresholdSeconds: ${thresholdSeconds}`)
+  console.log(`checkIntervalMs: ${checkIntervalMs}`)
+
   expiryCheckTimer = setInterval(async () => {    
     if (isTokenExpired(currentToken.value)) {
       onLogout()
     }
     else {
       const expiresIn = getTokenExpiration(currentToken.value)
-      if (expiresIn < 5 * 60) {
+      if (expiresIn < thresholdSeconds) {
         await doRefreshToken(currentRefreshToken.value)
       }
     }
-  }, 30000)
+  }, checkIntervalMs)
 }
 
 const doRefreshToken = async (refreshToken: string | null) => {
