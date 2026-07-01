@@ -3,12 +3,9 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import type { ProxyStatsData } from '../types/stats'
 
 const props = defineProps<{
-  token: string
+  stats: ProxyStatsData | null,
+  statsError: string
 }>()
-
-const stats = ref<ProxyStatsData | null>(null)
-const error = ref<string>('')
-let timer: ReturnType<typeof setInterval> | null = null
 
 const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0\u00A0B'
@@ -17,43 +14,11 @@ const formatBytes = (bytes: number): string => {
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + '\u00A0' + sizes[i]
 }
-
-const fetchStats = async () => {
-  try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014'
-    const response = await fetch(`${baseUrl}/ProxyStats`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${props.token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`)
-    }
-
-    stats.value = await response.json()
-    error.value = ''
-  } catch (err: any) {
-    error.value = 'Failed to update service statistics'
-    console.error(err)
-  }
-}
-
-onMounted(() => {
-  fetchStats()
-  timer = setInterval(fetchStats, 5000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
 </script>
 
 <template>
   <div class="stats-wrapper">
-    <div v-if="error" class="stats-error">{{ error }}</div>
+    <div v-if="statsError" class="stats-error">{{ statsError }}</div>
     
     <div v-if="stats" class="stats-container">
       <!-- Service Status Card -->
@@ -111,7 +76,7 @@ onUnmounted(() => {
       </div>
     </div>
     
-    <div v-else-if="!error" class="stats-loading">Loading service metrics...</div>
+    <div v-else-if="!statsError" class="stats-loading">Loading service metrics...</div>
   </div>
 </template>
 

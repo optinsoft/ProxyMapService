@@ -7,7 +7,10 @@ import LogViewer from './components/LogViewer.vue'
 import HttpTrafficViewer from './components/HttpTrafficViewer.vue'
 import { isTokenExpired, getTokenExpiration } from './utils/jwt'
 import type { LogEntry, HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, HttpHistoryDto } from './types/log'
+import type { ProxyStatsData } from './types/stats'
 
+const stats = ref<ProxyStatsData | null>(null)
+const statsError = ref<string>('')
 const logs = ref<LogEntry[]>([])
 const requests = ref<HttpRequestEntry[]>([])
 const responses = ref<HttpResponseEntry[]>([])
@@ -68,6 +71,29 @@ const fetchTrafficHistory = async () => {
   }
 }
 
+const fetchStats = async () => {
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014'
+    const response = await fetch(`${baseUrl}/ProxyStats`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${currentToken.value}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
+    }
+
+    stats.value = await response.json()
+    statsError.value = ''
+  } catch (err: any) {
+    statsError.value = 'Failed to update service statistics'
+    console.error('Error loading stats:', err)
+  }
+}
+
 const startSignalR = () => {
   if (connection) {
     connection.stop()
@@ -112,11 +138,16 @@ const startSignalR = () => {
     if (requestBodies.value.length > 500) responseBodies.value.shift()
   })
 
+  connection.on('Stats', (data: ProxyStatsData) => {
+    stats.value = data
+  })
+
   connection.onreconnected((connectionId) => {
     console.log('Reconnected! Fetching missed entries...')
     Promise.all([
       fetchLogHistory(),
-      fetchTrafficHistory()  
+      fetchTrafficHistory(),
+      fetchStats(),
     ])
       .then(() => {
         console.log('All missed entries successfully reloaded.');
@@ -128,7 +159,8 @@ const startSignalR = () => {
 
   Promise.all([
     fetchLogHistory(),
-    fetchTrafficHistory()
+    fetchTrafficHistory(),
+    fetchStats(),
   ])
     .then(() => {
       if (connection) {
@@ -347,7 +379,8 @@ onUnmounted(() => {
         <div class="stats-div" v-if="activeTab === 'stats'">
           <div class="stats-title">ProxyMapService Performance Metrics</div>
           <ProxyStats             
-            :token="currentToken" />
+            :stats="stats"
+            :stats-error="statsError" />
         </div>
         <LogViewer 
           v-if="activeTab === 'logs'" 

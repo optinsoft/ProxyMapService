@@ -323,9 +323,9 @@ const startResize = (e: MouseEvent) => {
   padding: 10px; position: sticky; top: 0; border-bottom: 1px solid #2d2d2d; z-index: 2;
 }
 /* Width distribution metrics */
-.traffic-table th:nth-child(1) { width: 60px; }
+.traffic-table th:nth-child(1) { width: 70px; }
 .traffic-table th:nth-child(2) { width: 170px; }
-.traffic-table th:nth-child(3) { width: 20%; }
+.traffic-table th:nth-child(3) { width: 170px; }
 .traffic-table th:nth-child(4) { width: 20%; }
 .traffic-table th:nth-child(5) { width: 20%; }
 .traffic-table th:nth-child(6) { width: 60px; }
