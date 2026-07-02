@@ -20,6 +20,8 @@ namespace ProxyMapService.WebLogging
 
     public record HttpResponseBodyEntry(HttpBodyDto Dto) : WebSocketMessageEntry;
 
+    public record HttpCompletionEntry(HttpCompletionDto Dto) : WebSocketMessageEntry;
+
     public record StatsMessageEntry (
         string ServiceInfo,
         bool Started,

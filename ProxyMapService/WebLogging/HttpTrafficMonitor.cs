@@ -33,6 +33,26 @@ namespace ProxyMapService.WebLogging
             }
         }
 
+        void IHttpTrafficMonitor.LogHttpCompleted(object? sender, EventArgs e)
+        {
+            if (sender is not IHttpLoggersProvider loggersProvider)
+            {
+                return;
+            }
+
+            var id = loggersProvider.GetCompletionId();
+            if (id == null)
+            {
+                return;
+            }
+
+            var completionDto = new HttpCompletionDto
+            {
+                Id = id,
+            };
+            websocketLogService.QueueMessage(new HttpCompletionEntry(completionDto));
+        }
+
         void IHttpTrafficMonitor.LogHttpHeaders(object? sender, HttpHeadersEventArgs e)
         {
             if (sender is not IHttpLoggersProvider loggersProvider)
@@ -67,6 +87,6 @@ namespace ProxyMapService.WebLogging
                     websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
                 }
             }
-        }        
+        }
     }
 }

@@ -30,8 +30,14 @@ export interface HttpResponseEntry {
   headers: Record<string, string>;
 }
 
-export type HttpBodyEntry = HttpMultipartPartEntry & {
+export interface HttpCompletionEntry {
+  timestamp: string;
   id: string;
+}
+
+export type HttpBodyEntry = HttpMultipartPartEntry & {
+  timestamp: string;
+  id: string;  
 };
 
 export type HttpMultipartPartEntry =
@@ -125,6 +131,7 @@ export interface MergedTrafficEntry {
   type: string;
   size: number | null;
   durationMs: number | null;
+  completed: boolean;
   requestHeaders: Record<string, string>;
   responseHeaders: Record<string, string>;
   requestBody: HttpBodyEntry | null;
@@ -134,6 +141,7 @@ export interface MergedTrafficEntry {
 export interface HttpHistoryDto {
   requests: HttpRequestEntry[];
   responses: HttpResponseEntry[];
+  completions: HttpCompletionEntry[];
   requestBodies: HttpBodyEntry[];
   responseBodies: HttpBodyEntry[];
 }

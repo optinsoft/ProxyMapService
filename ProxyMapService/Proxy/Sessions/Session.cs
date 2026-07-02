@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Authenticator;
+﻿using Microsoft.VisualBasic;
+using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
@@ -142,6 +143,8 @@ namespace ProxyMapService.Proxy.Sessions
                         step = HandleStep.Terminate;
                     }
                 } while (step != HandleStep.Terminate);
+                IHttpLoggersProvider httpLoggersProvider = context;
+                httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
             }
             finally
             {

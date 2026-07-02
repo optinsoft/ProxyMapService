@@ -111,6 +111,7 @@ namespace ProxyMapService.Proxy.Sessions
 
         IHttpHeadersLogger? IHttpLoggersProvider.RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
         IHttpHeadersLogger? IHttpLoggersProvider.ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
+        IHttpCompletionLogger? IHttpLoggersProvider.CompletionLogger { get => ProxyCounters.HttpCompletionLogger; }
         IHttpBodyLogger? IHttpLoggersProvider.RequestBodyLogger { get => ProxyCounters.HttpRequestBodyLogger; }
         IHttpBodyLogger? IHttpLoggersProvider.ResponseBodyLogger { get => ProxyCounters.HttpResponseBodyLogger; }
         string IHttpLoggersProvider.GetRequestId()
@@ -131,6 +132,10 @@ namespace ProxyMapService.Proxy.Sessions
         string IHttpLoggersProvider.GetResponseBodyId()
         {
             _requestId ??= Guid.NewGuid().ToString();
+            return _requestId;
+        }
+        string? IHttpLoggersProvider.GetCompletionId()
+        {
             return _requestId;
         }
         string? IHttpLoggersProvider.GetInbound()

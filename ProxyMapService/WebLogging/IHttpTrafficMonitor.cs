@@ -6,5 +6,6 @@ namespace ProxyMapService.WebLogging
     {
         void LogHttpHeaders(object? sender, HttpHeadersEventArgs e);
         void LogHttpBody(object? sender, HttpBodyEventArgs e);
+        void LogHttpCompleted(object? sender, EventArgs e);
     }
 }

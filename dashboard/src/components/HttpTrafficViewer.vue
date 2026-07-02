@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry } from '../types/log'
+import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry, HttpCompletionEntry } from '../types/log'
 import HttpBodyViewer from './HttpBodyViewer.vue'
 
 const props = defineProps<{
   requests: HttpRequestEntry[],
   responses: HttpResponseEntry[],
+  completions: HttpCompletionEntry[],  
   requestBodies: HttpBodyEntry[],
   responseBodies: HttpBodyEntry[],
   isConnected: boolean
@@ -26,11 +27,13 @@ const activeTab = ref<'request' | 'response'>('request')
 // Match requests and responses by unique ID
 const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
   const responsesMap = new Map(props.responses.map(r => [r.id, r]))
+  const completionsMap = new Map(props.completions.map(r => [r.id, r]))
   const reqBodiesMap = new Map(props.requestBodies.map(b => [b.id, b]))
   const resBodiesMap = new Map(props.responseBodies.map(b => [b.id, b]))
   
   return props.requests.map(req => {    
     const res = responsesMap.get(req.id)
+    const completion = completionsMap.get(req.id)
     
     // Parse timestamp calculations
     const reqTime = new Date(req.timestamp).getTime()
@@ -56,6 +59,7 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       type: res ? res.type : '',
       size: typeof res?.size === 'number' ? res.size : responseBody?.length || null,
       durationMs: duration,
+      completed: !!completion,
       requestHeaders: req.headers || {},
       responseHeaders: res?.headers || {},
       requestBody,
@@ -182,7 +186,7 @@ function formatBytes(bytes: number): string {
               <td class="cell-method">{{ tx.requestMethod }}</td>
               <td>
                 <span :class="['status-tag', getStatusClass(tx.statusCode)]">
-                  {{ tx.statusCode ? `${tx.statusCode} ${tx.statusText}` : 'Pending...' }}
+                  {{ tx.statusCode ? `${tx.statusCode} ${tx.statusText}` : (tx.completed ? 'Interrupted' :  'Pending...') }}
                 </span>
               </td>
               <td class="cell-type">{{ tx.type || '-' }}</td>
@@ -222,7 +226,7 @@ function formatBytes(bytes: number): string {
             <p><strong>Request URI:</strong> <span class="mono">{{ selectedTransaction.requestURI }}</span></p>
             <p><strong>Request Method:</strong> <span class="mono">{{ selectedTransaction.requestMethod }}</span></p>
             <p><strong>Status Code:</strong> <span class="mono">{{ selectedTransaction.statusCode || '-' }}</span></p>
-            <p><strong>Status Text:</strong> <span class="mono">{{ selectedTransaction.statusText || '-' }}</span></p>
+            <p><strong>Status Text:</strong> <span class="mono">{{ selectedTransaction.statusCode ? selectedTransaction.statusText : (selectedTransaction.completed ? 'Interrupted' : 'Pending...') }}</span></p>
             <p><strong>Type:</strong> <span class="mono">{{ selectedTransaction.type || '-' }}</span></p>
             <p><strong>Size:</strong> <span class="mono">{{ typeof selectedTransaction.size === 'number' ? selectedTransaction.size : '-' }}</span></p>
             <p><strong>Duration (ms):</strong> <span class="mono">{{ typeof selectedTransaction.durationMs === 'number' ? selectedTransaction.durationMs : '-' }}</span></p>

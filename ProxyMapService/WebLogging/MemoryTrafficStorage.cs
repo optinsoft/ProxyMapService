@@ -37,6 +37,10 @@ namespace ProxyMapService.WebLogging
                     .OfType<HttpResponseMessageEntry>()
                     .Select(entry => entry.Dto)
                     .ToArray(),
+                Completions = snapshot
+                    .OfType<HttpCompletionEntry>()
+                    .Select(entry => entry.Dto)
+                    .ToArray(),
                 RequestBodies = snapshot
                     .OfType<HttpRequestBodyEntry>()
                     .Select(entry => entry.Dto)

@@ -6,7 +6,7 @@ import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
 import HttpTrafficViewer from './components/HttpTrafficViewer.vue'
 import { isTokenExpired, getTokenExpiration } from './utils/jwt'
-import type { LogEntry, HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, HttpHistoryDto } from './types/log'
+import type { LogEntry, HttpRequestEntry, HttpResponseEntry, HttpCompletionEntry, HttpBodyEntry, HttpHistoryDto } from './types/log'
 import type { ProxyStatsData } from './types/stats'
 
 const stats = ref<ProxyStatsData | null>(null)
@@ -14,6 +14,7 @@ const statsError = ref<string>('')
 const logs = ref<LogEntry[]>([])
 const requests = ref<HttpRequestEntry[]>([])
 const responses = ref<HttpResponseEntry[]>([])
+const completions = ref<HttpCompletionEntry[]>([])
 const requestBodies = ref<HttpBodyEntry[]>([])
 const responseBodies = ref<HttpBodyEntry[]>([])
 const isConnected = ref<boolean>(false)
@@ -64,6 +65,7 @@ const fetchTrafficHistory = async () => {
     const history: HttpHistoryDto = await response.json();    
     requests.value = history.requests;
     responses.value = history.responses;
+    completions.value = history.completions;
     requestBodies.value = history.requestBodies;
     responseBodies.value = history.responseBodies;
   } catch (err) {
@@ -126,6 +128,10 @@ const startSignalR = () => {
   connection.on('HttpResponse', (data: HttpResponseEntry) => {
     responses.value.push(data)
     if (responses.value.length > 500) responses.value.shift()
+  })
+
+  connection.on('HttpCompletion', (data: HttpCompletionEntry) => {
+    completions.value.push(data)
   })
 
   connection.on('HttpRequestBody', (data: HttpBodyEntry) => {
@@ -391,6 +397,7 @@ onUnmounted(() => {
           v-if="activeTab === 'network'" 
           :requests="requests" 
           :responses="responses"
+          :completions="completions"
           :request-bodies="requestBodies"
           :response-bodies="responseBodies"
           :isConnected="isConnected"

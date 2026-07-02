@@ -115,6 +115,8 @@ namespace ProxyMapService.Services
                 _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
                 _proxyCounters.HttpResponseHeadersLogger ??= new HttpHeadersLogger(true);
                 _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
+                _proxyCounters.HttpCompletionLogger ??= new HttpCompletionLogger();
+                _proxyCounters.HttpCompletionLogger.HttpCompletionHandler += httpTrafficMonitor.LogHttpCompleted;
                 if (monitoringOptions?.TrafficMonitor.LogBody == true)
                 {
                     _proxyCounters.HttpRequestBodyLogger ??= new HttpBodyLogger(false);

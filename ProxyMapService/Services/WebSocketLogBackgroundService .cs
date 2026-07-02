@@ -64,6 +64,11 @@ namespace ProxyMapService.Services
                             await _hubContext.Clients.All.SendAsync("HttpResponse", response.Dto, stoppingToken);
                             break;
 
+                        case HttpCompletionEntry completion:
+                            _httpTrafficStorage.AddEntry(completion);
+                            await _hubContext.Clients.All.SendAsync("HttpCompletion", completion.Dto, stoppingToken);
+                            break;
+
                         case HttpRequestBodyEntry body:
                             _httpTrafficStorage.AddEntry(body);
                             await _hubContext.Clients.All.SendAsync("HttpRequestBody", body.Dto, stoppingToken);
