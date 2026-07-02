@@ -23,6 +23,8 @@ export interface HttpResponseEntry {
   inbound: string;
   statusCode: string;
   statusText: string;
+  type: string;
+  size: number | null;
   route: string;
   targetHost: string;
   headers: Record<string, string>;
@@ -120,6 +122,8 @@ export interface MergedTrafficEntry {
   targetHost: string;
   statusCode: number | null;
   statusText: string;
+  type: string;
+  size: number | null;
   durationMs: number | null;
   requestHeaders: Record<string, string>;
   responseHeaders: Record<string, string>;

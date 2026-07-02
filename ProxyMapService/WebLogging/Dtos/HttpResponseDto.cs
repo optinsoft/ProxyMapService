@@ -10,6 +10,8 @@
         public string? Route { get; set; }
         public string? TargetHost { get; set; }
         public string? StatusLine { get; set; }
+        public string? Type { get; set; }
+        public long? Size { get; set; }
         public Dictionary<string, string> Headers { get; set; } = [];
     }
 }

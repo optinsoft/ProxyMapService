@@ -53,6 +53,8 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       targetHost: targetHostDisplay,
       statusCode: res ? parseInt(res.statusCode, 10) : null,
       statusText: res ? res.statusText : '',
+      type: res ? res.type : '',
+      size: typeof res?.size === 'number' ? res.size : responseBody?.length || null,
       durationMs: duration,
       requestHeaders: req.headers || {},
       responseHeaders: res?.headers || {},
@@ -102,6 +104,32 @@ const startResize = (e: MouseEvent) => {
   window.addEventListener('mousemove', onMove)
   window.addEventListener('mouseup', onUp)
 }
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '0 B';
+  }
+
+  const labels = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+
+  if (i >= labels.length) {
+    return `${(bytes / Math.pow(1024, labels.length - 1)).toFixed(2)} ${labels[labels.length - 1]}`;
+  }
+
+  const value = bytes / Math.pow(1024, i);
+
+  let decimals = 0;
+  if (i === 1 || i === 2) {
+    decimals = 1;
+  } else if (i > 2) {
+    decimals = 2;
+  }
+
+  const formattedValue = value.toFixed(decimals).replace(/\.0+$/, '');
+
+  return `${formattedValue} ${labels[i]}`;
+}
 </script>
 
 <template>
@@ -127,6 +155,8 @@ const startResize = (e: MouseEvent) => {
               <th>Request URI</th>
               <th>Method</th>
               <th>Status</th>
+              <th>Type</th>
+              <th>Size</th>
               <th>Duration</th>
             </tr>
           </thead>
@@ -155,6 +185,8 @@ const startResize = (e: MouseEvent) => {
                   {{ tx.statusCode ? `${tx.statusCode} ${tx.statusText}` : 'Pending...' }}
                 </span>
               </td>
+              <td class="cell-type">{{ tx.type || '-' }}</td>
+              <td class="cell-size">{{ typeof tx.size === 'number' ? formatBytes(tx.size) : '-' }}</td>
               <td class="cell-duration">
                 {{ tx.durationMs !== null ? tx.durationMs + ' ms' : '-' }}
               </td>
@@ -183,15 +215,17 @@ const startResize = (e: MouseEvent) => {
         
         <div class="sidebar-content">          
           <div class="info-block">
+            <p><strong>Time:</strong> <span class="mono">{{ selectedTransaction.timestamp }}</span></p>            
             <p><strong>Inbound:</strong> <span class="mono">{{ selectedTransaction.inbound }}</span></p>
             <p><strong>Route:</strong> <span class="mono">{{ selectedTransaction.route }}</span></p>
             <p><strong>Target Host:</strong> <span class="mono">{{ selectedTransaction.targetHost }}</span></p>
             <p><strong>Request URI:</strong> <span class="mono">{{ selectedTransaction.requestURI }}</span></p>
             <p><strong>Request Method:</strong> <span class="mono">{{ selectedTransaction.requestMethod }}</span></p>
-            <p><strong>Status Code:</strong> <span class="mono">{{ selectedTransaction.statusCode }}</span></p>
-            <p><strong>Status Text:</strong> <span class="mono">{{ selectedTransaction.statusText }}</span></p>
-            <p><strong>Time:</strong> <span class="mono">{{ selectedTransaction.timestamp }}</span></p>
-            <p><strong>Duration (ms):</strong> <span class="mono">{{ selectedTransaction.durationMs }}</span></p>
+            <p><strong>Status Code:</strong> <span class="mono">{{ selectedTransaction.statusCode || '-' }}</span></p>
+            <p><strong>Status Text:</strong> <span class="mono">{{ selectedTransaction.statusText || '-' }}</span></p>
+            <p><strong>Type:</strong> <span class="mono">{{ selectedTransaction.type || '-' }}</span></p>
+            <p><strong>Size:</strong> <span class="mono">{{ typeof selectedTransaction.size === 'number' ? selectedTransaction.size : '-' }}</span></p>
+            <p><strong>Duration (ms):</strong> <span class="mono">{{ typeof selectedTransaction.durationMs === 'number' ? selectedTransaction.durationMs : '-' }}</span></p>
           </div>
 
           <div class="tabs">
@@ -330,7 +364,9 @@ const startResize = (e: MouseEvent) => {
 .traffic-table th:nth-child(5) { width: 20%; }
 .traffic-table th:nth-child(6) { width: 60px; }
 .traffic-table th:nth-child(7) { width: 15%; }
-.traffic-table th:nth-child(8) { width: 60px; }
+.traffic-table th:nth-child(8) { width: 80px; }
+.traffic-table th:nth-child(9) { width: 60px; }
+.traffic-table th:nth-child(10) { width: 60px; }
 
 .traffic-table td { padding: 8px 10px; border-bottom: 1px solid #2d2d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .traffic-table tbody tr:hover { background-color: #2a2a2a; }
@@ -342,6 +378,8 @@ const startResize = (e: MouseEvent) => {
 .cell-target-host { color: #e3e3e3; font-family: monospace; }
 .cell-request-uri { color: #e3e3e3; font-family: monospace; }
 .cell-method { color: #e3e3e3; font-family: monospace; }
+.cell-type { color: #e3e3e3; font-family: monospace; }
+.cell-size { color: #e3e3e3; font-family: monospace; }
 .cell-duration { font-family: monospace; text-align: right; padding-right: 15px !important; }
 
 .splitter {

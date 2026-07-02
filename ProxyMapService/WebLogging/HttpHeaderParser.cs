@@ -153,6 +153,8 @@ namespace ProxyMapService.WebLogging
             string? statusLine = null;
             string? httpStatusCode = null;
             string? httpStatuseText = null;
+            string? contentType = null;
+            string? contentLength = null;
 
             foreach (var headerLine in rawHeaders)
             {
@@ -189,8 +191,19 @@ namespace ProxyMapService.WebLogging
                         dictionary[key] += $", {value}";
                     else
                         dictionary[key] = value;
+
+                    if (key.Equals("content-type", StringComparison.OrdinalIgnoreCase)) {
+                        contentType = value;
+                    }
+                    else if (key.Equals("content-length", StringComparison.OrdinalIgnoreCase))
+                    {
+                        contentLength = value;
+                    }
                 }
             }
+
+            var type = contentType != null ? MimeTypeProvider.GetNetworkType(contentType) : null;
+            long? size = contentLength != null && long.TryParse(contentLength, out var length) ? length : null;
 
             var dto = new HttpResponseDto()
             {
@@ -198,6 +211,8 @@ namespace ProxyMapService.WebLogging
                 StatusCode = httpStatusCode,
                 StatusText = httpStatuseText,
                 StatusLine = statusLine,
+                Type = type,
+                Size = size,
                 Headers = dictionary
             };
 
