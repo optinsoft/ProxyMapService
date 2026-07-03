@@ -20,6 +20,7 @@ namespace ProxyMapService.Proxy.Proto
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, context.Token);
+            httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyConnectionEstablished(SessionContext context)
@@ -55,6 +56,7 @@ namespace ProxyMapService.Proxy.Proto
                 httpLoggersProvider.ResponseBodyLogger?.OnCompleted(context, contentType, contentBytes.Length, contentBytes);
                 await incomingStream.WriteAsync(contentBytes, context.Token);
             }
+            httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyError(SessionContext context, Stream? incomingStream, string httpStatusLine, List<string>? customHeaders)
@@ -188,6 +190,8 @@ namespace ProxyMapService.Proxy.Proto
                 httpLoggersProvider.ResponseBodyLogger?.OnCompleted(context, contentType, textBytes.Length, textBytes);
                 await incomingStream.WriteAsync(textBytes, context.Token);
             }
+
+            httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyJson(SessionContext context, Stream? incomingStream, object data, string[]? customHeaders, 
@@ -221,6 +225,8 @@ namespace ProxyMapService.Proxy.Proto
                 httpLoggersProvider.ResponseBodyLogger?.OnCompleted(context, contentType, jsonBytes.Length, jsonBytes);
                 await incomingStream.WriteAsync(jsonBytes, context.Token);
             }
+
+            httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
         }
 
         private static readonly JsonSerializerOptions SnakeCaseOptions = new()
@@ -302,6 +308,8 @@ namespace ProxyMapService.Proxy.Proto
                     await fileStream.CopyToAsync(incomingStream, context.Token);
                 }
             }
+
+            httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyFileStream(SessionContext context, FileStream fileStream)
@@ -352,6 +360,8 @@ namespace ProxyMapService.Proxy.Proto
                         await fileStream.CopyToAsync(incomingStream, context.Token);
                     }
                 }
+
+                httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
             }
             finally
             {

@@ -136,7 +136,9 @@ namespace ProxyMapService.Proxy.Sessions
         }
         string? IHttpLoggersProvider.GetCompletionId()
         {
-            return _requestId;
+            var completionId = _requestId;
+            _requestId = null;
+            return completionId;
         }
         string? IHttpLoggersProvider.GetInbound()
         {

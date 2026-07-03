@@ -34,17 +34,16 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
   return props.requests.map(req => {    
     const res = responsesMap.get(req.id)
     const completion = completionsMap.get(req.id)
+    const requestBody = reqBodiesMap.get(req.id) || null
+    const responseBody = resBodiesMap.get(req.id) || null
     
     // Parse timestamp calculations
     const reqTime = new Date(req.timestamp).getTime()
-    const resTime = res ? new Date(res.timestamp).getTime() : null
-    const duration = (resTime && reqTime) ? (resTime - reqTime) : null
+    const compTime = completion ? new Date(completion.timestamp).getTime() : null
+    const duration = (compTime && reqTime) ? (compTime - reqTime) : null
 
     const routeDisplay = res?.route || req.route || '-'
     const targetHostDisplay = res?.targetHost || req.targetHost || '-'
-
-    const requestBody = reqBodiesMap.get(req.id) || null
-    const responseBody = resBodiesMap.get(req.id) || null
 
     return {
       id: req.id,
@@ -111,28 +110,41 @@ const startResize = (e: MouseEvent) => {
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) {
-    return '0 B';
+    return '0 B'
   }
 
-  const labels = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const labels = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
 
   if (i >= labels.length) {
-    return `${(bytes / Math.pow(1024, labels.length - 1)).toFixed(2)} ${labels[labels.length - 1]}`;
+    return `${(bytes / Math.pow(1024, labels.length - 1)).toFixed(2)} ${labels[labels.length - 1]}`
   }
 
-  const value = bytes / Math.pow(1024, i);
+  const value = bytes / Math.pow(1024, i)
 
   let decimals = 0;
   if (i === 1 || i === 2) {
     decimals = 1;
   } else if (i > 2) {
-    decimals = 2;
+    decimals = 2
   }
 
-  const formattedValue = value.toFixed(decimals).replace(/\.0+$/, '');
+  const formattedValue = value.toFixed(decimals).replace(/\.0+$/, '')
 
-  return `${formattedValue} ${labels[i]}`;
+  return `${formattedValue} ${labels[i]}`
+}
+
+function formatDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) {
+    return '0 ms'
+  }
+
+  const i = Math.floor(Math.log(ms) / Math.log(1000))
+  if ( i > 0) {
+    return `${(ms / 1000).toFixed(2)} s`
+  } 
+  
+  return `${ms} ms`
 }
 </script>
 
@@ -192,7 +204,7 @@ function formatBytes(bytes: number): string {
               <td class="cell-type">{{ tx.type || '-' }}</td>
               <td class="cell-size">{{ typeof tx.size === 'number' ? formatBytes(tx.size) : '-' }}</td>
               <td class="cell-duration">
-                {{ tx.durationMs !== null ? tx.durationMs + ' ms' : '-' }}
+                {{ tx.durationMs !== null ? formatDuration(tx.durationMs) : '-' }}
               </td>
             </tr>
           </tbody>
@@ -361,16 +373,16 @@ function formatBytes(bytes: number): string {
   padding: 10px; position: sticky; top: 0; border-bottom: 1px solid #2d2d2d; z-index: 2;
 }
 /* Width distribution metrics */
-.traffic-table th:nth-child(1) { width: 70px; }
-.traffic-table th:nth-child(2) { width: 170px; }
-.traffic-table th:nth-child(3) { width: 170px; }
-.traffic-table th:nth-child(4) { width: 20%; }
-.traffic-table th:nth-child(5) { width: 20%; }
-.traffic-table th:nth-child(6) { width: 60px; }
+.traffic-table th:nth-child(1) { width: 5%; }
+.traffic-table th:nth-child(2) { width: 12%; }
+.traffic-table th:nth-child(3) { width: 12%; }
+.traffic-table th:nth-child(4) { width: 15%; }
+.traffic-table th:nth-child(5) { width: 16%; }
+.traffic-table th:nth-child(6) { width: 10%; }
 .traffic-table th:nth-child(7) { width: 15%; }
-.traffic-table th:nth-child(8) { width: 80px; }
-.traffic-table th:nth-child(9) { width: 60px; }
-.traffic-table th:nth-child(10) { width: 60px; }
+.traffic-table th:nth-child(8) { width: 5%; }
+.traffic-table th:nth-child(9) { width: 5%; }
+.traffic-table th:nth-child(10) { width: 5%; }
 
 .traffic-table td { padding: 8px 10px; border-bottom: 1px solid #2d2d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .traffic-table tbody tr:hover { background-color: #2a2a2a; }
