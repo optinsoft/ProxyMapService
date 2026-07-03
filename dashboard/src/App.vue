@@ -18,6 +18,7 @@ const completions = ref<HttpCompletionEntry[]>([])
 const requestBodies = ref<HttpBodyEntry[]>([])
 const responseBodies = ref<HttpBodyEntry[]>([])
 const isConnected = ref<boolean>(false)
+const isInitializing = ref(true) 
 
 const currentToken = ref<string>('')
 const currentRefreshToken = ref<string>('')
@@ -333,12 +334,14 @@ onMounted(async () => {
   if (savedToken && !isTokenExpired(savedToken)) {
     currentToken.value = savedToken
     currentRefreshToken.value = savedRefreshToken || ''
-    startExpiryCheck()
+    startExpiryCheck() 
   } else {
     const ok = await doRefreshToken(savedToken, savedRefreshToken)
     if (!ok)
       onLogout()
   }
+
+  isInitializing.value = false 
 })
 
 onUnmounted(() => {
@@ -357,8 +360,10 @@ onUnmounted(() => {
     </div>
   </header>
 
-  <main class="app-content">
-    <LoginForm v-if="!currentToken" @login-success="onLoginSuccess" />
+  <main class="app-content">    
+    <LoginForm 
+      v-if="!isInitializing && !currentToken" @login-success="onLoginSuccess" 
+    />
 
     <div v-if="currentToken" class="dashboard-layout">
       <div class="tab-navigation">
@@ -409,7 +414,13 @@ onUnmounted(() => {
     <div v-else class="unauthorized-placeholder">
       <div class="placeholder-icon">🔒</div>
       <h4>Authentication Required</h4>
-      <p>Please log in above to access the real-time telemetry metrics and event log.</p>
+      <div v-if="isInitializing" class="app-loader">
+        <div class="spinner"></div>
+        <p>Checking authorization...</p>
+      </div>
+      <div v-else>
+        <p>Please log in above to access the real-time telemetry metrics and event log.</p>
+      </div>
     </div>    
   </main>
 </template>
@@ -509,5 +520,27 @@ body {
   padding-left: 1rem;
   padding-top: 1rem;
   padding-right: 1rem;
+}
+.app-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* min-height: 100vh; */
+  font-family: sans-serif;
+  margin-top: 3rem;
+}
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>
