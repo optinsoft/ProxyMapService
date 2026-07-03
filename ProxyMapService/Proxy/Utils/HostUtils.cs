@@ -13,7 +13,7 @@ namespace ProxyMapService.Proxy.Utils
                 context.HostAction = SessionActionEnum.SessionAPI;
                 return;
             }
-            HostRule? hostRule = HostRule.FindRule(context.Host, context.HostRules);
+            HostRule? hostRule = context.IgnoreHostRules ? null : HostRule.FindRule(context.Host, context.HostRules);
             ActionEnum hostAction = hostRule?.Action ?? context.Action;
             context.HostAction = hostAction;
             if (hostAction != ActionEnum.Deny && hostRule != null)

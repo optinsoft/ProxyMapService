@@ -31,6 +31,7 @@ namespace ProxyMapService.Proxy.Sessions
         public bool DecryptSSL { get;set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
+        public bool IgnoreHostRules { get; set; }
         public SslClientOptionsConfig SslClientConfig { get; private set; }
         public SslServerOptionsConfig SslServerConfig { get; private set; }
         public X509Certificate2? ServerCertificate { get; set; }
@@ -206,6 +207,7 @@ namespace ProxyMapService.Proxy.Sessions
             DecryptSSL = mapping.Listen.DecryptSSL;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;
+            IgnoreHostRules = mapping.Listen.IgnoreHostRules;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;
             ProxyProvider = proxyProvider;
