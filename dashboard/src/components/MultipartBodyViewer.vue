@@ -6,6 +6,8 @@ import TextBodyViewer from './TextBodyViewer.vue';
 import ImageBodyViewer from './ImageBodyViewer.vue';
 import BinaryBodyViewer from './BinaryBodyViewer.vue';
 import FormUrlEncodedBodyViewer from './FormUrlEncodedBodyViewer.vue';
+import JavascriptBodyViewer from './JavascriptBodyViewer.vue';
+import TypescriptBodyViewer from './TypescriptBodyViewer.vue';
 
 import { type HttpMultipartBodyEntry, HttpContentKind } from '@/types/log';
 
@@ -61,6 +63,16 @@ defineProps<{
 
         <TextBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Text"
+          :body="part"
+        />
+
+        <JavascriptBodyViewer
+          v-else-if="part.contentKind === HttpContentKind.Javascript"
+          :body="part"
+        />
+
+        <TypescriptBodyViewer
+          v-else-if="part.contentKind === HttpContentKind.Typescript"
           :body="part"
         />
 

@@ -69,7 +69,7 @@ namespace ProxyMapService.Proxy.Headers
                 self.BadRequest = true;
             }
             onParse?.Invoke(self);
-            httpLoggersProvider?.RequestHeadersLogger?.OnHttpHeader(httpLoggersProvider, strings);
+            httpLoggersProvider?.RequestHeadersLogger?.OnHttpHeader(httpLoggersProvider, self.ContentLength.HasValue && self.ContentLength.Value == 0, strings);
         }
 
         private static byte[] GetBytes(string[]? headers, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)

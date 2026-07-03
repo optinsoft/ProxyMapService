@@ -2,11 +2,12 @@
 {
     public class HttpHeadersLogger(bool response) : IHttpHeadersLogger
     {
-        public void OnHttpHeader(object context, string[]? headers)
+        public void OnHttpHeader(object context, bool completed, string[]? headers)
         {
             HttpHeadersHandler?.Invoke(context, new()
             {
                 Response = response,
+                Completed = completed,
                 Headers = headers
             });
         }

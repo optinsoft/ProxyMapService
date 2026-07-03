@@ -298,7 +298,7 @@ namespace ProxyMapService.Proxy.Handlers
                             if (readCounter.IsLogReading)
                             {
                                 LogTunnelResetReadingHeaders(context.Logger, selfState.TunnelId);
-                            }
+                            }                            
                             if (selfState.Response)
                             {
                                 context.ResponseCacheEntry = null;

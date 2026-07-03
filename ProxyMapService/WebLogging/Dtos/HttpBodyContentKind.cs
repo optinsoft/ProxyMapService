@@ -9,6 +9,8 @@
         Image,
         Binary,
         FormUrlEncoded,
-        MultipartFormData
+        MultipartFormData,
+        Javascript,
+        Typescript,
     }
 }

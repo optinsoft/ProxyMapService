@@ -9,6 +9,7 @@ export interface LogEntry {
 export interface HttpRequestEntry {
   timestamp: string;
   id: string;
+  completed: boolean;
   inbound: string;
   requestURI: string;
   requestMethod: string;
@@ -20,6 +21,7 @@ export interface HttpRequestEntry {
 export interface HttpResponseEntry {
   timestamp: string;
   id: string;
+  completed: boolean;
   inbound: string;
   statusCode: string;
   statusText: string;
@@ -37,7 +39,8 @@ export interface HttpCompletionEntry {
 
 export type HttpBodyEntry = HttpMultipartPartEntry & {
   timestamp: string;
-  id: string;  
+  id: string;
+  completed: boolean;
 };
 
 export type HttpMultipartPartEntry =
@@ -48,7 +51,9 @@ export type HttpMultipartPartEntry =
   | HttpImageBodyEntry
   | HttpBinaryBodyEntry
   | HttpFormUrlEncodedBodyEntry
-  | HttpMultipartBodyEntry;
+  | HttpMultipartBodyEntry
+  | HttpJavascriptBodyEntry
+  | HttpTypescriptBodyEntry;
 
 interface HttpMultipartPartBaseEntry {
   id: string;
@@ -66,7 +71,9 @@ export enum HttpContentKind {
   Image = 4,
   Binary = 5,
   FormUrlEncoded = 6,
-  MultipartFormData = 7
+  MultipartFormData = 7,
+  Javascript = 8,
+  Typescript = 9,
 }
 
 export interface HttpJsonBodyEntry
@@ -90,6 +97,18 @@ export interface HttpHtmlBodyEntry
 export interface HttpTextBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Text;
+  content: string;
+}
+
+export interface HttpJavascriptBodyEntry
+  extends HttpMultipartPartBaseEntry {
+  contentKind: HttpContentKind.Javascript;
+  content: string;
+}
+
+export interface HttpTypescriptBodyEntry
+  extends HttpMultipartPartBaseEntry {
+  contentKind: HttpContentKind.Typescript;
   content: string;
 }
 

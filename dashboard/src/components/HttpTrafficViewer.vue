@@ -33,13 +33,24 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
   
   return props.requests.map(req => {    
     const res = responsesMap.get(req.id)
-    const completion = completionsMap.get(req.id)
-    const requestBody = reqBodiesMap.get(req.id) || null
-    const responseBody = resBodiesMap.get(req.id) || null
+    const completion = completionsMap.get(req.id) || null
+    const reqBody = reqBodiesMap.get(req.id) || null
+    const resBody = resBodiesMap.get(req.id) || null
     
     // Parse timestamp calculations
     const reqTime = new Date(req.timestamp).getTime()
-    const compTime = completion ? new Date(completion.timestamp).getTime() : null
+    const compTime = 
+      res?.completed 
+      ? new Date(res.timestamp).getTime() 
+      : (
+        resBody?.completed
+        ? new Date(resBody.timestamp).getTime()
+        : (
+          completion 
+          ? new Date(completion.timestamp).getTime() 
+          : null
+        )
+      )
     const duration = (compTime && reqTime) ? (compTime - reqTime) : null
 
     const routeDisplay = res?.route || req.route || '-'
@@ -56,13 +67,13 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       statusCode: res ? parseInt(res.statusCode, 10) : null,
       statusText: res ? res.statusText : '',
       type: res ? res.type : '',
-      size: typeof res?.size === 'number' ? res.size : responseBody?.length || null,
+      size: typeof res?.size === 'number' ? res.size : resBody?.length || null,
       durationMs: duration,
       completed: !!completion,
       requestHeaders: req.headers || {},
       responseHeaders: res?.headers || {},
-      requestBody,
-      responseBody
+      requestBody: reqBody,
+      responseBody: resBody
     }
   })
 })

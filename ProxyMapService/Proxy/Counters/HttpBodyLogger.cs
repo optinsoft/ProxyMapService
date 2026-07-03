@@ -8,6 +8,7 @@ namespace ProxyMapService.Proxy.Counters
             HttpBodyHandler?.Invoke(context, new()
             {
                 Response = response,
+                Completed = true,
                 ContentType = contentType,
                 ContentEncoding = contentEncoding,
                 BodyLength = bodyLength,
@@ -28,6 +29,7 @@ namespace ProxyMapService.Proxy.Counters
                 HttpBodyHandler.Invoke(context, new()
                 {
                     Response = response,
+                    Completed = true,
                     ContentType = contentType,
                     ContentEncoding = contentEncoding,
                     BodyLength = bodyLength,

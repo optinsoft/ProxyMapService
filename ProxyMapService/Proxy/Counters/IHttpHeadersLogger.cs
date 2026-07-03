@@ -2,6 +2,6 @@
 {
     public interface IHttpHeadersLogger
     {
-        void OnHttpHeader(object context, string[]? headers);
+        void OnHttpHeader(object context, bool completed, string[]? headers);
     }
 }

@@ -9,7 +9,7 @@ namespace ProxyMapService.WebLogging
 {
     public static class HttpBodyParser
     {
-        public static HttpBodyDto ParseBody(string id, long bodyLength, string? contentType, string? contentEncoding, ReadOnlySpan<byte> bodySpan)
+        public static HttpBodyDto ParseBody(string id, bool completed, long bodyLength, string? contentType, string? contentEncoding, ReadOnlySpan<byte> bodySpan)
         {
             bodySpan = TryDecompress(bodySpan, contentEncoding, out _);
 
@@ -18,6 +18,7 @@ namespace ProxyMapService.WebLogging
             var dto = new HttpBodyDto
             {
                 Id = id,
+                Completed = completed,
                 Length = bodyLength,
                 ContentType = contentType,
                 ContentKind = kind,
@@ -30,6 +31,8 @@ namespace ProxyMapService.WebLogging
                 case HttpBodyContentKind.Html:
                 case HttpBodyContentKind.Text:
                 case HttpBodyContentKind.FormUrlEncoded:
+                case HttpBodyContentKind.Javascript:
+                case HttpBodyContentKind.Typescript:
                     dto.Content = Encoding.UTF8.GetString(bodySpan);
                     break;
 
@@ -103,6 +106,8 @@ namespace ProxyMapService.WebLogging
                     case HttpBodyContentKind.Html:
                     case HttpBodyContentKind.Text:
                     case HttpBodyContentKind.FormUrlEncoded:
+                    case HttpBodyContentKind.Javascript:
+                    case HttpBodyContentKind.Typescript:
                         part.Content = Encoding.UTF8.GetString(bytesSpan);
                         break;
 
@@ -249,6 +254,16 @@ namespace ProxyMapService.WebLogging
             if (mediaType.EndsWith("+xml"))
             {
                 return HttpBodyContentKind.Xml;
+            }
+
+            if (mediaType is "application/javascript" or "text/javascript")
+            {
+                return HttpBodyContentKind.Javascript;
+            }
+
+            if (mediaType is "application/typescript" or "text/typescript")
+            {
+                return HttpBodyContentKind.Typescript;
             }
 
             if (mediaType == "text/html")
