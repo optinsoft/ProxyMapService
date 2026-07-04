@@ -5,11 +5,10 @@
         public List<CacheRule> Items { get; init; } = [];
         public List<CacheRulesFile> Files { get; init; } = [];
 
-        public static void LoadRulesList(List<CacheRule> rules, IConfigurationSection configurationSection)
+        public static void LoadRulesList(List<CacheRule> rules, CacheRules? cacheRules)
         {
             rules.Clear();
             List<IConfigurationRoot> fileConfigurations = [];
-            var cacheRules = configurationSection.Get<CacheRules>();
             if (cacheRules != null)
             {
                 rules.AddRange(cacheRules.Items);

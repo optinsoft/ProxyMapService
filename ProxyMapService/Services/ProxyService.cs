@@ -145,7 +145,7 @@ namespace ProxyMapService.Services
             }
 
             HostRules.LoadRulesList(_hostRules, _configuration.GetSection("HostRules"));
-            CacheRules.LoadRulesList(_cacheRules, _configuration.GetSection("CacheRules"));
+            CacheRules.LoadRulesList(_cacheRules, _configuration.GetSection("CacheRules").Get<CacheRules>());
 
             var cacheConfig = _configuration.GetSection("Cache").Get<CacheConfig>();
             cacheConfig ??= new CacheConfig();

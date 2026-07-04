@@ -5,5 +5,6 @@
         public Listen Listen { get; init; } = new();
         public Authentication Authentication { get; init; } = new();
         public ProxyServers ProxyServers { get; init; } = new();
+        public CacheRules? CacheRules { get; init; } = null;
     }
 }

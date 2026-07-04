@@ -75,10 +75,13 @@ namespace ProxyMapService.Proxy.Configurations
         public string? RootDir { get; set; }
         public List<CacheRule>? HostCacheRules { get => _hostCacheRules; }
 
-        public void LoadCacheRules(IConfigurationSection configurationSection)
+        public void LoadCacheRules(CacheRules? cacheRules)
         {
-            _hostCacheRules = [];
-            CacheRules.LoadRulesList(_hostCacheRules, configurationSection);
+            if (cacheRules != null)
+            {
+                _hostCacheRules = [];
+                CacheRules.LoadRulesList(_hostCacheRules, cacheRules);
+            }
         }
 
         public static HostRule? FindRule(HostAddress host, List<HostRule>? rules)

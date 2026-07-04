@@ -20,6 +20,8 @@ namespace ProxyMapService.Proxy
         private readonly List<ProxyServer> _proxyServers = [];
         private readonly List<IConfigurationRoot> _proxyServerFileConfigurations = [];
 
+        private List<CacheRule>? _cacheRules = null;
+
         private void LoadProxyServers()
         {
             _proxyServers.Clear();
@@ -49,7 +51,17 @@ namespace ProxyMapService.Proxy
             {
                 LoadProxyServers();
 
-                ProxyProvider proxyProvider = new(_proxyServers);
+                if (mapping.CacheRules != null)
+                {
+                    _cacheRules = [];
+                    CacheRules.LoadRulesList(_cacheRules, mapping.CacheRules);
+                }
+                else
+                {
+                    _cacheRules = null;
+                }
+
+                    ProxyProvider proxyProvider = new(_proxyServers);
                 ProxyAuthenticator proxyAuthenticator = new(mapping.Authentication);
 
                 List<Task> tasks = [];
@@ -83,7 +95,7 @@ namespace ProxyMapService.Proxy
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
                 await Session.Run(inboundEndPoint, client, mapping, sessionAPI,
                     proxyProvider, proxyAuthenticator, usernameParameterResolver,
-                    hostRules, cacheRules, cacheManager, userAgent, 
+                    hostRules, _cacheRules ?? cacheRules, cacheManager, userAgent, 
                     sslClientConfig, sslServerConfig,
                     proxyCounters, sessionLogger, logStep, token);
 

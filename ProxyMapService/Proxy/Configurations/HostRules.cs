@@ -12,11 +12,7 @@
                 var rule = child.Get<HostRule>();
                 if (rule != null)
                 {
-                    bool cacheRulesExists = child.GetChildren().Any(s => s.Key == "CacheRules");
-                    if (cacheRulesExists)
-                    {
-                        rule.LoadCacheRules(child.GetSection("CacheRules"));
-                    }
+                    rule.LoadCacheRules(child.GetSection("CacheRules").Get<CacheRules>());
                     rules.Add(rule);
                 }
             }
