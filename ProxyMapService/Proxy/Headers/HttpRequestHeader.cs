@@ -56,12 +56,12 @@ namespace ProxyMapService.Proxy.Headers
                 self.HTTPProtocol = GetHTTPProtocol(strings);
                 self.Host = GetHostAddress(strings);
                 self.ContentLength = GetContentLength(strings);
-                self.ContentType = GetSingleHeaderValue(strings, "content-type:");
-                self.ContentEncoding = GetSingleHeaderValue(strings, "content-encoding:");
-                self.TransferEncoding = GetSingleHeaderValue(strings, "transfer-encoding:");
+                self.ContentType = GetFirstHeaderValue(strings, "content-type:");
+                self.ContentEncoding = GetFirstHeaderValue(strings, "content-encoding:");
+                self.TransferEncoding = GetFirstHeaderValue(strings, "transfer-encoding:");
                 self.TransferEncodingChunked = self.TransferEncoding != null && string.Equals("chunked", self.TransferEncoding, StringComparison.OrdinalIgnoreCase);
                 self.ProxyAuthorization = GetBasicProxyAuthorization(strings);
-                self.Accept = GetSingleHeaderValue(strings, "accept:");
+                self.Accept = GetFirstHeaderValue(strings, "accept:");
                 self.Headers = strings;
             }
             catch (UriFormatException)
@@ -141,7 +141,7 @@ namespace ProxyMapService.Proxy.Headers
             const string key = "host:";
 
             var split = strings
-                .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .TrimStart()
                 .Split(':');
@@ -159,7 +159,7 @@ namespace ProxyMapService.Proxy.Headers
             const string key = "content-length:";
 
             return Convert.ToInt64(strings
-                .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .TrimStart());
         }
@@ -219,6 +219,14 @@ namespace ProxyMapService.Proxy.Headers
         {
             return strings
                 .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                ?.Substring(key.Length)
+                .TrimStart();
+        }
+
+        private static string? GetFirstHeaderValue(IEnumerable<string> strings, string key)
+        {
+            return strings
+                .FirstOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .TrimStart();
         }

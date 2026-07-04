@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Counters;
+using System.Diagnostics;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
@@ -47,15 +48,15 @@ namespace ProxyMapService.Proxy.Headers
             self.StatusCode = GetStatusCode(strings);
             self.StatusText = GetStatusText(strings);
             self.ContentLength = GetContentLength(strings);
-            self.ContentType = GetSingleHeaderValue(strings, "content-type:");
-            self.ContentEncoding = GetSingleHeaderValue(strings, "content-encoding:");
-            self.TransferEncoding = GetSingleHeaderValue(strings, "transfer-encoding:");
+            self.ContentType = GetFirstHeaderValue(strings, "content-type:");
+            self.ContentEncoding = GetFirstHeaderValue(strings, "content-encoding:");
+            self.TransferEncoding = GetFirstHeaderValue(strings, "transfer-encoding:");
             self.TransferEncodingChunked = self.TransferEncoding != null && string.Equals("chunked", self.TransferEncoding, StringComparison.OrdinalIgnoreCase);
             self.ETag = GetFirstHeaderValue(strings, "etag:");
             self.CacheControl = GetCommaSeparatedHeaderValues(strings, "cache-control:");
-            self.Date = GetSingleHeaderValue(strings, "date:");
+            self.Date = GetFirstHeaderValue(strings, "date:");
             self.Expires = GetSingleHeaderValue(strings, "expires:", "0");
-            self.LastModified = GetSingleHeaderValue(strings, "last-modified:");
+            self.LastModified = GetFirstHeaderValue(strings, "last-modified:");
             self.Headers = strings;
             onParse?.Invoke(self);
             httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, self.ContentLength.HasValue && self.ContentLength.Value == 0, strings);
@@ -86,11 +87,11 @@ namespace ProxyMapService.Proxy.Headers
         {
             const string key = "content-length:";
             return Convert.ToInt64(strings
-                .SingleOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .TrimStart());
         }
-
+        
         private static string? GetSingleHeaderValue(IEnumerable<string> strings, string key)
         {
             return strings
@@ -98,7 +99,7 @@ namespace ProxyMapService.Proxy.Headers
                 ?.Substring(key.Length)
                 .TrimStart();
         }
-
+        
         private static string? GetSingleHeaderValue(IEnumerable<string> strings, string key, string? fallbackIfMultiple)
         {
             var values = strings
