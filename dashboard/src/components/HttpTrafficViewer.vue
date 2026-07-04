@@ -290,6 +290,10 @@ function formatDuration(ms: number): string {
             <h5 class="headers-title">Request Body</h5>
             <div v-if="selectedTransaction.requestBody">
               <div class="headers-grid">
+                <div v-if="typeof selectedTransaction.requestBody.compressedLength === 'number'" class="header-row">
+                  <span class="header-key">Compressed Length:</span>
+                  <span class="header-val" :title="selectedTransaction.requestBody.length.toString()">{{ selectedTransaction.requestBody.compressedLength }}</span>
+                </div>
                 <div class="header-row">
                   <span class="header-key">Length:</span>
                   <span class="header-val" :title="selectedTransaction.requestBody.length.toString()">{{ selectedTransaction.requestBody.length }}</span>
@@ -325,7 +329,11 @@ function formatDuration(ms: number): string {
             </div>
             <h5 class="headers-title">Response Body</h5>
             <div v-if="selectedTransaction.responseBody">
-              <div class="headers-grid">
+              <div class="headers-grid">                
+                <div v-if="typeof selectedTransaction.responseBody.compressedLength === 'number'" class="header-row">
+                  <span class="header-key">Compressed Length:</span>
+                  <span class="header-val" :title="selectedTransaction.responseBody.length.toString()">{{ selectedTransaction.responseBody.compressedLength }}</span>
+                </div>
                 <div class="header-row">
                   <span class="header-key">Length:</span>
                   <span class="header-val" :title="selectedTransaction.responseBody.length.toString()">{{ selectedTransaction.responseBody.length }}</span>

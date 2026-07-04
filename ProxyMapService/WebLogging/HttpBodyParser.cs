@@ -11,7 +11,7 @@ namespace ProxyMapService.WebLogging
     {
         public static HttpBodyDto ParseBody(string id, bool completed, long bodyLength, string? contentType, string? contentEncoding, ReadOnlySpan<byte> bodySpan)
         {
-            bodySpan = TryDecompress(bodySpan, contentEncoding, out _);
+            bodySpan = TryDecompress(bodySpan, contentEncoding, out var decompressedBytes);
 
             var kind = GetContentKind(contentType, HttpBodyContentKind.Binary);
 
@@ -19,7 +19,8 @@ namespace ProxyMapService.WebLogging
             {
                 Id = id,
                 Completed = completed,
-                Length = bodyLength,
+                Length = decompressedBytes?.Length ?? bodyLength,
+                CompressedLength = decompressedBytes != null ? bodyLength : null,
                 ContentType = contentType,
                 ContentKind = kind,
             };
@@ -256,7 +257,7 @@ namespace ProxyMapService.WebLogging
                 return HttpBodyContentKind.Xml;
             }
 
-            if (mediaType is "application/javascript" or "text/javascript")
+            if (mediaType is "application/javascript" or "text/javascript" or "application/x-javascript")
             {
                 return HttpBodyContentKind.Javascript;
             }

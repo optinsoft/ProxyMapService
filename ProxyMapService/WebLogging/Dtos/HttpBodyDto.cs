@@ -5,5 +5,6 @@
         public required string Id { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public bool Completed { get; set; }
+        public long? CompressedLength { get; set; }
     }
 }

@@ -41,6 +41,7 @@ export type HttpBodyEntry = HttpMultipartPartEntry & {
   timestamp: string;
   id: string;
   completed: boolean;
+  compressedLength: number | null;
 };
 
 export type HttpMultipartPartEntry =

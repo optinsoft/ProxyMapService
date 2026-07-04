@@ -12,6 +12,7 @@
             { "text/javascript", "script" },
             { "application/javascript", "script" },
             { "application/x-javascript", "script" },
+            { "application/x-ecmascript", "script" },
             { "text/ecmascript", "script" },
         
             // Stylesheets
