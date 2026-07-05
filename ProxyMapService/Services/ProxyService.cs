@@ -162,7 +162,7 @@ namespace ProxyMapService.Services
             var sessionAPI = _configuration.GetSection("SessionAPI").Get<SessionAPIConfig>() ?? new SessionAPIConfig();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
-            var sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
+            using var sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
             var logStep = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogStep") ?? false;
 
             if (proxyMappings == null || proxyMappings.Count == 0)

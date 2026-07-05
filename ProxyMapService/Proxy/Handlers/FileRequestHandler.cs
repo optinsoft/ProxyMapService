@@ -34,17 +34,10 @@ namespace ProxyMapService.Proxy.Handlers
 
                 if (incomingSslStream != null)
                 {
-                    if (serverCertificate == null)
-                    {
-                        if (context.CACertificate != null)
-                        {
-                            serverCertificate = SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate);
-                        }
-                        else
-                        {
-                            throw new NullServerCertificateException();
-                        }
-                    }
+                    using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null 
+                        ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
+                        : null;
+                    serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
                     try
                     {

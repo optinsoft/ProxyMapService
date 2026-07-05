@@ -166,17 +166,10 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     string subjectName = $"CN=*.{context.Host.OriginalHostname}";
                     X509Certificate2? serverCertificate = context.ServerCertificate;
-                    if (serverCertificate == null)
-                    {
-                        if (context.CACertificate != null)
-                        {
-                            serverCertificate = SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate);
-                        }
-                        else
-                        {
-                            throw new NullServerCertificateException();
-                        }
-                    }
+                    using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null
+                        ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
+                        : null;
+                    serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
                     await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
                     context.Logger.LogServerTLSHandshakeSucceeded();

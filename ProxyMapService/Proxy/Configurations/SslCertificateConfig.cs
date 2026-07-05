@@ -2,7 +2,7 @@
 
 namespace ProxyMapService.Proxy.Configurations
 {
-    public class SslCertificateConfig
+    public class SslCertificateConfig : IDisposable
     {
         private string? _path = null;
         private string? _password = null;
@@ -88,6 +88,21 @@ namespace ProxyMapService.Proxy.Configurations
                     _initialized = true;
                 }
                 return _certificate;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _certificate?.Dispose();
+                _certificate = null;
             }
         }
     }
