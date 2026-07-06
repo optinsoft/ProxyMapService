@@ -15,8 +15,7 @@ namespace ProxyMapService.Proxy.Proto
                 "HTTP/1.1 200 Connection established",
                 $"Date: {DateTime.UtcNow:R}"
             ];
-            IHttpLoggersProvider httpLoggersProvider = context;
-            httpLoggersProvider.ResponseHeadersLogger?.OnHttpHeader(context, true, headers);
+            context.ResponseHeadersLogger?.OnHttpHeader(context, true, headers);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, context.Token);
@@ -45,16 +44,15 @@ namespace ProxyMapService.Proxy.Proto
                 headers.Add($"Content-Type: {contentType}");
             }
             headers.Add($"Content-Length: {contentBytes.Length}");
-            IHttpLoggersProvider httpLoggersProvider = context;
-            httpLoggersProvider.ResponseHeadersLogger?.OnHttpHeader(context, contentBytes.Length <= 0, [.. headers]);
+            context.ResponseHeadersLogger?.OnHttpHeader(context, contentBytes.Length <= 0, [.. headers]);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(headerBytes, context.Token);
             if (contentBytes.Length > 0)
             {
-                httpLoggersProvider.ResponseBodyLogger?.OnCompleted(context, contentType, contentBytes.Length, contentBytes);
+                context.ResponseBodyLogger?.OnCompleted(context, contentType, contentBytes.Length, contentBytes);
                 await incomingStream.WriteAsync(contentBytes, context.Token);
-                httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
+                context.CompletionLogger?.OnHttpCompleted(context);
             }
         }
 
@@ -176,8 +174,7 @@ namespace ProxyMapService.Proxy.Proto
                 $"Content-Type: {contentType}"
             ];
 
-            IHttpLoggersProvider httpLoggersProvider = context;
-            httpLoggersProvider.ResponseHeadersLogger?.OnHttpHeader(context, textBytes.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpHeader(context, textBytes.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -186,9 +183,9 @@ namespace ProxyMapService.Proxy.Proto
 
             if (textBytes.Length > 0)
             {
-                httpLoggersProvider.ResponseBodyLogger?.OnCompleted(context, contentType, textBytes.Length, textBytes);
+                context.ResponseBodyLogger?.OnCompleted(context, contentType, textBytes.Length, textBytes);
                 await incomingStream.WriteAsync(textBytes, context.Token);
-                httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
+                context.CompletionLogger?.OnHttpCompleted(context);
             }
         }
 
@@ -210,8 +207,7 @@ namespace ProxyMapService.Proxy.Proto
                 .. (customHeaders ?? [])
             ];
 
-            IHttpLoggersProvider httpLoggersProvider = context;
-            httpLoggersProvider.ResponseHeadersLogger?.OnHttpHeader(context, jsonBytes.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpHeader(context, jsonBytes.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -220,9 +216,9 @@ namespace ProxyMapService.Proxy.Proto
 
             if (jsonBytes.Length > 0)
             {
-                httpLoggersProvider.ResponseBodyLogger?.OnCompleted(context, contentType, jsonBytes.Length, jsonBytes);
+                context.ResponseBodyLogger?.OnCompleted(context, contentType, jsonBytes.Length, jsonBytes);
                 await incomingStream.WriteAsync(jsonBytes, context.Token);
-                httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
+                context.CompletionLogger?.OnHttpCompleted(context);
             }
         }
 
@@ -278,9 +274,7 @@ namespace ProxyMapService.Proxy.Proto
                 $"Content-Type: {contentType}"
             ];
 
-            IHttpLoggersProvider httpLoggersProvider = context;
-
-            httpLoggersProvider.ResponseHeadersLogger?.OnHttpHeader(context, fileInfo.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpHeader(context, fileInfo.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -290,7 +284,7 @@ namespace ProxyMapService.Proxy.Proto
             var bodyLength = fileStream.Length;
             if (bodyLength > 0)
             {
-                var bodyLogger = httpLoggersProvider.ResponseBodyLogger;
+                var bodyLogger = context.ResponseBodyLogger;
                 if (bodyLogger != null)
                 {
                     using MemoryStream bodyStream = new();
@@ -304,7 +298,7 @@ namespace ProxyMapService.Proxy.Proto
                 {
                     await fileStream.CopyToAsync(incomingStream, context.Token);
                 }
-                httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
+                context.CompletionLogger?.OnHttpCompleted(context);
             }
         }
 
@@ -321,8 +315,6 @@ namespace ProxyMapService.Proxy.Proto
             context.CachedReply = true;
             try
             {
-                IHttpLoggersProvider httpLoggersProvider = context;
-
                 var headerLength = cacheEntry.HeaderLength;
                 if (headerLength > 0)
                 {
@@ -333,7 +325,7 @@ namespace ProxyMapService.Proxy.Proto
                     string headerString = Encoding.UTF8.GetString(headerBuffer);
                     string[] headers = headerString.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
 
-                    httpLoggersProvider.ResponseHeadersLogger?.OnHttpHeader(context, fileStream.Length <= fileStream.Position, headers);
+                    context.ResponseHeadersLogger?.OnHttpHeader(context, fileStream.Length <= fileStream.Position, headers);
 
                     await incomingStream.WriteAsync(headerBuffer.AsMemory(0, headerLength), context.Token);
                 }
@@ -341,7 +333,7 @@ namespace ProxyMapService.Proxy.Proto
                 var bodyLength = fileStream.Length - fileStream.Position;
                 if (bodyLength > 0)
                 {
-                    var bodyLogger = httpLoggersProvider.ResponseBodyLogger;
+                    var bodyLogger = context.ResponseBodyLogger;
                     if (bodyLogger != null)
                     {
                         using MemoryStream bodyStream = new();
@@ -355,7 +347,7 @@ namespace ProxyMapService.Proxy.Proto
                     {
                         await fileStream.CopyToAsync(incomingStream, context.Token);
                     }
-                    httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
+                    context.CompletionLogger?.OnHttpCompleted(context);
                 }
             }
             finally

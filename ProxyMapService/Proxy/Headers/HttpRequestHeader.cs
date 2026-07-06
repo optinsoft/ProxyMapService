@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 
@@ -7,14 +6,14 @@ namespace ProxyMapService.Proxy.Headers
 {
     public class HttpRequestHeader
     {
-        public HttpRequestHeader(byte[] array, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse = null)
+        public HttpRequestHeader(byte[] array)
         {
-            Parse(this, array, httpLoggersProvider, onParse);
+            Parse(this, array);
         }
 
-        public HttpRequestHeader(string[] strings, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse = null)
+        public HttpRequestHeader(string[] strings)
         {
-            Parse(this, strings, httpLoggersProvider, onParse);
+            Parse(this, strings);
         }
 
         public bool BadRequest { get; private set; }
@@ -38,13 +37,13 @@ namespace ProxyMapService.Proxy.Headers
             return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
         }
 
-        private static void Parse(HttpRequestHeader self, byte[] array, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse)
+        private static void Parse(HttpRequestHeader self, byte[] array)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-            Parse(self, strings, httpLoggersProvider, onParse);
+            Parse(self, strings);
         }
 
-        private static void Parse(HttpRequestHeader self, string[] strings, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse)
+        private static void Parse(HttpRequestHeader self, string[] strings/*, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse*/)
         {
             self.BadRequest = false;
             try
@@ -68,8 +67,8 @@ namespace ProxyMapService.Proxy.Headers
             {
                 self.BadRequest = true;
             }
-            onParse?.Invoke(self);
-            httpLoggersProvider?.RequestHeadersLogger?.OnHttpHeader(httpLoggersProvider, self.ContentLength.HasValue && self.ContentLength.Value == 0, strings);
+            //onParse?.Invoke(self);
+            //httpLoggersProvider?.RequestHeadersLogger?.OnHttpHeader(httpLoggersProvider, self.ContentLength.HasValue && self.ContentLength.Value == 0, strings);
         }
 
         private static byte[] GetBytes(string[]? headers, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)

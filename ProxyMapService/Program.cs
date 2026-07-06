@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Middleware;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Services;
 using ProxyMapService.Vite;
 using ProxyMapService.WebLogging;
@@ -35,6 +36,20 @@ Console.OutputEncoding = Encoding.UTF8;
 // Add services to the container.
 
 builder.Services.AddSignalR();
+
+var monitoringOptions = builder.Configuration
+    .GetSection("WebSocketMonitoring")
+    .Get<WebSocketMonitoringOptions>();
+
+var loggingSwitch = new LoggingSwitch
+{
+    IsEventCapture = monitoringOptions?.EventLog?.Capture ?? false,
+    IsHttpCapture = monitoringOptions?.TrafficMonitor?.Capture ?? false
+};
+
+builder.Services.AddSingleton(loggingSwitch);
+builder.Services.AddSingleton<IEventLoggingSwitch>(sp => sp.GetRequiredService<LoggingSwitch>());
+builder.Services.AddSingleton<IHttpLoggingSwitch>(sp => sp.GetRequiredService<LoggingSwitch>());
 
 builder.Services.AddSingleton<WebSocketLogBackgroundService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WebSocketLogBackgroundService>());

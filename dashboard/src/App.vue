@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import * as signalR from '@microsoft/signalr'
 import LoginForm from './components/LoginForm.vue'
 import ProxyStats from './components/ProxyStats.vue'
@@ -27,6 +27,9 @@ let expiryCheckTimer: ReturnType<typeof setInterval> | null = null
 const activeTab = ref<'stats' | 'logs' | 'network'>('stats')
 
 let connection: signalR.HubConnection | null = null
+
+const isLogCapturing = computed(() => stats.value?.logCapture ?? false)
+const isHttpCapturing = computed(() => stats.value?.httpCapture ?? false)
 
 const fetchLogHistory = async () => {
   try {
@@ -94,6 +97,58 @@ const fetchStats = async () => {
   } catch (err: any) {
     statsError.value = 'Failed to update service statistics'
     console.error('Error loading stats:', err)
+  }
+}
+
+const handleToggleLogCapture = async () => {
+  if (!stats.value) return
+
+  const targetState = !stats.value.logCapture
+  stats.value.logCapture = targetState
+
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014'
+    const response = await fetch(`${baseUrl}/EventLog/toggle`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentToken.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ capture: targetState })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
+    }
+  } catch (err) {
+    stats.value.logCapture = !targetState
+    console.error('Failed to toggle event log capture on server:', err)
+  }
+}
+
+const handleToggleHttpCapture = async () => {
+  if (!stats.value) return
+
+  const targetState = !stats.value.httpCapture
+  stats.value.httpCapture = targetState
+
+  try {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014'
+    const response = await fetch(`${baseUrl}/TrafficHistory/toggle`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentToken.value}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ capture: targetState })
+    })
+
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
+    }
+  } catch (err) {
+    stats.value.httpCapture = !targetState
+    console.error('Failed to toggle event log capture on server:', err)
   }
 }
 
@@ -397,7 +452,10 @@ onUnmounted(() => {
           v-if="activeTab === 'logs'" 
           :logs="logs" 
           :isConnected="isConnected" 
-          @clear-logs="clearLogs" />
+          :is-capturing="isLogCapturing" 
+          @clear-logs="clearLogs"
+          @toggle-capture="handleToggleLogCapture" 
+        />
         <HttpTrafficViewer 
           v-if="activeTab === 'network'" 
           :requests="requests" 
@@ -406,7 +464,9 @@ onUnmounted(() => {
           :request-bodies="requestBodies"
           :response-bodies="responseBodies"
           :isConnected="isConnected"
+          :is-capturing="isHttpCapturing"          
           @clear-network="clearNetworkData"
+          @toggle-capture="handleToggleHttpCapture"
         />          
       </div>
     </div>

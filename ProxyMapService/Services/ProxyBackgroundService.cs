@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using ProxyMapService.Interfaces;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Utils;
 using ProxyMapService.WebLogging;
 
@@ -10,13 +11,18 @@ namespace ProxyMapService.Services
         private readonly IProxyService _proxyService;
         private readonly ILogger _logger;
         private readonly IHubContext<LogHub> _hubContext;
+        private readonly IEventLoggingSwitch _eventLoggingSwitch;
+        private readonly IHttpLoggingSwitch _httpLoggingSwitch;
         private readonly string _serviceId = RandomStringGenerator.GenerateRandomString(6);
 
-        public ProxyBackgroundService(IProxyService proxyService, ILogger<ProxyService> logger, IHubContext<LogHub> hubContext)
+        public ProxyBackgroundService(IProxyService proxyService, ILogger<ProxyService> logger, IHubContext<LogHub> hubContext,
+            IEventLoggingSwitch eventLoggingSwitch, IHttpLoggingSwitch httpLoggingSwitch)
         {
             _proxyService = proxyService;
             _logger = logger;
             _hubContext = hubContext;
+            _eventLoggingSwitch = eventLoggingSwitch;
+            _httpLoggingSwitch = httpLoggingSwitch;
             _logger.LogInformation(
                 "[BackgroundService.{}] Service is created at {}.",
                 _serviceId,
@@ -76,7 +82,9 @@ namespace ProxyMapService.Services
                             BypassBytesRead: _proxyService.GetBypassBytesRead(),
                             BypassBytesSent: _proxyService.GetBypassBytesSent(),
                             CacheResponses: _proxyService.GetCacheResponses(),
-                            CacheBytesSent: _proxyService.GetCacheBytesSent()
+                            CacheBytesSent: _proxyService.GetCacheBytesSent(),
+                            LogCapture: _eventLoggingSwitch.IsEventCapture,
+                            HttpCapture: _httpLoggingSwitch.IsHttpCapture
                         );
 
                         await _hubContext.Clients.All.SendAsync("Stats", stats, stoppingToken);

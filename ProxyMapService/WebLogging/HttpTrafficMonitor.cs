@@ -5,19 +5,15 @@ using ProxyMapService.WebLogging.Dtos;
 namespace ProxyMapService.WebLogging
 {
     public class HttpTrafficMonitor(
-        WebSocketLogBackgroundService websocketLogService) : IHttpTrafficMonitor
+        WebSocketLogBackgroundService websocketLogService,
+        IHttpLoggingSwitch loggingSwitch) : IHttpTrafficMonitor
     {
         void IHttpTrafficMonitor.LogHttpBody(object? sender, HttpBodyEventArgs e)
         {
-            if (sender is not IHttpLoggersProvider loggersProvider)
-            {
-                return;
-            }
+            if (!loggingSwitch.IsHttpCapture) return;
 
-            if (e.BodyLength == 0)
-            {
-                return;
-            }
+            if (sender is not IHttpLoggersProvider loggersProvider) return;
+            if (e.BodyLength == 0) return;
 
             var id = e.Response ? loggersProvider.GetResponseBodyId() : loggersProvider.GetRequestBodyId();
 
@@ -35,16 +31,12 @@ namespace ProxyMapService.WebLogging
 
         void IHttpTrafficMonitor.LogHttpCompleted(object? sender, EventArgs e)
         {
-            if (sender is not IHttpLoggersProvider loggersProvider)
-            {
-                return;
-            }
+            if (!loggingSwitch.IsHttpCapture) return;
+
+            if (sender is not IHttpLoggersProvider loggersProvider) return;
 
             var id = loggersProvider.GetCompletionId();
-            if (id == null)
-            {
-                return;
-            }
+            if (id == null) return;
 
             var completionDto = new HttpCompletionDto
             {
@@ -55,10 +47,9 @@ namespace ProxyMapService.WebLogging
 
         void IHttpTrafficMonitor.LogHttpHeaders(object? sender, HttpHeadersEventArgs e)
         {
-            if (sender is not IHttpLoggersProvider loggersProvider)
-            {
-                return;
-            }
+            if (!loggingSwitch.IsHttpCapture) return;
+
+            if (sender is not IHttpLoggersProvider loggersProvider) return;
 
             var inbound = loggersProvider.GetInbound();
             var route = loggersProvider.GetRoute();

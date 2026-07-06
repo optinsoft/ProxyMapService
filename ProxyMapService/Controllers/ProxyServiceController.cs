@@ -50,7 +50,7 @@ namespace ProxyMapService.Controllers
         {
             if (request?.action == null || request.action != "terminate")
             {
-                return Ok(new SuccessResponse
+                return BadRequest(new 
                 {
                     success = false,
                     message = "Bad action."

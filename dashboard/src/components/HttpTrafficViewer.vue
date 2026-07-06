@@ -9,11 +9,13 @@ const props = defineProps<{
   completions: HttpCompletionEntry[],  
   requestBodies: HttpBodyEntry[],
   responseBodies: HttpBodyEntry[],
-  isConnected: boolean
+  isConnected: boolean,
+  isCapturing: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'clear-network'): void
+  (e: 'clear-network'): void,
+  (e: 'toggle-capture'): void
 }>()
 
 const selectedId = ref<string | null>(null)
@@ -163,7 +165,15 @@ function formatDuration(ms: number): string {
   <div class="http-traffic-viewer">
     <div class="toolbar">
       <div class="status-indicator">
-        <span class="dot online"></span> HTTP Traffic Analyzer
+        <span :class="['dot', isConnected ? 'online' : 'offline']"></span>
+        {{ isConnected ? 'Connected' : 'Disconnected' }}
+        
+        <button 
+          @click="emit('toggle-capture');" 
+          :class="['capture-btn', isCapturing ? 'active' : 'paused']"
+        >
+          {{ isCapturing ? '⏸️ Pause Capture' : '▶️ Resume Capture' }}
+        </button>
       </div>
       <button class="btn-clear" @click="emit('clear-network'); selectedId = null">Clear</button>
     </div>
@@ -365,20 +375,22 @@ function formatDuration(ms: number): string {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  color: #d4d4d4;
 }
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #252526;
-  padding: 8px 15px;
-  border-bottom: 1px solid #2d2d2d;
+  background-color: #2d2d2d;
+  padding: 10px 15px;
+  height: 36px;
+  border-bottom: 1px solid #3c3c3c;
 }
-.status-indicator { display: flex; align-items: center; font-size: 13px; color: #ccc; }
-.dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; background-color: #4caf50; }
+.status-indicator { display: flex; align-items: center; font-size: 14px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; background-color: #4caf50; }
 .btn-clear {
   background: #3c3c3c; color: #fff; border: 1px solid #555;
-  padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 13px;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 13px;
 }
 .btn-clear:hover { background: #444; }
 
@@ -482,5 +494,34 @@ function formatDuration(ms: number): string {
 .tabs button.active {
   background: #094771;
   color: white;
+}
+
+.status-indicator .capture-btn {
+  background: #3c3c3c;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 5px 12px;
+  margin-left: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-indicator .capture-btn:hover {
+  filter: brightness(1.2);
+}
+.status-indicator .capture-btn.active {
+  background-color: rgba(76, 175, 80, 0.15);
+  border-color: #4caf50;
+  color: #4caf50;
+}
+.status-indicator .capture-btn.paused {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-color: #f44336;
+  color: #ef5350;
 }
 </style>

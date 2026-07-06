@@ -10,6 +10,7 @@ namespace ProxyMapService.WebLogging
         IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : ILogger
     {
         private WebSocketLogBackgroundService? _backgroundService;
+        private IEventLoggingSwitch? _loggingSwitch;
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -20,6 +21,10 @@ namespace ProxyMapService.WebLogging
             {
                 return false;
             }
+
+            _loggingSwitch ??= serviceProvider.GetRequiredService<IEventLoggingSwitch>();
+
+            if (!_loggingSwitch.IsEventCapture) return false;
 
             var filter = filterOptions.CurrentValue;
             if (categoryName.StartsWith("Microsoft.AspNetCore.SignalR") ||
@@ -46,10 +51,7 @@ namespace ProxyMapService.WebLogging
         {
             if (!IsEnabled(logLevel)) return;
 
-            if (_backgroundService == null)
-            {
-                _backgroundService = serviceProvider.GetRequiredService<WebSocketLogBackgroundService>();
-            }
+            _backgroundService ??= serviceProvider.GetRequiredService<WebSocketLogBackgroundService>();
 
             var message = formatter(state, exception);
 

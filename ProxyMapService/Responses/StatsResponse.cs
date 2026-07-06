@@ -31,7 +31,8 @@
         public long bypassBytesSent { get; set; }
         public int cacheResponses {  get; set; }
         public long cacheBytesSent {  get; set; }
-
+        public bool logCapture { get; set; }
+        public bool httpCapture { get; set; }
 #pragma warning restore IDE1006 // Naming Styles
     }
 }

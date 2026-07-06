@@ -4,11 +4,13 @@ import type { LogEntry } from '../types/log'
 
 const props = defineProps<{
   logs: LogEntry[],
-  isConnected: boolean
+  isConnected: boolean,
+  isCapturing: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'clear-logs'): void
+  (e: 'clear-logs'): void,
+  (e: 'toggle-capture'): void
 }>()
 
 const filterLevel = ref<string>('All')
@@ -44,6 +46,10 @@ const handleClear = (): void => {
   emit('clear-logs')
 }
 
+const handleToggle = (): void => {
+  emit('toggle-capture')
+}
+
 </script>
 
 <template>
@@ -52,6 +58,13 @@ const handleClear = (): void => {
       <div class="status-indicator">
         <span :class="['dot', isConnected ? 'online' : 'offline']"></span>
         {{ isConnected ? 'Connected' : 'Disconnected' }}
+        
+        <button 
+          @click="handleToggle" 
+          :class="['capture-btn', isCapturing ? 'active' : 'paused']"
+        >
+          {{ isCapturing ? '⏸️ Pause Capture' : '▶️ Resume Capture' }}
+        </button>
       </div>
 
       <div class="controls">
@@ -62,7 +75,7 @@ const handleClear = (): void => {
           <option value="Warning">Warning</option>
           <option value="Error">Error</option>
         </select>
-        <button @click="handleClear">Clear</button>
+        <button class="btn-clear" @click="handleClear">Clear</button>
       </div>
     </div>
 
@@ -95,7 +108,6 @@ const handleClear = (): void => {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 140px);
-  font-family: 'Courier New', Courier, monospace;
   background-color: #1e1e1e;
   color: #d4d4d4;
   border-radius: 8px;
@@ -124,7 +136,14 @@ const handleClear = (): void => {
   border-radius: 4px;
   cursor: pointer;
 }
-.console { flex: 1; padding: 15px; overflow-y: auto; font-size: 13px; line-height: 1.5; }
+.console { 
+  flex: 1; 
+  padding: 15px; 
+  overflow-y: auto; 
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px; 
+  line-height: 1.5; 
+}
 .empty-msg { color: #666; text-align: center; margin-top: 20px; }
 .log-line { margin-bottom: 4px; white-space: pre-wrap; word-break: break-all; }
 .time { color: #858585; margin-right: 5px; }
@@ -140,4 +159,32 @@ const handleClear = (): void => {
 .bg-red-800 { background-color: #c62828; border-radius: 2px; }
 .px-1 { padding-left: 4px; padding-right: 4px; }
 .font-bold { font-weight: bold; }
+.status-indicator .capture-btn {
+  background: #3c3c3c;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 5px 12px;
+  margin-left: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-indicator .capture-btn:hover {
+  filter: brightness(1.2);
+}
+.status-indicator .capture-btn.active {
+  background-color: rgba(76, 175, 80, 0.15);
+  border-color: #4caf50;
+  color: #4caf50;
+}
+.status-indicator .capture-btn.paused {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-color: #f44336;
+  color: #ef5350;
+}
 </style>

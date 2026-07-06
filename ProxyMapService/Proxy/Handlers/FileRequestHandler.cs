@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Configurations;
+﻿using Microsoft.VisualBasic;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Headers;
@@ -109,7 +110,8 @@ namespace ProxyMapService.Proxy.Handlers
                         var headerBytes = HttpParser.GetRequestHeaderBytes(ms, headersEnd);
                         if (headerBytes != null && headerBytes.Length > 0)
                         {
-                            context.RequestHeader = new HttpRequestHeader(headerBytes, context);
+                            context.RequestHeader = new HttpRequestHeader(headerBytes);
+                            context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                             if (!context.RequestHeader.BadRequest)
                             {
                                 CreateRequestBodyTracker(context, null);

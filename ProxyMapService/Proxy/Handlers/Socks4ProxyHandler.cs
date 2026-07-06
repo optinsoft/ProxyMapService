@@ -99,7 +99,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
                                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                                 {
-                                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, null);
+                                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
                                     if (!context.RequestHeader.BadRequest)
                                     {
                                         CreateRequestBodyTracker(context, null);

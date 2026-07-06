@@ -143,8 +143,7 @@ namespace ProxyMapService.Proxy.Sessions
                         step = HandleStep.Terminate;
                     }
                 } while (step != HandleStep.Terminate);
-                IHttpLoggersProvider httpLoggersProvider = context;
-                httpLoggersProvider.CompletionLogger?.OnHttpCompleted(context);
+                context.CompletionLogger?.OnHttpCompleted(context);
             }
             finally
             {

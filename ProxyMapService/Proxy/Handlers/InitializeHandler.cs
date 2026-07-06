@@ -2,6 +2,7 @@
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
+using System.Reflection.PortableExecutable;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -25,13 +26,13 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         case 0x00:
                             context.InboundType = ProxyType.Http;
-                            context.Http = new HttpRequestHeader(requestHeaderBytes, context, onParse: (header) => {
-                                if (header.HTTPTargetHost != null)
-                                {
-                                    //initialize context.Host before logging HttpRequestHeader
-                                    context.Host = header.HTTPTargetHost;
-                                }
-                            });
+                            context.Http = new HttpRequestHeader(requestHeaderBytes);
+                            if (context.Http.HTTPTargetHost != null)
+                            {
+                                //initialize context.Host before logging HttpRequestHeader
+                                context.Host = context.Http.HTTPTargetHost;
+                            }
+                            context.RequestHeadersLogger?.OnHttpHeader(context, context.Http);
                             if (context.Http.BadRequest)
                             {
                                 context.Logger.LogHttpBadRequest();

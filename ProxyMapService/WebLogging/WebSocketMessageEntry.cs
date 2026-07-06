@@ -50,6 +50,8 @@ namespace ProxyMapService.WebLogging
         long BypassBytesRead,
         long BypassBytesSent,
         int CacheResponses,
-        long CacheBytesSent
+        long CacheBytesSent,
+        bool LogCapture,
+        bool HttpCapture
     ) : WebSocketMessageEntry;
 }

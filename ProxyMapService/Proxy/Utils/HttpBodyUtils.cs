@@ -16,9 +16,9 @@ namespace ProxyMapService.Proxy.Utils
                         context.Logger,
                         context.RequestHeader.ContentType,
                         context.RequestHeader.ContentEncoding,
-                        (context as IHttpLoggersProvider).RequestBodyLogger,
+                        context.RequestBodyLogger,
                         context,
-                        (context as IHttpLoggersProvider).RequestBodyLogger != null);
+                        context.RequestBodyLogger != null);
                 }
                 else
                 {
@@ -27,9 +27,9 @@ namespace ProxyMapService.Proxy.Utils
                         context.RequestHeader.ContentType,
                         context.RequestHeader.ContentEncoding,
                         context.RequestHeader.ContentLength ?? 0,
-                        (context as IHttpLoggersProvider).RequestBodyLogger,
+                        context.RequestBodyLogger,
                         context,
-                        (context as IHttpLoggersProvider).RequestBodyLogger != null);
+                        context.RequestBodyLogger != null);
                 }
                 if (bodyBytes != null)
                 {
@@ -48,9 +48,9 @@ namespace ProxyMapService.Proxy.Utils
                         context.Logger,
                         context.ResponseHeader.ContentType,
                         context.ResponseHeader.ContentEncoding,
-                        (context as IHttpLoggersProvider).ResponseBodyLogger,
+                        context.ResponseBodyLogger,
                         context,
-                        (context as IHttpLoggersProvider).ResponseBodyLogger != null);
+                        context.ResponseBodyLogger != null);
                 }
                 else
                 {
@@ -59,9 +59,9 @@ namespace ProxyMapService.Proxy.Utils
                         context.ResponseHeader.ContentType,
                         context.ResponseHeader.ContentEncoding,
                         context.ResponseHeader.ContentLength ?? 0,
-                        (context as IHttpLoggersProvider).ResponseBodyLogger,
+                        context.ResponseBodyLogger,
                         context,
-                        (context as IHttpLoggersProvider).ResponseBodyLogger != null);
+                        context.ResponseBodyLogger != null);
                 }
                 if (bodyBytes != null)
                 {

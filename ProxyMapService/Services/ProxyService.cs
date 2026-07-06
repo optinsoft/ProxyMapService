@@ -44,7 +44,8 @@ namespace ProxyMapService.Services
             get => _started;
         }
 
-        public ProxyService(IConfiguration configuration, ILogger<ProxyService> logger, ILoggerFactory loggerFactory, IHttpTrafficMonitor httpTrafficMonitor)
+        public ProxyService(IConfiguration configuration, ILogger<ProxyService> logger, ILoggerFactory loggerFactory, 
+            IHttpTrafficMonitor httpTrafficMonitor, IHttpLoggingSwitch loggingSwitch)
         {
             _configuration = configuration;
             _logger = logger;
@@ -99,29 +100,29 @@ namespace ProxyMapService.Services
             var LogHttpRequestHeaders = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogHttpRequestHeaders") ?? false;
             if (LogHttpRequestHeaders)
             {
-                _proxyCounters.HttpRequestHeadersLogger ??= new HttpHeadersLogger(false);
+                _proxyCounters.HttpRequestHeadersLogger ??= new HttpHeadersLogger(false, null);
                 _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += _bytesLogger.LogHttpHeaders;
             }
             var LogHttpResponseHeaders = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogHttpResponseHeaders") ?? false;
             if (LogHttpResponseHeaders)
             {
-                _proxyCounters.HttpResponseHeadersLogger ??= new HttpHeadersLogger(true);
+                _proxyCounters.HttpResponseHeadersLogger ??= new HttpHeadersLogger(true, null);
                 _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += _bytesLogger.LogHttpHeaders;
             }
             var monitoringOptions = _configuration.GetSection("WebSocketMonitoring")?.Get<WebSocketMonitoringOptions>();
             if (monitoringOptions != null && monitoringOptions.TrafficMonitor.Enabled)
             {
-                _proxyCounters.HttpRequestHeadersLogger ??= new HttpHeadersLogger(false);
+                _proxyCounters.HttpRequestHeadersLogger ??= new HttpHeadersLogger(false, loggingSwitch);
                 _proxyCounters.HttpRequestHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
-                _proxyCounters.HttpResponseHeadersLogger ??= new HttpHeadersLogger(true);
+                _proxyCounters.HttpResponseHeadersLogger ??= new HttpHeadersLogger(true, loggingSwitch);
                 _proxyCounters.HttpResponseHeadersLogger.HttpHeadersHandler += httpTrafficMonitor.LogHttpHeaders;
-                _proxyCounters.HttpCompletionLogger ??= new HttpCompletionLogger();
+                _proxyCounters.HttpCompletionLogger ??= new HttpCompletionLogger(loggingSwitch);
                 _proxyCounters.HttpCompletionLogger.HttpCompletionHandler += httpTrafficMonitor.LogHttpCompleted;
                 if (monitoringOptions?.TrafficMonitor.LogBody == true)
                 {
-                    _proxyCounters.HttpRequestBodyLogger ??= new HttpBodyLogger(false);
+                    _proxyCounters.HttpRequestBodyLogger ??= new HttpBodyLogger(false, loggingSwitch);
                     _proxyCounters.HttpRequestBodyLogger.HttpBodyHandler += httpTrafficMonitor.LogHttpBody;
-                    _proxyCounters.HttpResponseBodyLogger ??= new HttpBodyLogger(true);
+                    _proxyCounters.HttpResponseBodyLogger ??= new HttpBodyLogger(true, loggingSwitch);
                     _proxyCounters.HttpResponseBodyLogger.HttpBodyHandler += httpTrafficMonitor.LogHttpBody;
                 }
             }

@@ -2,14 +2,17 @@
 using Microsoft.AspNetCore.Mvc;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Models;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Responses;
+using ProxyMapService.WebLogging;
 
 namespace ProxyMapService.Controllers
 {
     [Authorize]
     [Route("[controller]")]
     [ApiController]
-    public class ProxyStatsController(IProxyService service) : ControllerBase
+    public class ProxyStatsController(IProxyService service, 
+        IEventLoggingSwitch eventLoggingSwitch, IHttpLoggingSwitch httpLoggingSwitch) : ControllerBase
     {
         [HttpGet(Name = "getStats")]
         public ActionResult<StatsResponse> GetStats()
@@ -43,7 +46,9 @@ namespace ProxyMapService.Controllers
                 bypassBytesRead = service.GetBypassBytesRead(),
                 bypassBytesSent = service.GetBypassBytesSent(),
                 cacheResponses = service.GetCacheResponses(),
-                cacheBytesSent = service.GetCacheBytesSent()
+                cacheBytesSent = service.GetCacheBytesSent(),
+                logCapture = eventLoggingSwitch.IsEventCapture,
+                httpCapture = httpLoggingSwitch.IsHttpCapture
             });
         }
 

@@ -1,21 +1,19 @@
-﻿using ProxyMapService.Proxy.Counters;
-using System.Diagnostics;
-using System.Text;
+﻿using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
 {
     public class HttpResponseHeader
     {
-        public HttpResponseHeader(byte[] array, IHttpLoggersProvider? httpLoggersProvider, Action<HttpResponseHeader>? onParse = null)
+        public HttpResponseHeader(byte[] array)
         {
             HeaderLength = array.Length;
-            Parse(this, array, httpLoggersProvider, onParse);
+            Parse(this, array);
         }
 
-        public HttpResponseHeader(string[] strings, int headerLength, IHttpLoggersProvider? httpLoggersProvider, Action<HttpResponseHeader>? onParse = null)
+        public HttpResponseHeader(string[] strings, int headerLength)
         {
             HeaderLength = headerLength;
-            Parse(this, strings, httpLoggersProvider, onParse);
+            Parse(this, strings);
         }
 
         public int HeaderLength { get; private set; }
@@ -35,13 +33,13 @@ namespace ProxyMapService.Proxy.Headers
         public string? LastModified { get; private set; }
         public string[]? Headers { get; private set; }
 
-        private static void Parse(HttpResponseHeader self, byte[] array, IHttpLoggersProvider? httpLoggersProvider, Action<HttpResponseHeader>? onParse)
+        private static void Parse(HttpResponseHeader self, byte[] array)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
-            Parse(self, strings, httpLoggersProvider, onParse);
+            Parse(self, strings);
         }
 
-        private static void Parse(HttpResponseHeader self, string[] strings, IHttpLoggersProvider? httpLoggersProvider, Action<HttpResponseHeader>? onParse)
+        private static void Parse(HttpResponseHeader self, string[] strings/*, IHttpLoggersProvider? httpLoggersProvider, Action<HttpResponseHeader>? onParse*/)
         {
             self.BadResponse = false;
             self.HTTPProtocol = GetHTTPProtocol(strings);
@@ -58,8 +56,8 @@ namespace ProxyMapService.Proxy.Headers
             self.Expires = GetSingleHeaderValue(strings, "expires:", "0");
             self.LastModified = GetFirstHeaderValue(strings, "last-modified:");
             self.Headers = strings;
-            onParse?.Invoke(self);
-            httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, self.ContentLength.HasValue && self.ContentLength.Value == 0, strings);
+            //onParse?.Invoke(self);
+            //httpLoggersProvider?.ResponseHeadersLogger?.OnHttpHeader(httpLoggersProvider, self.ContentLength.HasValue && self.ContentLength.Value == 0, strings);
         }
 
         private static string GetHTTPProtocol(IEnumerable<string> strings)

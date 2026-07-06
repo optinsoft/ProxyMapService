@@ -27,4 +27,6 @@ export interface ProxyStatsData {
   bypassBytesSent: number;
   cacheResponses: number;
   cacheBytesSent: number;
+  logCapture: boolean;
+  httpCapture: boolean;
 }

@@ -4,22 +4,29 @@ using System.Collections.Concurrent;
 
 namespace ProxyMapService.WebLogging
 {
-    public class MemoryTrafficStorage(IOptions<WebSocketMonitoringOptions> monitoringOptions) : IHttpTrafficStorage
+    public class MemoryTrafficStorage(IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : IHttpTrafficStorage
     {
         private readonly ConcurrentQueue<WebSocketMessageEntry> _entries = new();
-        private readonly WebSocketMonitoringOptions _settings = monitoringOptions.Value;
+        private readonly object _cleanupLock = new();
 
         public void AddEntry(WebSocketMessageEntry entry)
         {
-            if (!_settings.TrafficMonitor.Enabled) return;
+            var currentSettings = monitoringOptions.CurrentValue;
+            if (!currentSettings.TrafficMonitor.Enabled) return;
 
             _entries.Enqueue(entry);
 
-            int maxCount = _settings.TrafficMonitor.MaxEntries;
+            int maxCount = currentSettings.TrafficMonitor.MaxEntries;
 
-            while (_entries.Count > maxCount) 
+            if (_entries.Count > maxCount)
             {
-                _entries.TryDequeue(out _);
+                lock (_cleanupLock)
+                {
+                    while (_entries.Count > maxCount)
+                    {
+                        _entries.TryDequeue(out _);
+                    }
+                }
             }
         }
 

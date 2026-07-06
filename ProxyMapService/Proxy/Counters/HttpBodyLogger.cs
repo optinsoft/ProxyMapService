@@ -1,10 +1,10 @@
-﻿
-namespace ProxyMapService.Proxy.Counters
+﻿namespace ProxyMapService.Proxy.Counters
 {
-    public class HttpBodyLogger(bool response) : IHttpBodyLogger
+    public class HttpBodyLogger(bool response, IHttpLoggingSwitch? loggingSwitch) : IHttpBodyLogger
     {
         public void OnCompleted(object context, string? contentType, string? contentEncoding, long bodyLength, byte[] bodyBytes)
         {
+            if (loggingSwitch?.IsHttpCapture == false) return;
             HttpBodyHandler?.Invoke(context, new()
             {
                 Response = response,
@@ -23,6 +23,7 @@ namespace ProxyMapService.Proxy.Counters
 
         public void OnCompleted(object context, string? contentType, string? contentEncoding, long bodyLength, MemoryStream? bodyStream)
         {
+            if (loggingSwitch?.IsHttpCapture == false) return;
             if (HttpBodyHandler != null)
             {
                 byte[]? bodyBytes = bodyStream?.ToArray();
@@ -42,7 +43,6 @@ namespace ProxyMapService.Proxy.Counters
         {
             OnCompleted(context, contentType, null, bodyLength, bodyStream);
         }
-
 
         public event EventHandler<HttpBodyEventArgs>? HttpBodyHandler;
     }

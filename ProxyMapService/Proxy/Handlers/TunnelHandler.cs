@@ -9,6 +9,7 @@ using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
@@ -272,7 +273,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             try
             {
-                int bytesRead, headersEnd, searchStart = 0;
+                int bytesRead, headersEnd, searchHeadersStart = 0;
                 bool readHeaders = selfState.Response ? context.ResponseHeader == null : context.RequestHeader == null;
                 do
                 {
@@ -304,6 +305,9 @@ namespace ProxyMapService.Proxy.Handlers
                                 context.DisposeRequestBodyTracker();
                                 context.DisposeResponseBodyTracker();
                             }
+                            ms.SetLength(0);
+                            ms.Position = 0;
+                            searchHeadersStart = 0;
                             readHeaders = selfState.Response ? context.ResponseHeader == null : context.RequestHeader == null;
                         }
                         if (!otherTunnelState.ResetReadHeaders)
@@ -323,7 +327,7 @@ namespace ProxyMapService.Proxy.Handlers
                                     selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                             }
                             ms.Write(buffer, 0, bytesRead);
-                            if ((headersEnd = HttpParser.FindHeadersEnd(ms, selfState.Response, ref searchStart)) >= 0 || searchStart < 0)
+                            if ((headersEnd = HttpParser.FindHeadersEnd(ms, selfState.Response, ref searchHeadersStart)) >= 0 || searchHeadersStart < 0)
                             {
                                 readHeaders = false;
                                 bool headerModified = false;
@@ -339,7 +343,8 @@ namespace ProxyMapService.Proxy.Handlers
                                     if (selfState.Response)
                                     {
                                         Debug.Assert(context.RequestHeader != null, "!!! HTTP Request Header is null !!!");
-                                        context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4, context);
+                                        context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4);
+                                        context.ResponseHeadersLogger?.OnHttpHeader(context, context.ResponseHeader);
                                         if (!context.ResponseHeader.BadResponse)
                                         {
                                             CreateResponseBodyTracker(context, headerAndBody.BodyBytes);
@@ -357,7 +362,8 @@ namespace ProxyMapService.Proxy.Handlers
                                     else
                                     {
                                         Debug.Assert(context.ResponseHeader == null, "!!! HTTP Response Header is not null !!!");
-                                        context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines, context);
+                                        context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines);
+                                        context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                                         if (!context.RequestHeader.BadRequest)
                                         {
                                             CreateRequestBodyTracker(context, headerAndBody.BodyBytes);

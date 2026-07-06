@@ -110,38 +110,39 @@ namespace ProxyMapService.Proxy.Sessions
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
         public bool CachedReply { get; set; }
 
-        IHttpHeadersLogger? IHttpLoggersProvider.RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
-        IHttpHeadersLogger? IHttpLoggersProvider.ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
-        IHttpCompletionLogger? IHttpLoggersProvider.CompletionLogger { get => ProxyCounters.HttpCompletionLogger; }
-        IHttpBodyLogger? IHttpLoggersProvider.RequestBodyLogger { get => ProxyCounters.HttpRequestBodyLogger; }
-        IHttpBodyLogger? IHttpLoggersProvider.ResponseBodyLogger { get => ProxyCounters.HttpResponseBodyLogger; }
-        string IHttpLoggersProvider.GetRequestId()
+        // IHttpLoggersProvider
+        public IHttpHeadersLogger? RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
+        public IHttpHeadersLogger? ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
+        public IHttpCompletionLogger? CompletionLogger { get => ProxyCounters.HttpCompletionLogger; }
+        public IHttpBodyLogger? RequestBodyLogger { get => ProxyCounters.HttpRequestBodyLogger; }
+        public IHttpBodyLogger? ResponseBodyLogger { get => ProxyCounters.HttpResponseBodyLogger; }
+        public string GetRequestId()
         {
             _requestId = Guid.NewGuid().ToString();
             return _requestId;
         }
-        string IHttpLoggersProvider.GetResponseId()
+        public string GetResponseId()
         {
             _requestId ??= Guid.NewGuid().ToString();
             return _requestId;
         }
-        string IHttpLoggersProvider.GetRequestBodyId()
+        public string GetRequestBodyId()
         {
             _requestId ??= Guid.NewGuid().ToString();
             return _requestId;
         }
-        string IHttpLoggersProvider.GetResponseBodyId()
+        public string GetResponseBodyId()
         {
             _requestId ??= Guid.NewGuid().ToString();
             return _requestId;
         }
-        string? IHttpLoggersProvider.GetCompletionId()
+        public string? GetCompletionId()
         {
             var completionId = _requestId;
             _requestId = null;
             return completionId;
         }
-        string? IHttpLoggersProvider.GetInbound()
+        public string? GetInbound()
         {
             return (InboundType switch
             {
@@ -151,7 +152,7 @@ namespace ProxyMapService.Proxy.Sessions
                 _ => null
             });
         }
-        string? IHttpLoggersProvider.GetRoute()
+        public string? GetRoute()
         {
             string cachePrefix = CachedReply ? "(cache) " : "";
             switch (ProxyServer?.ProxyType)
@@ -181,7 +182,7 @@ namespace ProxyMapService.Proxy.Sessions
                     return "deny";
             }
         }
-        string? IHttpLoggersProvider.GetTargetHost()
+        public string? GetTargetHost()
         {
             if (Host.Hostname.Length == 0) return null;
             return $"{Host.Hostname}:{Host.Port}";

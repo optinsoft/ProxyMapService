@@ -31,7 +31,7 @@ namespace ProxyMapService.Proxy.Handlers
                     connectHttpCommand.Add($"User-Agent: {context.UserAgent}");
                 }
                 connectHttpCommand.Add("Proxy-Connection: Keep-Alive");
-                http = new HttpRequestHeader([.. connectHttpCommand], null);
+                http = new HttpRequestHeader([.. connectHttpCommand]);
             }
 
             string? requestFirstLine = null;
@@ -72,7 +72,11 @@ namespace ProxyMapService.Proxy.Handlers
                 var httpRequestBytes = http.GetBytes(true, proxyAuthorization, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context.Http == null ? context : null);
+                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
+                    if (context.Http == null)
+                    {
+                        context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
+                    }
 
                     if (!context.RequestHeader.BadRequest)
                     {
@@ -113,7 +117,8 @@ namespace ProxyMapService.Proxy.Handlers
                     if (responseHeaderBytes != null)
                     {
                         context.RequestTunnelState.ResetReadHeaders = true;
-                        context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes, context);
+                        context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes);
+                        context.ResponseHeadersLogger?.OnHttpHeader(context, context.ResponseHeader);
                         if (!context.ResponseHeader.BadResponse)
                         {
                             CreateResponseBodyTracker(context, null);
