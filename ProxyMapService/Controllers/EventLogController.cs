@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using ProxyMapService.Requests;
 using ProxyMapService.Responses;
 using ProxyMapService.WebLogging;
-using System.Text.Json.Serialization;
 
 namespace ProxyMapService.Controllers
 {

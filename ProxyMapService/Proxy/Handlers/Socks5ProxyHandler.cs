@@ -3,6 +3,7 @@ using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Text;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using static ProxyMapService.Proxy.Utils.ProxyHandlerUtils;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;

@@ -1,7 +1,7 @@
-﻿using ProxyMapService.Proxy.Headers;
-using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using System.Net.Sockets;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 

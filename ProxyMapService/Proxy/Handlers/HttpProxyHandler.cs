@@ -1,6 +1,4 @@
-﻿using ProxyMapService.Proxy.Counters;
-using ProxyMapService.Proxy.Http;
-using ProxyMapService.Proxy.Proto;
+﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
 using System.Text;

@@ -1,8 +1,6 @@
-﻿using Microsoft.VisualBasic;
-using ProxyMapService.Proxy.Configurations;
+﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
-using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
@@ -10,6 +8,7 @@ using ProxyMapService.Proxy.Ssl;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 
 namespace ProxyMapService.Proxy.Handlers
