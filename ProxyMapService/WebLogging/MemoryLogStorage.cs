@@ -6,8 +6,7 @@ namespace ProxyMapService.WebLogging
     public class MemoryLogStorage(IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : ILogStorage
     {
         private readonly ConcurrentQueue<LogMessageEntry> _logs = new();
-        private readonly object _cleanupLock = new();
-
+        
         public void AddLog(LogMessageEntry log)
         {
             var currentSettings = monitoringOptions.CurrentValue;
@@ -17,26 +16,24 @@ namespace ProxyMapService.WebLogging
             
             int maxCount = currentSettings.EventLog.MaxEntries;
 
-            if (_logs.Count > maxCount)
+            while (_logs.Count > maxCount && _logs.TryDequeue(out _))
             {
-                lock (_cleanupLock)
-                {
-                    while (_logs.Count > maxCount)
-                    {
-                        _logs.TryDequeue(out _);
-                    }
-                }
             }
         }
 
         public IEnumerable<LogMessageEntry> GetRecentLogs()
         {
-            return _logs.ToArray();
+            foreach (var log in _logs)
+            {
+                yield return log;
+            }
         }
 
         public void Clear()
         {
             _logs.Clear();
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
         }
     }
 }

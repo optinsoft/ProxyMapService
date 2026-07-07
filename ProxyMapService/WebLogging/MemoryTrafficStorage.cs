@@ -7,7 +7,6 @@ namespace ProxyMapService.WebLogging
     public class MemoryTrafficStorage(IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : IHttpTrafficStorage
     {
         private readonly ConcurrentQueue<WebSocketMessageEntry> _entries = new();
-        private readonly object _cleanupLock = new();
 
         public void AddEntry(WebSocketMessageEntry entry)
         {
@@ -18,50 +17,40 @@ namespace ProxyMapService.WebLogging
 
             int maxCount = currentSettings.TrafficMonitor.MaxEntries;
 
-            if (_entries.Count > maxCount)
+            while (_entries.Count > maxCount && _entries.TryDequeue(out _))
             {
-                lock (_cleanupLock)
-                {
-                    while (_entries.Count > maxCount)
-                    {
-                        _entries.TryDequeue(out _);
-                    }
-                }
             }
         }
 
         public HttpTrafficHistoryDto GetRecentEntries()
         {
-            var snapshot = _entries.ToArray();
-
             return new HttpTrafficHistoryDto
             {
-                Requests = snapshot
-                    .OfType<HttpRequestMessageEntry>()
-                    .Select(entry => entry.Dto)
-                    .ToArray(),
-                Responses = snapshot
-                    .OfType<HttpResponseMessageEntry>()
-                    .Select(entry => entry.Dto)
-                    .ToArray(),
-                Completions = snapshot
-                    .OfType<HttpCompletionEntry>()
-                    .Select(entry => entry.Dto)
-                    .ToArray(),
-                RequestBodies = snapshot
-                    .OfType<HttpRequestBodyEntry>()
-                    .Select(entry => entry.Dto)
-                    .ToArray(),
-                ResponseBodies = snapshot
-                    .OfType<HttpResponseBodyEntry>()
-                    .Select (entry => entry.Dto)
-                    .ToArray(),
+                Requests = FilterEntries<HttpRequestMessageEntry, HttpRequestDto>(e => e.Dto),
+                Responses = FilterEntries<HttpResponseMessageEntry, HttpResponseDto>(e => e.Dto),
+                Completions = FilterEntries<HttpCompletionEntry, HttpCompletionDto>(e => e.Dto),
+                RequestBodies = FilterEntries<HttpRequestBodyEntry, HttpBodyDto>(e => e.Dto),
+                ResponseBodies = FilterEntries<HttpResponseBodyEntry, HttpBodyDto>(e => e.Dto)
             };
+        }
+
+        private IEnumerable<TResult> FilterEntries<TTarget, TResult>(Func<TTarget, TResult> selector)
+            where TTarget : WebSocketMessageEntry
+        {
+            foreach (var entry in _entries)
+            {
+                if (entry is TTarget target)
+                {
+                    yield return selector(target);
+                }
+            }
         }
 
         public void Clear()
         {
             _entries.Clear();
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
         }
     }
 }
