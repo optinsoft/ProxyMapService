@@ -43,7 +43,15 @@ namespace ProxyMapService.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            await foreach (var message in _channel.Reader.ReadAllAsync(stoppingToken))
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 4,
+                CancellationToken = stoppingToken
+            };
+
+            var asyncEnumerable = _channel.Reader.ReadAllAsync(stoppingToken);
+
+            await Parallel.ForEachAsync(asyncEnumerable, parallelOptions, async (message, token) =>
             {
                 try
                 {
@@ -51,32 +59,32 @@ namespace ProxyMapService.Services
                     {
                         case LogMessageEntry log:
                             _logStorage.AddLog(log);
-                            await _hubContext.Clients.All.SendAsync("EventLog", log, stoppingToken);
+                            await _hubContext.Clients.All.SendAsync("EventLog", log, token);
                             break;
 
                         case HttpRequestMessageEntry request:
                             _httpTrafficStorage.AddEntry(request);
-                            await _hubContext.Clients.All.SendAsync("HttpRequest", request.Dto, stoppingToken);
+                            await _hubContext.Clients.All.SendAsync("HttpRequest", request.Dto, token);
                             break;
 
                         case HttpResponseMessageEntry response:
                             _httpTrafficStorage.AddEntry(response);
-                            await _hubContext.Clients.All.SendAsync("HttpResponse", response.Dto, stoppingToken);
+                            await _hubContext.Clients.All.SendAsync("HttpResponse", response.Dto, token);
                             break;
 
                         case HttpCompletionEntry completion:
                             _httpTrafficStorage.AddEntry(completion);
-                            await _hubContext.Clients.All.SendAsync("HttpCompletion", completion.Dto, stoppingToken);
+                            await _hubContext.Clients.All.SendAsync("HttpCompletion", completion.Dto, token);
                             break;
 
                         case HttpRequestBodyEntry body:
                             _httpTrafficStorage.AddEntry(body);
-                            await _hubContext.Clients.All.SendAsync("HttpRequestBody", body.Dto, stoppingToken);
+                            await _hubContext.Clients.All.SendAsync("HttpRequestBody", body.Dto, token);
                             break;
 
                         case HttpResponseBodyEntry body:
                             _httpTrafficStorage.AddEntry(body);
-                            await _hubContext.Clients.All.SendAsync("HttpResponseBody", body.Dto, stoppingToken);
+                            await _hubContext.Clients.All.SendAsync("HttpResponseBody", body.Dto, token);
                             break;
 
                     }
@@ -85,7 +93,7 @@ namespace ProxyMapService.Services
                 {
                     _internalLogger.LogError(ex, "Error sending log via WebSocket");
                 }
-            }
+            });
         }
     }
 }

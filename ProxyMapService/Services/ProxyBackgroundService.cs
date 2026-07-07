@@ -108,7 +108,7 @@ namespace ProxyMapService.Services
                     DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
 
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 _logger.LogInformation(
                     "[BackgroundService.{}] Stopped by Host Shutdown at {}.",
