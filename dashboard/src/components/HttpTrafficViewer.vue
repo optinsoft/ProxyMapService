@@ -2,6 +2,7 @@
 import { ref, computed, reactive } from 'vue'
 import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry, HttpCompletionEntry } from '../types/log'
 import HttpBodyViewer from './HttpBodyViewer.vue'
+import { type ColumnKey, type ColumnFilters, allColumns } from '../types/column'
 
 const props = defineProps<{
   requests: HttpRequestEntry[],
@@ -10,12 +11,16 @@ const props = defineProps<{
   requestBodies: HttpBodyEntry[],
   responseBodies: HttpBodyEntry[],
   isConnected: boolean,
-  isCapturing: boolean
+  isCapturing: boolean,
+  filters: ColumnFilters,
+  visibleColumns: ColumnKey[]  
 }>()
 
 const emit = defineEmits<{
   (e: 'clear-network'): void,
-  (e: 'toggle-capture'): void
+  (e: 'toggle-capture'): void,
+  (e: 'update:filters', value: ColumnFilters): void
+  (e: 'update:visible-columns', value: ColumnKey[]): void  
 }>()
 
 const selectedId = ref<string | null>(null)
@@ -160,47 +165,17 @@ function formatDuration(ms: number): string {
   return `${ms} ms`
 }
 
-interface Column {
-  key: ColumnKey
-  label: string
-}
-
-type ColumnKey =
-  | 'time'
-  | 'inbound'
-  | 'route'
-  | 'targetHost'
-  | 'requestURI'
-  | 'method'
-  | 'status'
-  | 'type'
-  | 'size'
-  | 'duration'
-
-const allColumns: Column[] = [
-  { key: 'time', label: 'Time' },
-  { key: 'inbound', label: 'Inbound' },
-  { key: 'route', label: 'Route' },
-  { key: 'targetHost', label: 'Target Host' },
-  { key: 'requestURI', label: 'Request URI' },
-  { key: 'method', label: 'Method' },
-  { key: 'status', label: 'Status' },
-  { key: 'type', label: 'Type' },
-  { key: 'size', label: 'Size' },
-  { key: 'duration', label: 'Duration' },
-]
-
-const visibleColumns = ref(allColumns.map(c => c.key))
+//const visibleColumns = ref(allColumns.map(c => c.key))
 
 const displayedColumns = computed(() =>
-    allColumns.filter(c => visibleColumns.value.includes(c.key))
+    allColumns.filter(c => props.visibleColumns.includes(c.key))
 )
 
-const columnFilters = reactive<Record<ColumnKey, string>>(
-  Object.fromEntries(
-    allColumns.map(c => [c.key, ''])
-  ) as Record<ColumnKey, string>
-)
+//const columnFilters = reactive<ColumnFilters>(
+//  Object.fromEntries(
+//    allColumns.map(c => [c.key, ''])
+//  ) as ColumnFilters
+//)
 
 const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
   time: tx => tx.timestamp,
@@ -221,7 +196,7 @@ const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
 const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
   return mergedTransactions.value.filter((tx: MergedTrafficEntry) => {
     return displayedColumns.value.every(column => {
-      const filter = columnFilters[column.key]
+      const filter = props.filters[column.key]
         .trim()
         .toLowerCase()
 
@@ -264,7 +239,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
             >
               <input
                 type="checkbox"
-                v-model="visibleColumns"
+                v-model="props.visibleColumns"
                 :value="column.key"
               >
               {{ column.label }}
@@ -296,7 +271,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
                 :key="column.key"
               >
                 <input
-                  v-model="columnFilters[column.key]"
+                  v-model="props.filters[column.key]"
                   class="column-filter"
                   type="text"
                   placeholder="Filter..."

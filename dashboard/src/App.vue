@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, reactive, onMounted, onUnmounted } from 'vue'
 import * as signalR from '@microsoft/signalr'
 import LoginForm from './components/LoginForm.vue'
 import ProxyStats from './components/ProxyStats.vue'
@@ -11,6 +11,7 @@ import type {
   EventLogPayload, HttpRequestPayload, HttpResponsePayload, HttpCompletionPayload, HttpBodyPayload,
   HttpHistoryDto } from './types/log'
 import type { ProxyStatsData } from './types/stats'
+import { type ColumnKey, type ColumnFilters, allColumns } from './types/column'
 
 const stats = ref<ProxyStatsData | null>(null)
 const statsError = ref<string>('')
@@ -417,6 +418,14 @@ onUnmounted(() => {
   if (expiryCheckTimer) clearInterval(expiryCheckTimer)
   if (connection) connection.stop()
 })
+
+const visibleColumns = ref(allColumns.map(c => c.key))
+
+const columnFilters = reactive<ColumnFilters>(
+  Object.fromEntries(
+    allColumns.map(c => [c.key, ''])
+  ) as Record<ColumnKey, string>
+)
 </script>
 
 <template>
@@ -478,7 +487,9 @@ onUnmounted(() => {
           :request-bodies="requestBodies"
           :response-bodies="responseBodies"
           :isConnected="isConnected"
-          :is-capturing="isHttpCapturing"          
+          :is-capturing="isHttpCapturing"
+          v-model:filters="columnFilters"
+          v-model:visible-columns="visibleColumns"          
           @clear-network="clearNetworkData"
           @toggle-capture="handleToggleHttpCapture"
         />          
