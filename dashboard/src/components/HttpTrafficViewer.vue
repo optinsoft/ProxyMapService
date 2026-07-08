@@ -159,6 +159,25 @@ function formatDuration(ms: number): string {
   
   return `${ms} ms`
 }
+
+const allColumns = [
+  { key: 'time', label: 'Time' },
+  { key: 'inbound', label: 'Inbound' },
+  { key: 'route', label: 'Route' },
+  { key: 'targetHost', label: 'Target Host' },
+  { key: 'requestURI', label: 'Request URI' },
+  { key: 'method', label: 'Method' },
+  { key: 'status', label: 'Status' },
+  { key: 'type', label: 'Type' },
+  { key: 'size', label: 'Size' },
+  { key: 'duration', label: 'Duration' },
+]
+
+const visibleColumns = ref(allColumns.map(c => c.key))
+
+const displayedColumns = computed(() =>
+    allColumns.filter(c => visibleColumns.value.includes(c.key))
+)
 </script>
 
 <template>
@@ -175,7 +194,27 @@ function formatDuration(ms: number): string {
           {{ isCapturing ? '⏸️ Pause Capture' : '▶️ Resume Capture' }}
         </button>
       </div>
-      <button class="btn-clear" @click="emit('clear-network'); selectedId = null">Clear</button>
+      <div class="controls">
+        <div class="columns-menu">
+          <button class="btn-columns">
+            Columns ▼
+          </button>
+          <div class="columns-popup">
+            <label
+              v-for="column in allColumns"
+              :key="column.key"
+            >
+              <input
+                type="checkbox"
+                v-model="visibleColumns"
+                :value="column.key"
+              >
+              {{ column.label }}
+            </label>
+          </div>
+        </div>
+        <button class="btn-clear" @click="emit('clear-network'); selectedId = null">Clear</button>
+      </div>
     </div>
 
     <!-- Master-Detail Layout Container -->
@@ -185,21 +224,18 @@ function formatDuration(ms: number): string {
         <table class="traffic-table">
           <thead>
             <tr>
-              <th>Time</th>
-              <th>Inbound</th>
-              <th>Route</th>
-              <th>Target Host</th>
-              <th>Request URI</th>
-              <th>Method</th>
-              <th>Status</th>
-              <th>Type</th>
-              <th>Size</th>
-              <th>Duration</th>
+              <th
+                v-for="column in displayedColumns"
+                :key="column.key"
+                :class="`col-${column.key}`"
+              >
+                {{ column.label }}
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="mergedTransactions.length === 0">
-              <td colspan="6" class="empty-row">No proxy transactions captured yet...</td>
+              <td :colspan="displayedColumns.length" class="empty-row">No transactions captured yet...</td>
             </tr>
             <tr 
               v-for="(tx, index) in mergedTransactions" 
@@ -208,26 +244,60 @@ function formatDuration(ms: number): string {
               :class="{ 'active-row': selectedId === tx.id }"
               @click="selectRow(tx.id)"
             >
-              <td class="cell-time">{{ tx.timestamp }}</td>
-              <td class="cell-inbound">{{ tx.inbound }}</td>
-              <td>
-                <span :class="['route-badge', {'direct': 'route-direct', 'file': 'route-file'}[tx.route.toLowerCase()] || 'route-proxy']">
-                  {{ tx.route }}
-                </span>
-              </td>
-              <td class="cell-target-host">{{ tx.targetHost }}</td>
-              <td class="cell-request-uri" :title="tx.requestURI">{{ tx.requestURI }}</td>
-              <td class="cell-method">{{ tx.requestMethod }}</td>
-              <td>
-                <span :class="['status-tag', getStatusClass(tx.statusCode)]">
-                  {{ tx.statusCode ? `${tx.statusCode} ${tx.statusText}` : (tx.completed ? 'Interrupted' :  'Pending...') }}
-                </span>
-              </td>
-              <td class="cell-type">{{ tx.type || '-' }}</td>
-              <td class="cell-size">{{ typeof tx.size === 'number' ? formatBytes(tx.size) : '-' }}</td>
-              <td class="cell-duration">
-                {{ tx.durationMs !== null ? formatDuration(tx.durationMs) : '-' }}
-              </td>
+              <td
+                v-for="column in displayedColumns"
+                :key="column.key"
+                :class="`cell-${column.key}`"
+              >
+                <template v-if="column.key === 'time'">
+                  {{ tx.timestamp }}
+                </template>
+                <template v-else-if="column.key === 'inbound'">
+                  {{ tx.inbound }}
+                </template>
+                <template v-else-if="column.key === 'route'">
+                  <span
+                    :class="[
+                      'route-badge',
+                      {
+                        direct: 'route-direct',
+                        file: 'route-file'
+                      }[tx.route.toLowerCase()] || 'route-proxy'
+                    ]"
+                  >
+                    {{ tx.route }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'targetHost'">
+                  {{ tx.targetHost }}
+                </template>
+                <template v-else-if="column.key === 'requestURI'">
+                  <span :title="tx.requestURI">
+                    {{ tx.requestURI }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'method'">
+                  {{ tx.requestMethod }}
+                </template>
+                <template v-else-if="column.key === 'status'">
+                  <span :class="['status-tag', getStatusClass(tx.statusCode)]">
+                    {{
+                      tx.statusCode
+                        ? `${tx.statusCode} ${tx.statusText}`
+                        : (tx.completed ? 'Interrupted' : 'Pending...')
+                    }}
+                  </span>
+                </template>
+                <template v-else-if="column.key === 'type'">
+                  {{ tx.type || '-' }}
+                </template>
+                <template v-else-if="column.key === 'size'">
+                  {{ typeof tx.size === 'number' ? formatBytes(tx.size) : '-' }}
+                </template>
+                <template v-else-if="column.key === 'duration'">
+                  {{ tx.durationMs !== null ? formatDuration(tx.durationMs) : '-' }}
+                </template>
+              </td>              
             </tr>
           </tbody>
         </table>
@@ -405,26 +475,28 @@ function formatDuration(ms: number): string {
   padding: 10px; position: sticky; top: 0; border-bottom: 1px solid #2d2d2d; z-index: 2;
 }
 /* Width distribution metrics */
-.traffic-table th:nth-child(1) { width: 5%; }
-.traffic-table th:nth-child(2) { width: 12%; }
-.traffic-table th:nth-child(3) { width: 12%; }
-.traffic-table th:nth-child(4) { width: 18%; }
-.traffic-table th:nth-child(5) { width: 18%; }
-.traffic-table th:nth-child(6) { width: 5%; }
-.traffic-table th:nth-child(7) { width: 15%; }
-.traffic-table th:nth-child(8) { width: 5%; }
-.traffic-table th:nth-child(9) { width: 5%; }
-.traffic-table th:nth-child(10) { width: 5%; }
+.col-time { width: 5%; }
+.col-inbound { width: 12%; }
+.col-route { width: 12%; }
+.col-targetHost { width: 18%; }
+.col-requestURI { width: 18%; }
+.col-method { width: 5%; }
+.col-status { width: 15%; }
+.col-type { width: 5%; }
+.col-size { width: 5%; }
+.col-duration { width: 5%; }
 
 .traffic-table td { padding: 8px 10px; border-bottom: 1px solid #2d2d2d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .traffic-table tbody tr:hover { background-color: #2a2a2a; }
 .traffic-table tbody tr.active-row { background-color: #094771 !important; color: #fff; }
 
 .empty-row { text-align: center; color: #666; padding: 40px !important; font-style: italic; }
+
 .cell-time { color: #858585; font-family: monospace; }
 .cell-inbound { color: #e3e3e3; font-family: monospace; }
-.cell-target-host { color: #e3e3e3; font-family: monospace; }
-.cell-request-uri { color: #e3e3e3; font-family: monospace; }
+.cell-route { color: #e3e3e3; font-family: monospace; }
+.cell-targetHost { color: #e3e3e3; font-family: monospace; }
+.cell-requestURI { color: #e3e3e3; font-family: monospace; }
 .cell-method { color: #e3e3e3; font-family: monospace; }
 .cell-type { color: #e3e3e3; font-family: monospace; }
 .cell-size { color: #e3e3e3; font-family: monospace; }
@@ -524,5 +596,62 @@ function formatDuration(ms: number): string {
   background-color: rgba(244, 67, 54, 0.1);
   border-color: #f44336;
   color: #ef5350;
+}
+.columns-menu {
+  position: relative;
+  display: inline-block;
+}
+.btn-columns {
+  background: #3c3c3c;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-columns:hover {
+  background: #444;
+}
+.columns-menu:hover .columns-popup {
+  display: block;
+}
+.columns-popup {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+
+  min-width: 180px;
+  max-height: 350px;
+  overflow-y: auto;
+
+  background: #252526;
+  border: 1px solid #3c3c3c;
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.5);
+
+  padding: 6px 0;
+}
+.columns-popup label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: #ddd;
+}
+.columns-popup label:hover {
+  background: #2d2d2d;
+}
+.columns-popup input {
+  margin: 0;
+}
+.controls div, .controls button {
+  margin-left: 10px;
 }
 </style>
