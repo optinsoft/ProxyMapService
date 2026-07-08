@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry, HttpCompletionEntry } from '../types/log'
 import HttpBodyViewer from './HttpBodyViewer.vue'
 
@@ -160,7 +160,24 @@ function formatDuration(ms: number): string {
   return `${ms} ms`
 }
 
-const allColumns = [
+interface Column {
+  key: ColumnKey
+  label: string
+}
+
+type ColumnKey =
+  | 'time'
+  | 'inbound'
+  | 'route'
+  | 'targetHost'
+  | 'requestURI'
+  | 'method'
+  | 'status'
+  | 'type'
+  | 'size'
+  | 'duration'
+
+const allColumns: Column[] = [
   { key: 'time', label: 'Time' },
   { key: 'inbound', label: 'Inbound' },
   { key: 'route', label: 'Route' },
@@ -178,6 +195,47 @@ const visibleColumns = ref(allColumns.map(c => c.key))
 const displayedColumns = computed(() =>
     allColumns.filter(c => visibleColumns.value.includes(c.key))
 )
+
+const columnFilters = reactive<Record<ColumnKey, string>>(
+  Object.fromEntries(
+    allColumns.map(c => [c.key, ''])
+  ) as Record<ColumnKey, string>
+)
+
+const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
+  time: tx => tx.timestamp,
+  inbound: tx => tx.inbound,
+  route: tx => tx.route,
+  targetHost: tx => tx.targetHost,
+  requestURI: tx => tx.requestURI,
+  method: tx => tx.requestMethod,
+  status: tx =>
+    tx.statusCode
+      ? `${tx.statusCode} ${tx.statusText}`
+      : '',
+  type: tx => tx.type ?? '',
+  size: tx => tx.size?.toString() ?? '',
+  duration: tx => tx.durationMs?.toString() ?? '',
+}
+
+const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
+  return mergedTransactions.value.filter((tx: MergedTrafficEntry) => {
+    return displayedColumns.value.every(column => {
+      const filter = columnFilters[column.key]
+        .trim()
+        .toLowerCase()
+
+      if (!filter) {
+        return true
+      }
+      const getter = valueGetters[column.key]
+      if (!getter) {
+        return true
+      }
+      return getter(tx).toLowerCase().includes(filter)
+    })
+  })
+})
 </script>
 
 <template>
@@ -232,13 +290,26 @@ const displayedColumns = computed(() =>
                 {{ column.label }}
               </th>
             </tr>
+            <tr class="filters-row">
+              <th
+                v-for="column in displayedColumns"
+                :key="column.key"
+              >
+                <input
+                  v-model="columnFilters[column.key]"
+                  class="column-filter"
+                  type="text"
+                  placeholder="Filter..."
+                >
+              </th>
+            </tr>            
           </thead>
           <tbody>
             <tr v-if="mergedTransactions.length === 0">
               <td :colspan="displayedColumns.length" class="empty-row">No transactions captured yet...</td>
             </tr>
             <tr 
-              v-for="(tx, index) in mergedTransactions" 
+              v-for="(tx, index) in filteredTransactions" 
               :key="tx.id"
               :data-row-number="index + 1"
               :class="{ 'active-row': selectedId === tx.id }"
@@ -653,5 +724,29 @@ const displayedColumns = computed(() =>
 }
 .controls div, .controls button {
   margin-left: 10px;
+}
+.filters-row th {
+    padding: 4px;
+    background: #1f1f1f;
+    border-bottom: 1px solid #2d2d2d;
+}
+
+.column-filter {
+    width: 100%;
+    box-sizing: border-box;
+
+    background: #2d2d2d;
+    color: #ddd;
+
+    border: 1px solid #444;
+    border-radius: 3px;
+
+    padding: 3px 6px;
+    font-size: 12px;
+}
+
+.column-filter:focus {
+    outline: none;
+    border-color: #007acc;
 }
 </style>
