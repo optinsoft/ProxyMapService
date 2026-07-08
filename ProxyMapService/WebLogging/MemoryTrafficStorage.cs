@@ -5,29 +5,71 @@ namespace ProxyMapService.WebLogging
 {
     public class MemoryTrafficStorage(IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions) : IHttpTrafficStorage
     {
-        private readonly WebSocketDoubleBufferedQueue _doubleQueue = new();
+        private readonly WebSocketDoubleBufferedQueue _requestQueue = new();
+        private readonly WebSocketDoubleBufferedQueue _responseQueue = new();
+        private readonly WebSocketDoubleBufferedQueue _completionQueue = new();
+        private readonly WebSocketDoubleBufferedQueue _requestBodyQueue = new();
+        private readonly WebSocketDoubleBufferedQueue _responseBodyQueue = new();
 
-        public void AddEntry(WebSocketMessageEntry entry)
+        public void AddRequestEntry(HttpRequestMessageEntry entry)
         {
             var currentSettings = monitoringOptions.CurrentValue;
             if (!currentSettings.TrafficMonitor.Enabled) return;
 
             int maxCount = currentSettings.TrafficMonitor.MaxEntries;
 
-            _doubleQueue.AddEntry(entry, maxCount);
+            _requestQueue.AddEntry(entry, maxCount);
+        }
+
+        public void AddResponseEntry(HttpResponseMessageEntry entry)
+        {
+            var currentSettings = monitoringOptions.CurrentValue;
+            if (!currentSettings.TrafficMonitor.Enabled) return;
+
+            int maxCount = currentSettings.TrafficMonitor.MaxEntries;
+
+            _responseQueue.AddEntry(entry, maxCount);
+        }
+
+        public void AddCompletionEntry(HttpCompletionEntry entry)
+        {
+            var currentSettings = monitoringOptions.CurrentValue;
+            if (!currentSettings.TrafficMonitor.Enabled) return;
+
+            int maxCount = currentSettings.TrafficMonitor.MaxEntries;
+
+            _completionQueue.AddEntry(entry, maxCount);
+        }
+
+        public void AddRequestBodyEntry(HttpRequestBodyEntry entry)
+        {
+            var currentSettings = monitoringOptions.CurrentValue;
+            if (!currentSettings.TrafficMonitor.Enabled) return;
+
+            int maxCount = currentSettings.TrafficMonitor.MaxEntries;
+
+            _requestBodyQueue.AddEntry(entry, maxCount);
+        }
+
+        public void AddResponseBodyEntry(HttpResponseBodyEntry entry)
+        {
+            var currentSettings = monitoringOptions.CurrentValue;
+            if (!currentSettings.TrafficMonitor.Enabled) return;
+
+            int maxCount = currentSettings.TrafficMonitor.MaxEntries;
+
+            _responseBodyQueue.AddEntry(entry, maxCount);
         }
 
         public HttpTrafficHistoryDto GetRecentEntries()
         {
-            var queue = _doubleQueue.CurrentQueue;
-
             return new HttpTrafficHistoryDto
             {
-                Requests = FilterEntries<HttpRequestMessageEntry, HttpRequestDto>(queue, e => e.Dto),
-                Responses = FilterEntries<HttpResponseMessageEntry, HttpResponseDto>(queue, e => e.Dto),
-                Completions = FilterEntries<HttpCompletionEntry, HttpCompletionDto>(queue,e => e.Dto),
-                RequestBodies = FilterEntries<HttpRequestBodyEntry, HttpBodyDto>(queue,e => e.Dto),
-                ResponseBodies = FilterEntries<HttpResponseBodyEntry, HttpBodyDto>(queue,e => e.Dto)
+                Requests = FilterEntries<HttpRequestMessageEntry, HttpRequestDto>(_requestQueue.CurrentQueue, e => e.Dto),
+                Responses = FilterEntries<HttpResponseMessageEntry, HttpResponseDto>(_responseQueue.CurrentQueue, e => e.Dto),
+                Completions = FilterEntries<HttpCompletionEntry, HttpCompletionDto>(_completionQueue.CurrentQueue, e => e.Dto),
+                RequestBodies = FilterEntries<HttpRequestBodyEntry, HttpBodyDto>(_requestBodyQueue.CurrentQueue, e => e.Dto),
+                ResponseBodies = FilterEntries<HttpResponseBodyEntry, HttpBodyDto>(_responseBodyQueue.CurrentQueue, e => e.Dto)
             };
         }
 
@@ -45,7 +87,11 @@ namespace ProxyMapService.WebLogging
 
         public void Clear()
         {
-            _doubleQueue.Clear();
+            _requestQueue.Clear();
+            _responseQueue.Clear();
+            _completionQueue.Clear();
+            _requestBodyQueue.Clear();
+            _responseBodyQueue.Clear();
         }
     }
 }

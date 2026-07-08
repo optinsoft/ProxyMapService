@@ -68,27 +68,27 @@ namespace ProxyMapService.Services
                             break;
 
                         case HttpRequestMessageEntry request:
-                            _httpTrafficStorage.AddEntry(request);
+                            _httpTrafficStorage.AddRequestEntry(request);
                             await _hubContext.Clients.All.SendAsync("HttpRequest", new HttpRequestPayload(request.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpResponseMessageEntry response:
-                            _httpTrafficStorage.AddEntry(response);
+                            _httpTrafficStorage.AddResponseEntry(response);
                             await _hubContext.Clients.All.SendAsync("HttpResponse", new HttpResponsePayload(response.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpCompletionEntry completion:
-                            _httpTrafficStorage.AddEntry(completion);
+                            _httpTrafficStorage.AddCompletionEntry(completion);
                             await _hubContext.Clients.All.SendAsync("HttpCompletion", new HttpCompletionPayload(completion.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpRequestBodyEntry body:
-                            _httpTrafficStorage.AddEntry(body);
+                            _httpTrafficStorage.AddRequestBodyEntry(body);
                             await _hubContext.Clients.All.SendAsync("HttpRequestBody", new HttpBodyPayload(body.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpResponseBodyEntry body:
-                            _httpTrafficStorage.AddEntry(body);
+                            _httpTrafficStorage.AddResponseBodyEntry(body);
                             await _hubContext.Clients.All.SendAsync("HttpResponseBody", new HttpBodyPayload(body.Dto, maxTrafficEntries) , token);
                             break;
 

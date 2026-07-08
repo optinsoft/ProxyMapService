@@ -4,7 +4,11 @@ namespace ProxyMapService.WebLogging
 {
     public interface IHttpTrafficStorage
     {
-        void AddEntry(WebSocketMessageEntry entry);
+        void AddRequestEntry(HttpRequestMessageEntry entry);
+        void AddResponseEntry(HttpResponseMessageEntry entry);
+        void AddCompletionEntry(HttpCompletionEntry entry);
+        void AddRequestBodyEntry(HttpRequestBodyEntry entry);
+        void AddResponseBodyEntry(HttpResponseBodyEntry entry);
         HttpTrafficHistoryDto GetRecentEntries();
         void Clear();
     }
