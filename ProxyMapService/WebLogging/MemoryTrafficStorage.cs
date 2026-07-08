@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
 using ProxyMapService.WebLogging.Dtos;
-using System;
 using System.Collections.Concurrent;
 
 namespace ProxyMapService.WebLogging

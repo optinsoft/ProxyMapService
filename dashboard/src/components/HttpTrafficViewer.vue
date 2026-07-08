@@ -202,8 +202,9 @@ function formatDuration(ms: number): string {
               <td colspan="6" class="empty-row">No proxy transactions captured yet...</td>
             </tr>
             <tr 
-              v-for="tx in mergedTransactions" 
+              v-for="(tx, index) in mergedTransactions" 
               :key="tx.id"
+              :data-row-number="index + 1"
               :class="{ 'active-row': selectedId === tx.id }"
               @click="selectRow(tx.id)"
             >

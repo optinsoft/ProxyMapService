@@ -6,6 +6,11 @@ export interface LogEntry {
   exception?: string | null;
 }
 
+export interface EventLogPayload{
+  entry: LogEntry;
+  maxEntries: number;
+}
+
 export interface HttpRequestEntry {
   timestamp: string;
   id: string;
@@ -16,6 +21,11 @@ export interface HttpRequestEntry {
   route: string;
   targetHost: string;
   headers: Record<string, string>;
+}
+
+export interface HttpRequestPayload {
+  entry: HttpRequestEntry;
+  maxEntries: number;
 }
 
 export interface HttpResponseEntry {
@@ -32,9 +42,19 @@ export interface HttpResponseEntry {
   headers: Record<string, string>;
 }
 
+export interface HttpResponsePayload {
+  entry: HttpResponseEntry;
+  maxEntries: number;
+}
+
 export interface HttpCompletionEntry {
   timestamp: string;
   id: string;
+}
+
+export interface HttpCompletionPayload {
+  entry: HttpCompletionEntry;
+  maxEntries: number;
 }
 
 export type HttpBodyEntry = HttpMultipartPartEntry & {
@@ -43,6 +63,11 @@ export type HttpBodyEntry = HttpMultipartPartEntry & {
   completed: boolean;
   compressedLength: number | null;
 };
+
+export interface HttpBodyPayload {
+  entry: HttpBodyEntry;
+  maxEntries: number;
+}
 
 export type HttpMultipartPartEntry =
   | HttpJsonBodyEntry

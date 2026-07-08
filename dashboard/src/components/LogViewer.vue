@@ -88,6 +88,7 @@ const handleToggle = (): void => {
         v-for="(log, index) in logs" 
         :key="index"
         v-show="filterLevel === 'All' || log.level === filterLevel"
+        :data-row-number="index + 1"
         class="log-line"
       >
         <span class="time">[{{ formatTime(log.timestamp) }}]</span>

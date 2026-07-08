@@ -12,15 +12,40 @@ namespace ProxyMapService.WebLogging
         string? Exception
     ) : WebSocketMessageEntry;
 
+    public record EventLogPayload(
+        LogMessageEntry Entry,
+        int MaxEntries
+    ) : WebSocketMessageEntry;
+
     public record HttpRequestMessageEntry(HttpRequestDto Dto) : WebSocketMessageEntry;
+
+    public record HttpRequestPayload(
+        HttpRequestDto Entry, 
+        int MaxEntries
+    ): WebSocketMessageEntry;
+
 
     public record HttpResponseMessageEntry(HttpResponseDto Dto) : WebSocketMessageEntry;
 
-    public record HttpRequestBodyEntry(HttpBodyDto Dto) : WebSocketMessageEntry;
+    public record HttpResponsePayload(
+        HttpResponseDto Entry,
+        int MaxEntries
+    ) : WebSocketMessageEntry;
 
+    public record HttpRequestBodyEntry(HttpBodyDto Dto) : WebSocketMessageEntry;
     public record HttpResponseBodyEntry(HttpBodyDto Dto) : WebSocketMessageEntry;
 
+    public record HttpBodyPayload(
+        HttpBodyDto Entry, 
+        int MaxEntries
+    ) : WebSocketMessageEntry;
+
     public record HttpCompletionEntry(HttpCompletionDto Dto) : WebSocketMessageEntry;
+
+    public record HttpCompletionPayload(
+        HttpCompletionDto Entry, 
+        int MaxEntries
+    ) : WebSocketMessageEntry;
 
     public record StatsMessageEntry (
         string ServiceInfo,

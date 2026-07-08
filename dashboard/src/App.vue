@@ -6,7 +6,10 @@ import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
 import HttpTrafficViewer from './components/HttpTrafficViewer.vue'
 import { isTokenExpired, getTokenExpiration } from './utils/jwt'
-import type { LogEntry, HttpRequestEntry, HttpResponseEntry, HttpCompletionEntry, HttpBodyEntry, HttpHistoryDto } from './types/log'
+import type { 
+  LogEntry, HttpRequestEntry, HttpResponseEntry, HttpCompletionEntry, HttpBodyEntry, 
+  EventLogPayload, HttpRequestPayload, HttpResponsePayload, HttpCompletionPayload, HttpBodyPayload,
+  HttpHistoryDto } from './types/log'
 import type { ProxyStatsData } from './types/stats'
 
 const stats = ref<ProxyStatsData | null>(null)
@@ -168,36 +171,47 @@ const startSignalR = () => {
     .configureLogging(signalR.LogLevel.Information)
     .build()
 
-  connection.on('EventLog', (logEntry: LogEntry) => {
-    logs.value.push(logEntry)    
-    if (logs.value.length > 500) {
+  connection.on('EventLog', (payload: EventLogPayload) => {
+    logs.value.push(payload.entry)    
+    while (payload.maxEntries && logs.value.length > payload.maxEntries) {
       logs.value.shift()
     }    
     // scrollToBottom()
   })
 
-  connection.on('HttpRequest', (data: HttpRequestEntry) => {
-    requests.value.push(data)
-    if (requests.value.length > 500) requests.value.shift()
+  connection.on('HttpRequest', (payload: HttpRequestPayload) => {
+    requests.value.push(payload.entry)
+    while (payload.maxEntries && requests.value.length > payload.maxEntries) {    
+      requests.value.shift()
+    }
   })  
 
-  connection.on('HttpResponse', (data: HttpResponseEntry) => {
-    responses.value.push(data)
-    if (responses.value.length > 500) responses.value.shift()
+  connection.on('HttpResponse', (payload: HttpResponsePayload) => {
+    responses.value.push(payload.entry)
+    while (payload.maxEntries && responses.value.length > payload.maxEntries) {
+      responses.value.shift()
+    }
   })
 
-  connection.on('HttpCompletion', (data: HttpCompletionEntry) => {
-    completions.value.push(data)
+  connection.on('HttpCompletion', (payload: HttpCompletionPayload) => {
+    completions.value.push(payload.entry)
+    while (payload.maxEntries && responses.value.length > payload.maxEntries) {
+      responses.value.shift()
+    }
   })
 
-  connection.on('HttpRequestBody', (data: HttpBodyEntry) => {
-    requestBodies.value.push(data)
-    if (requestBodies.value.length > 500) requestBodies.value.shift()
+  connection.on('HttpRequestBody', (payload: HttpBodyPayload) => {
+    requestBodies.value.push(payload.entry)
+    while (payload.maxEntries && requestBodies.value.length > payload.maxEntries) {
+      requestBodies.value.shift()
+    }
   })
 
-  connection.on('HttpResponseBody', (data: HttpBodyEntry) => {
-    responseBodies.value.push(data)
-    if (requestBodies.value.length > 500) responseBodies.value.shift()
+  connection.on('HttpResponseBody', (payload: HttpBodyPayload) => {
+    responseBodies.value.push(payload.entry)
+    while (payload.maxEntries && requestBodies.value.length > payload.maxEntries) {
+      responseBodies.value.shift()
+    }
   })
 
   connection.on('Stats', (data: ProxyStatsData) => {

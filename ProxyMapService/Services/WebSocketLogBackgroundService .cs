@@ -13,20 +13,22 @@ namespace ProxyMapService.Services
         private readonly ILogger<WebSocketLogBackgroundService> _internalLogger;
         private readonly ILogStorage _logStorage;
         private readonly IHttpTrafficStorage _httpTrafficStorage;
+        private readonly IOptionsMonitor<WebSocketMonitoringOptions> _monitoringOptions;
 
         public WebSocketLogBackgroundService(
             IHubContext<LogHub> hubContext, 
             ILogger<WebSocketLogBackgroundService> internalLogger,
             ILogStorage logStorage,
-            IHttpTrafficStorage httpTrafficStorage, 
-            IOptions<WebSocketMonitoringOptions> options)
+            IHttpTrafficStorage httpTrafficStorage,
+            IOptionsMonitor<WebSocketMonitoringOptions> monitoringOptions)
         {
             _hubContext = hubContext;
             _internalLogger = internalLogger;
             _logStorage = logStorage;
             _httpTrafficStorage = httpTrafficStorage;
+            _monitoringOptions = monitoringOptions;
 
-            int capacity = options.Value.QueueCapacity;
+            int capacity = monitoringOptions.CurrentValue.QueueCapacity;
 
             _channel = Channel.CreateBounded<WebSocketMessageEntry>(new BoundedChannelOptions(capacity)
             {
@@ -43,6 +45,9 @@ namespace ProxyMapService.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            int maxLogEntries = _monitoringOptions.CurrentValue.EventLog.MaxEntries;
+            int maxTrafficEntries = _monitoringOptions.CurrentValue.TrafficMonitor.MaxEntries;
+
             var parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = 4,
@@ -59,32 +64,32 @@ namespace ProxyMapService.Services
                     {
                         case LogMessageEntry log:
                             _logStorage.AddLog(log);
-                            await _hubContext.Clients.All.SendAsync("EventLog", log, token);
+                            await _hubContext.Clients.All.SendAsync("EventLog", new EventLogPayload(log, maxLogEntries), token);
                             break;
 
                         case HttpRequestMessageEntry request:
                             _httpTrafficStorage.AddEntry(request);
-                            await _hubContext.Clients.All.SendAsync("HttpRequest", request.Dto, token);
+                            await _hubContext.Clients.All.SendAsync("HttpRequest", new HttpRequestPayload(request.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpResponseMessageEntry response:
                             _httpTrafficStorage.AddEntry(response);
-                            await _hubContext.Clients.All.SendAsync("HttpResponse", response.Dto, token);
+                            await _hubContext.Clients.All.SendAsync("HttpResponse", new HttpResponsePayload(response.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpCompletionEntry completion:
                             _httpTrafficStorage.AddEntry(completion);
-                            await _hubContext.Clients.All.SendAsync("HttpCompletion", completion.Dto, token);
+                            await _hubContext.Clients.All.SendAsync("HttpCompletion", new HttpCompletionPayload(completion.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpRequestBodyEntry body:
                             _httpTrafficStorage.AddEntry(body);
-                            await _hubContext.Clients.All.SendAsync("HttpRequestBody", body.Dto, token);
+                            await _hubContext.Clients.All.SendAsync("HttpRequestBody", new HttpBodyPayload(body.Dto, maxTrafficEntries), token);
                             break;
 
                         case HttpResponseBodyEntry body:
                             _httpTrafficStorage.AddEntry(body);
-                            await _hubContext.Clients.All.SendAsync("HttpResponseBody", body.Dto, token);
+                            await _hubContext.Clients.All.SendAsync("HttpResponseBody", new HttpBodyPayload(body.Dto, maxTrafficEntries) , token);
                             break;
 
                     }
