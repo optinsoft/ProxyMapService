@@ -12,16 +12,32 @@ const props = defineProps<{
   responseBodies: HttpBodyEntry[],
   isConnected: boolean,
   isCapturing: boolean,
-  filters: ColumnFilters,
-  visibleColumns: ColumnKey[]  
+//  filters: ColumnFilters,
+//  visibleColumns: ColumnKey[]  
 }>()
 
 const emit = defineEmits<{
   (e: 'clear-network'): void,
   (e: 'toggle-capture'): void,
-  (e: 'update:filters', value: ColumnFilters): void
-  (e: 'update:visible-columns', value: ColumnKey[]): void  
+//  (e: 'update:filters', value: ColumnFilters): void,
+//  (e: 'update:visible-columns', value: ColumnKey[]): void  
 }>()
+
+const filters = defineModel<ColumnFilters>(
+  'filters',
+  {
+    default: () => Object.fromEntries(
+      allColumns.map(c => [c.key, ''])
+    ) as ColumnFilters
+  }
+)
+
+const visibleColumns = defineModel<ColumnKey[]>(
+  'visible-columns',
+  {
+    default: () => allColumns.map(c => c.key)
+  }  
+)
 
 const selectedId = ref<string | null>(null)
 
@@ -168,7 +184,7 @@ function formatDuration(ms: number): string {
 //const visibleColumns = ref(allColumns.map(c => c.key))
 
 const displayedColumns = computed(() =>
-    allColumns.filter(c => props.visibleColumns.includes(c.key))
+    allColumns.filter(c => visibleColumns.value.includes(c.key))
 )
 
 //const columnFilters = reactive<ColumnFilters>(
@@ -196,7 +212,7 @@ const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
 const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
   return mergedTransactions.value.filter((tx: MergedTrafficEntry) => {
     return displayedColumns.value.every(column => {
-      const filter = props.filters[column.key]
+      const filter = filters.value[column.key]
         .trim()
         .toLowerCase()
 
@@ -239,7 +255,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
             >
               <input
                 type="checkbox"
-                v-model="props.visibleColumns"
+                v-model="visibleColumns"
                 :value="column.key"
               >
               {{ column.label }}
@@ -271,7 +287,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
                 :key="column.key"
               >
                 <input
-                  v-model="props.filters[column.key]"
+                  v-model="filters[column.key]"
                   class="column-filter"
                   type="text"
                   placeholder="Filter..."
@@ -665,7 +681,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
 .columns-popup {
   display: none;
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100%);
   right: 0;
   z-index: 100;
 

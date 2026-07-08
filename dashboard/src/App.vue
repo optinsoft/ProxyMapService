@@ -419,7 +419,9 @@ onUnmounted(() => {
   if (connection) connection.stop()
 })
 
-const visibleColumns = ref(allColumns.map(c => c.key))
+const visibleColumns = ref<ColumnKey[]>(
+    allColumns.map(c => c.key)
+)
 
 const columnFilters = reactive<ColumnFilters>(
   Object.fromEntries(
