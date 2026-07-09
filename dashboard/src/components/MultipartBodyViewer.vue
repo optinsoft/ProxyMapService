@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import JsonBodyViewer from './JsonBodyViewer.vue';
 import XmlBodyViewer from './XmlBodyViewer.vue';
 import HtmlBodyViewer from './HtmlBodyViewer.vue';
@@ -11,7 +12,7 @@ import TypescriptBodyViewer from './TypescriptBodyViewer.vue';
 
 import { type HttpMultipartBodyEntry, HttpContentKind } from '@/types/log';
 
-defineProps<{
+const props = defineProps<{
   body: HttpMultipartBodyEntry;
 }>();
 </script>
@@ -88,6 +89,7 @@ defineProps<{
 
         <ImageBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Image"
+          :content-type="part.contentType || null"
           :body="part"
         />
 

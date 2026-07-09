@@ -36,16 +36,43 @@ function download() {
 
 <template>
   <div class="binary-viewer">
-    <div>
+    <div class="info-row">
       Size: {{ body.length.toLocaleString() }} byte(s)
     </div>
 
-    <div>
+    <div class="info-row">
       Type: {{ body.contentType ?? 'unknown' }}
     </div>
 
-    <button @click="download">
-      Download
-    </button>
+    <div class="action-row">
+      <button 
+        class="action-btn" 
+        @click="download"
+      >
+        Download
+      </button>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.binary-viewer {
+  color: #fff;
+  font-size: 13px;
+  padding: 0px 8px;
+}
+
+.info-row {
+  padding: 3px 0px;
+}
+
+.action-row {
+  margin: 8px 0px;
+}
+
+.action-btn {
+  background: #3c3c3c; color: #fff; border: 1px solid #555;
+  padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 13px;
+
+}
+</style>

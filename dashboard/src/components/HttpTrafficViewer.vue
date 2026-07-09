@@ -480,7 +480,8 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
                   <span class="header-val" :title="selectedTransaction.responseBody.length.toString()">{{ selectedTransaction.responseBody.length }}</span>
                 </div>
               </div>
-              <HttpBodyViewer              
+              <HttpBodyViewer  
+                :headers="selectedTransaction.responseHeaders"            
                 :body="selectedTransaction.responseBody"
               />
             </div>

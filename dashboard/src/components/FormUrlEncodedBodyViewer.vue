@@ -30,8 +30,8 @@ const entries = computed(() => {
         v-for="entry in entries"
         :key="`${entry.key}:${entry.value}`"
       >
-        <td>{{ entry.key }}</td>
-        <td>{{ entry.value }}</td>
+        <td class="key-column">{{ entry.key }}</td>
+        <td class="value-column">{{ entry.value }}</td>
       </tr>
     </tbody>
   </table>
@@ -58,5 +58,17 @@ const entries = computed(() => {
 
 .form-table td {
   word-break: break-all;
+}
+
+.key-column {
+  width: 150px;
+  font-weight: bold;
+  vertical-align: top;
+}
+
+.value-column {
+  word-break: break-all;
+  white-space: pre-wrap;
+  vertical-align: top;
 }
 </style>
