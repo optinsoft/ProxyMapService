@@ -418,7 +418,7 @@ onUnmounted(() => {
   if (expiryCheckTimer) clearInterval(expiryCheckTimer)
   if (connection) connection.stop()
 })
-
+/*
 const visibleColumns = ref<ColumnKey[]>(
     allColumns.map(c => c.key)
 )
@@ -428,6 +428,7 @@ const columnFilters = reactive<ColumnFilters>(
     allColumns.map(c => [c.key, ''])
   ) as Record<ColumnKey, string>
 )
+*/
 </script>
 
 <template>
@@ -474,7 +475,7 @@ const columnFilters = reactive<ColumnFilters>(
             :stats-error="statsError" />
         </div>
         <LogViewer 
-          v-if="activeTab === 'logs'" 
+          v-show="activeTab === 'logs'" 
           :logs="logs" 
           :isConnected="isConnected" 
           :is-capturing="isLogCapturing" 
@@ -482,7 +483,7 @@ const columnFilters = reactive<ColumnFilters>(
           @toggle-capture="handleToggleLogCapture" 
         />
         <HttpTrafficViewer 
-          v-if="activeTab === 'network'" 
+          v-show="activeTab === 'network'" 
           :requests="requests" 
           :responses="responses"
           :completions="completions"
@@ -490,8 +491,6 @@ const columnFilters = reactive<ColumnFilters>(
           :response-bodies="responseBodies"
           :isConnected="isConnected"
           :is-capturing="isHttpCapturing"
-          v-model:filters="columnFilters"
-          v-model:visible-columns="visibleColumns"          
           @clear-network="clearNetworkData"
           @toggle-capture="handleToggleHttpCapture"
         />          

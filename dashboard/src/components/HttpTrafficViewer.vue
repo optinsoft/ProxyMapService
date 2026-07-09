@@ -12,17 +12,13 @@ const props = defineProps<{
   responseBodies: HttpBodyEntry[],
   isConnected: boolean,
   isCapturing: boolean,
-//  filters: ColumnFilters,
-//  visibleColumns: ColumnKey[]  
 }>()
 
 const emit = defineEmits<{
   (e: 'clear-network'): void,
   (e: 'toggle-capture'): void,
-//  (e: 'update:filters', value: ColumnFilters): void,
-//  (e: 'update:visible-columns', value: ColumnKey[]): void  
 }>()
-
+/*
 const filters = defineModel<ColumnFilters>(
   'filters',
   {
@@ -39,13 +35,15 @@ const visibleColumns = defineModel<ColumnKey[]>(
   }  
 )
 
-const selectedId = ref<string | null>(null)
-
+const selectedId = defineModel<string | null>('selected-id')
+const inspectorWidth = defineModel<number>('inspector-width', { default: 420 })
+const activeTab = defineModel<'request' | 'response'>('active-tab', { default: 'request' })
+*/
+const selectedId = defineModel<string | null>('selected-id')
 const inspectorWidth = ref(420)
+const activeTab = ref<'request' | 'response'>('request')
 
 const isResizing = ref(false)
-
-const activeTab = ref<'request' | 'response'>('request')
 
 // Match requests and responses by unique ID
 const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
@@ -181,17 +179,17 @@ function formatDuration(ms: number): string {
   return `${ms} ms`
 }
 
-//const visibleColumns = ref(allColumns.map(c => c.key))
+const visibleColumns = ref(allColumns.map(c => c.key))
 
 const displayedColumns = computed(() =>
     allColumns.filter(c => visibleColumns.value.includes(c.key))
 )
 
-//const columnFilters = reactive<ColumnFilters>(
-//  Object.fromEntries(
-//    allColumns.map(c => [c.key, ''])
-//  ) as ColumnFilters
-//)
+const filters = reactive<ColumnFilters>(
+  Object.fromEntries(
+    allColumns.map(c => [c.key, ''])
+  ) as ColumnFilters
+)
 
 const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
   time: tx => tx.timestamp,
@@ -212,7 +210,7 @@ const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
 const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
   return mergedTransactions.value.filter((tx: MergedTrafficEntry) => {
     return displayedColumns.value.every(column => {
-      const filter = filters.value[column.key]
+      const filter = filters[column.key]
         .trim()
         .toLowerCase()
 
