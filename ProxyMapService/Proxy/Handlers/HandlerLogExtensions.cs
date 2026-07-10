@@ -338,6 +338,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Not found: {path}")]
         public static partial void LogHttpNotFound(this ILogger logger, string? path);
 
+        [LoggerMessage(
+            EventId = 1287,
+            Level = LogLevel.Warning,
+            Message = "{ExceptionName}: {ErrorMessage}")]
+        public static partial void LogExceptionWarning(this ILogger logger, string exceptionName, string errorMessage);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

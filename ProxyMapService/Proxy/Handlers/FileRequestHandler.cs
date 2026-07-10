@@ -6,10 +6,11 @@ using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -22,65 +23,78 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && !context.Token.IsCancellationRequested)
             {
-                using SslStream? incomingSslStream = context.SslMode switch
+                SslStream? incomingSslStream;
+                try
                 {
-                    SslMode.Yes => new(context.IncomingStream),
-                    SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
-                    _ => null
-                };
-
-                string subjectName = $"CN=*.{context.Host.OriginalHostname}";
-                X509Certificate2? serverCertificate = context.ServerCertificate;
-
-                if (incomingSslStream != null)
+                    incomingSslStream = context.SslMode switch
+                    {
+                        SslMode.Yes => new(context.IncomingStream),
+                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
+                        _ => null
+                    };
+                }
+                catch (Exception ex) when (ex is IOException or SocketException)
                 {
-                    using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null 
-                        ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
+                    context.Logger.LogExceptionWarning(ex.GetType().Name, ex.Message);
+                    return HandleStep.Terminate;
+                }
+
+                using (incomingSslStream)
+                {
+
+                    string subjectName = $"CN=*.{context.Host.OriginalHostname}";
+                    X509Certificate2? serverCertificate = context.ServerCertificate;
+
+                    if (incomingSslStream != null)
+                    {
+                        using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null
+                            ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
+                            : null;
+                        serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
+                        var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
+                        try
+                        {
+                            await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
+                        }
+                        catch (AuthenticationException ex)
+                        {
+                            context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                            return HandleStep.Terminate;
+                        }
+                        context.Logger.LogServerTLSHandshakeSucceeded();
+                    }
+
+                    using CountingStream? incomingSslCountingStream =
+                        incomingSslStream != null
+                        ? new CountingStream(incomingSslStream, context,
+                            context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
+                            context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
                         : null;
-                    serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
-                    var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
-                    try
+                    if (incomingSslCountingStream != null)
                     {
-                        await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
+                        context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
                     }
-                    catch (AuthenticationException ex)
+
+                    var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
+
+                    var http = context.Http;
+                    if (http == null || (incomingSslStream != null && http.HTTPVerb == "CONNECT"))
                     {
-                        context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
-                        return HandleStep.Terminate;
+                        await ReadHttpRequest(context, incomingStream);
+                        if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
+                        {
+                            http = context.RequestHeader;
+                        }
+                        else
+                        {
+                            context.Logger.LogHttpBadRequest();
+                            await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                            return HandleStep.Terminate;
+                        }
                     }
-                    context.Logger.LogServerTLSHandshakeSucceeded();
+
+                    return await HandleRequest(context, incomingStream, http);
                 }
-
-                using CountingStream? incomingSslCountingStream =
-                    incomingSslStream != null
-                    ? new CountingStream(incomingSslStream, context,
-                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
-                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
-                    : null;
-                if (incomingSslCountingStream != null)
-                {
-                    context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
-                }
-
-                var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
-
-                var http = context.Http;
-                if (http == null || (incomingSslStream != null && http.HTTPVerb == "CONNECT"))
-                {
-                    await ReadHttpRequest(context, incomingStream);
-                    if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
-                    {
-                        http = context.RequestHeader;
-                    }
-                    else
-                    {
-                        context.Logger.LogHttpBadRequest();
-                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
-                        return HandleStep.Terminate;
-                    }
-                }
-
-                return await HandleRequest(context, incomingStream, http);
             }
             return HandleStep.Terminate;
         }

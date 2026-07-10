@@ -139,7 +139,7 @@ namespace ProxyMapService.Proxy.Sessions
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError("Error: {ErrorMessage}", ex.Message);
+                        logger.LogError("Error (step {step}): {ErrorMessage}", step, ex.Message);
                         step = HandleStep.Terminate;
                     }
                 } while (step != HandleStep.Terminate);

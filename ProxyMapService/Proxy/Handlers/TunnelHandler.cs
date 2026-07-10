@@ -9,13 +9,14 @@ using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using System.Diagnostics;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
-using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
+using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -28,43 +29,56 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && context.OutgoingStream != null && !context.Token.IsCancellationRequested)
             {
-                using SslStream? incomingSslStream = context.DecryptSSL ? context.SslMode switch {
-                    SslMode.Yes => new(context.IncomingStream),
-                    SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
-                    _ => null
-                } : null;
-                using SslStream? outgoingSslStream = context.DecryptSSL ? context.UpstreamSslMode switch
+                SslStream? incomingSslStream;
+                try
                 {
-                    SslMode.Yes => new(context.OutgoingStream),
-                    SslMode.Auto => NetworkSecurityHelper.IsStandardTlsPort(context.Host.Port) ? new(context.OutgoingStream) : null,
-                    _ => null
-                } : null;
+                    incomingSslStream = context.DecryptSSL ? context.SslMode switch
+                    {
+                        SslMode.Yes => new(context.IncomingStream),
+                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
+                        _ => null
+                    } : null;
+                }
+                catch (Exception ex) when (ex is IOException or SocketException)
+                {
+                    LogTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
+                    return HandleStep.Terminate;
+                }
+                using (incomingSslStream)
+                {
+                    using SslStream? outgoingSslStream = context.DecryptSSL ? context.UpstreamSslMode switch
+                    {
+                        SslMode.Yes => new(context.OutgoingStream),
+                        SslMode.Auto => NetworkSecurityHelper.IsStandardTlsPort(context.Host.Port) ? new(context.OutgoingStream) : null,
+                        _ => null
+                    } : null;
 
-                using CountingStream? incomingSslCountingStream =
-                    incomingSslStream != null
-                    ? new CountingStream(incomingSslStream, context,
-                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
-                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
-                    : null;
-                using CountingStream? outgoingSslCountingStream =
-                    outgoingSslStream != null
-                    ? new CountingStream(outgoingSslStream, context,
-                        context.ProxyCounters.OutgoingReadSslCounter, context.ProxyCounters.OutgoingSendSslCounter,
-                        context.OutgoingStream.ReadTunnelId, context.OutgoingStream.SendTunnelId)
-                    : null;
+                    using CountingStream? incomingSslCountingStream =
+                        incomingSslStream != null
+                        ? new CountingStream(incomingSslStream, context,
+                            context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
+                            context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
+                        : null;
+                    using CountingStream? outgoingSslCountingStream =
+                        outgoingSslStream != null
+                        ? new CountingStream(outgoingSslStream, context,
+                            context.ProxyCounters.OutgoingReadSslCounter, context.ProxyCounters.OutgoingSendSslCounter,
+                            context.OutgoingStream.ReadTunnelId, context.OutgoingStream.SendTunnelId)
+                        : null;
 
-                var incomingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                var outgoingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    var incomingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                    var outgoingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
-                var outgoingStream = outgoingSslCountingStream ?? context.OutgoingStream;
+                    var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
+                    var outgoingStream = outgoingSslCountingStream ?? context.OutgoingStream;
 
-                var requestTunnelTask = RequestTunnel(context, incomingSslStream,
-                    incomingStream, outgoingStream, incomingReady, outgoingReady);
-                var responseTunnelTask = ResponseTunnel(context, outgoingSslStream,
-                    incomingStream, outgoingStream, incomingReady, outgoingReady);
+                    var requestTunnelTask = RequestTunnel(context, incomingSslStream,
+                        incomingStream, outgoingStream, incomingReady, outgoingReady);
+                    var responseTunnelTask = ResponseTunnel(context, outgoingSslStream,
+                        incomingStream, outgoingStream, incomingReady, outgoingReady);
 
-                await Task.WhenAny(requestTunnelTask, responseTunnelTask);
+                    await Task.WhenAny(requestTunnelTask, responseTunnelTask);
+                }
             }
 
             return HandleStep.Terminate;
@@ -154,6 +168,12 @@ namespace ProxyMapService.Proxy.Handlers
             Level = LogLevel.Warning,
             Message = "[ResponseTunnel] {ExceptionName}: {ErrorMessage}")]
         private static partial void LogResponseTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1312,
+            Level = LogLevel.Warning,
+            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
 
         #endregion
 
