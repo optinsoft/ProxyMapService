@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { HttpImageBodyEntry } from '@/types/log';
+import type { HttpImageBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   contentType: string | null,

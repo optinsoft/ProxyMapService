@@ -9,8 +9,9 @@ import BinaryBodyViewer from './BinaryBodyViewer.vue';
 import FormUrlEncodedBodyViewer from './FormUrlEncodedBodyViewer.vue';
 import JavascriptBodyViewer from './JavascriptBodyViewer.vue';
 import TypescriptBodyViewer from './TypescriptBodyViewer.vue';
+import MicrosoftAjaxDeltaBodyViewer from './MicrosoftAjaxDeltaBodyViewer.vue';
 
-import { type HttpMultipartBodyEntry, HttpContentKind } from '@/types/log';
+import { type HttpMultipartBodyEntry, HttpContentKind } from '@/types/http';
 
 const props = defineProps<{
   body: HttpMultipartBodyEntry;
@@ -74,6 +75,11 @@ const props = defineProps<{
 
         <TypescriptBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Typescript"
+          :body="part"
+        />
+
+        <MicrosoftAjaxDeltaBodyViewer
+          v-else-if="part.contentKind === HttpContentKind.MicrosoftAjaxDelta"
           :body="part"
         />
 

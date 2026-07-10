@@ -9,11 +9,13 @@ namespace ProxyMapService.WebLogging
 {
     public static class HttpBodyParser
     {
-        public static HttpBodyDto ParseBody(string id, bool completed, long bodyLength, string? contentType, string? contentEncoding, ReadOnlySpan<byte> bodySpan)
+        public static HttpBodyDto ParseBody(string id, bool response, bool completed, long bodyLength, 
+            string? contentType, string? contentEncoding, string? requesXMicrosoftAjax,
+            ReadOnlySpan<byte> bodySpan)
         {
             bodySpan = TryDecompress(bodySpan, contentEncoding, out var decompressedBytes);
 
-            var kind = GetContentKind(contentType, HttpBodyContentKind.Binary);
+            var kind = GetContentKind(response, contentType, requesXMicrosoftAjax, HttpBodyContentKind.Binary);
 
             var dto = new HttpBodyDto
             {
@@ -34,13 +36,14 @@ namespace ProxyMapService.WebLogging
                 case HttpBodyContentKind.FormUrlEncoded:
                 case HttpBodyContentKind.Javascript:
                 case HttpBodyContentKind.Typescript:
+                case HttpBodyContentKind.MicrosoftAjaxDelta:
                     dto.Content = Encoding.UTF8.GetString(bodySpan);
                     break;
 
                 case HttpBodyContentKind.MultipartFormData:
                     try
                     {
-                        ParseMultipart(dto, bodySpan);
+                        ParseMultipart(response, requesXMicrosoftAjax, dto, bodySpan);
                     }
                     catch
                     {
@@ -59,7 +62,7 @@ namespace ProxyMapService.WebLogging
             return dto;
         }
 
-        private static void ParseMultipart(HttpMultipartBodyDto dto, ReadOnlySpan<byte> multipartBytes)
+        private static void ParseMultipart(bool response, string? requesXMicrosoftAjax, HttpMultipartBodyDto dto, ReadOnlySpan<byte> multipartBytes)
         {
             var mediaType = MediaTypeHeaderValue.Parse(dto.ContentType);
             var boundary = HeaderUtilities.RemoveQuotes(mediaType.Boundary).Value;
@@ -88,7 +91,7 @@ namespace ProxyMapService.WebLogging
                 int streamLength = (int)ms.Length;
                 ReadOnlySpan<byte> bytesSpan = ms.GetBuffer().AsSpan(0, streamLength);
 
-                var kind = GetContentKind(section.ContentType, HttpBodyContentKind.Text);
+                var kind = GetContentKind(response, section.ContentType, requesXMicrosoftAjax, HttpBodyContentKind.Text);
 
                 var part = new HttpMultipartPartDto
                 {
@@ -109,13 +112,14 @@ namespace ProxyMapService.WebLogging
                     case HttpBodyContentKind.FormUrlEncoded:
                     case HttpBodyContentKind.Javascript:
                     case HttpBodyContentKind.Typescript:
+                    case HttpBodyContentKind.MicrosoftAjaxDelta:
                         part.Content = Encoding.UTF8.GetString(bytesSpan);
                         break;
 
                     case HttpBodyContentKind.MultipartFormData:
                         try
                         {
-                            ParseMultipart(part, bytesSpan);
+                            ParseMultipart(response, requesXMicrosoftAjax, part, bytesSpan);
                         }
                         catch
                         {
@@ -215,7 +219,8 @@ namespace ProxyMapService.WebLogging
             return decompressedBytes;
         }
 
-        private static HttpBodyContentKind GetContentKind(string? contentType, HttpBodyContentKind emptyContentTypeKind)
+        private static HttpBodyContentKind GetContentKind(bool response, string? contentType, 
+            string? requestContentType, HttpBodyContentKind emptyContentTypeKind)
         {
             if (string.IsNullOrWhiteSpace(contentType))
             {
@@ -270,6 +275,13 @@ namespace ProxyMapService.WebLogging
             if (mediaType == "text/html")
             {
                 return HttpBodyContentKind.Html;
+            }
+
+            if (response && mediaType == "text/plain")
+            {
+                if (requestContentType != null && requestContentType.Equals("delta=true", StringComparison.OrdinalIgnoreCase)){
+                    return HttpBodyContentKind.MicrosoftAjaxDelta;
+                }
             }
 
             if (mediaType.StartsWith("text/"))

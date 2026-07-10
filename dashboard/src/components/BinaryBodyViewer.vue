@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HttpBinaryBodyEntry } from '@/types/log';
+import type { HttpBinaryBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   body: HttpBinaryBodyEntry;

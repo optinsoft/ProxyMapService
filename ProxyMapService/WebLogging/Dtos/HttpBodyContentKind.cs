@@ -12,5 +12,6 @@
         MultipartFormData,
         Javascript,
         Typescript,
+        MicrosoftAjaxDelta,
     }
 }

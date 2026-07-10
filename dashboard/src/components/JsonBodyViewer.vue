@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { HttpJsonBodyEntry } from '@/types/log';
+import type { HttpJsonBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   body: HttpJsonBodyEntry;

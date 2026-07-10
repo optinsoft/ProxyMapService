@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { HttpXmlBodyEntry } from '@/types/log';
+import type { HttpXmlBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   body: HttpXmlBodyEntry;

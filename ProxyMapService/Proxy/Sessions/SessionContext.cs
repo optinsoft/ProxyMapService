@@ -188,6 +188,11 @@ namespace ProxyMapService.Proxy.Sessions
             return $"{Host.Hostname}:{Host.Port}";
         }
 
+        public string? GetRequestXMicrosoftAjax()
+        {
+            return _requestHeader?.XMicrosoftAjax;
+        }
+
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
             System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, SessionAPIConfig sessionAPI, 
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, reactive } from 'vue'
-import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry, HttpCompletionEntry } from '../types/log'
+import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry, HttpCompletionEntry } from '../types/http'
 import HttpBodyViewer from './HttpBodyViewer.vue'
 import { type ColumnKey, type ColumnFilters, allColumns } from '../types/column'
 

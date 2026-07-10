@@ -15,5 +15,6 @@
         string? GetInbound();
         string? GetRoute();
         string? GetTargetHost();
+        string? GetRequestXMicrosoftAjax();
     }
 }

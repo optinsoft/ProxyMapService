@@ -6,10 +6,11 @@ import ProxyStats from './components/ProxyStats.vue'
 import LogViewer from './components/LogViewer.vue'
 import HttpTrafficViewer from './components/HttpTrafficViewer.vue'
 import { isTokenExpired, getTokenExpiration } from './utils/jwt'
+import type { LogEntry, EventLogPayload } from './types/log'
 import type { 
-  LogEntry, HttpRequestEntry, HttpResponseEntry, HttpCompletionEntry, HttpBodyEntry, 
-  EventLogPayload, HttpRequestPayload, HttpResponsePayload, HttpCompletionPayload, HttpBodyPayload,
-  HttpHistoryDto } from './types/log'
+  HttpRequestEntry, HttpResponseEntry, HttpCompletionEntry, HttpBodyEntry, 
+  HttpRequestPayload, HttpResponsePayload, HttpCompletionPayload, HttpBodyPayload,
+  HttpHistoryDto } from './types/http'
 import type { ProxyStatsData } from './types/stats'
 import { type ColumnKey, type ColumnFilters, allColumns } from './types/column'
 

@@ -16,8 +16,12 @@ namespace ProxyMapService.WebLogging
             if (e.BodyLength == 0) return;
 
             var id = e.Response ? loggersProvider.GetResponseBodyId() : loggersProvider.GetRequestBodyId();
+            var requestXMicrosoftAjax = loggersProvider.GetRequestXMicrosoftAjax();
 
-            var bodyDto = HttpBodyParser.ParseBody(id, e.Completed, e.BodyLength, e.ContentType, e.ContentEncoding, e.BodyBytes ?? []);
+            var bodyDto = HttpBodyParser.ParseBody(
+                id, e.Response, e.Completed, e.BodyLength, 
+                e.ContentType, e.ContentEncoding, requestXMicrosoftAjax,
+                e.BodyBytes ?? []);
 
             if (e.Response)
             {

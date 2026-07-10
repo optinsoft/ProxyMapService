@@ -1,14 +1,57 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { HttpHtmlBodyEntry } from '@/types/http';
+import type { HttpMicrosoftAjaxDeltaBodyEntry } from '@/types/http';
 
 const props = defineProps<{
-  body: HttpHtmlBodyEntry;
+  body: HttpMicrosoftAjaxDeltaBodyEntry;
 }>();
 
 const tab = ref<'source' | 'preview'>('source');
 
-const iframeSrcDoc = computed(() => props.body.content);
+const extractHtmlFromDeltaTypeScript = (deltaString: string): string | null => {
+    let index: number = 0;
+    let combinedHtml: string | null = null;
+
+    while (index < deltaString.length) {
+        let nextPipe: number = deltaString.indexOf('|', index);
+        if (nextPipe === -1) break;
+        
+        const lengthStr: string = deltaString.substring(index, nextPipe);
+        const blockLength: number = parseInt(lengthStr, 10);
+        if (isNaN(blockLength)) break;
+        
+        index = nextPipe + 1;
+
+        nextPipe = deltaString.indexOf('|', index);
+        if (nextPipe === -1) break;
+        const blockType: string = deltaString.substring(index, nextPipe);
+        index = nextPipe + 1;
+
+        nextPipe = deltaString.indexOf('|', index);
+        if (nextPipe === -1) break;
+        const blockId: string = deltaString.substring(index, nextPipe);
+        index = nextPipe + 1;
+
+        let blockContent: string = deltaString.substring(index, index + blockLength);
+
+        if (blockType === "updatePanel") {
+            const tailIndex: number = blockContent.search(/\|\d+\|[a-zA-Z#]+/);
+            if (tailIndex !== -1) {
+                blockContent = blockContent.substring(0, tailIndex);
+            }
+            
+            combinedHtml = (combinedHtml || "") + `<!-- Block: ${blockId} -->\n${blockContent}\n\n`;
+        }
+        
+        index = index + blockLength + 1;
+    }
+
+    return combinedHtml;
+}
+
+const iframeSrcDoc = computed(() => {
+    return extractHtmlFromDeltaTypeScript(props.body.content) || props.body.content
+});
 
 const copyToClipboard = async () => {
   try {
@@ -19,12 +62,12 @@ const copyToClipboard = async () => {
 };
 
 const downloadAsFile = () => {
-  const blob = new Blob([props.body.content], { type: 'text/html' });
+  const blob = new Blob([props.body.content], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   
   link.href = url;
-  link.download = `body-${Date.now()}.html`;
+  link.download = `body-${Date.now()}.txt`;
   link.click();
   
   URL.revokeObjectURL(url);
@@ -32,16 +75,16 @@ const downloadAsFile = () => {
 </script>
 
 <template>
-  <div class="html-viewer-container">
+  <div class="delta-viewer-container">
     <div class="actions-panel">
       <button @click="copyToClipboard" class="action-btn">
         📋 Copy
       </button>
       <button @click="downloadAsFile" class="action-btn">
-        💾 Download .html
+        💾 Download .txt
       </button>
-    </div>
-    <div class="html-viewer">
+    </div>    
+    <div class="delta-viewer">
       <div class="tabs">
         <button
           :class="{ active: tab === 'source' }"
@@ -74,7 +117,7 @@ const downloadAsFile = () => {
 </template>
 
 <style scoped>
-.html-viewer-container {
+.delta-viewer-container {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -97,7 +140,7 @@ const downloadAsFile = () => {
   background-color: #444;
 }
 
-.html-viewer {
+.delta-viewer {
   display: flex;
   flex-direction: column;
   height: 100%;
