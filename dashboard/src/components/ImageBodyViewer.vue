@@ -25,27 +25,78 @@ const imageUrl = computed(() => {
   return `data:${mime};base64,${props.body.binaryContentBase64}`
 });
 
+const base64ToBlob = (
+  base64: string,
+  mime: string,
+): Blob => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([bytes], { type: mime });
+};
+
+const convertImageToPng = async (
+  blob: Blob,
+): Promise<Blob> => {
+  const bitmap = await createImageBitmap(blob);
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Unable to create canvas context");
+  }
+
+  ctx.drawImage(bitmap, 0, 0);
+
+  bitmap.close();
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      pngBlob => {
+        if (pngBlob) {
+          resolve(pngBlob);
+        } else {
+          reject(
+            new Error("Unable to convert image to PNG")
+          );
+        }
+      },
+      "image/png",
+    );
+  });
+};
+
+const copyImageToClipboard = async (
+  base64: string,
+  mime: string,
+): Promise<void> => {
+  const imageBlob = base64ToBlob(base64, mime);
+
+  const pngBlob =
+    mime === "image/png"
+      ? imageBlob
+      : await convertImageToPng(imageBlob);
+
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      "image/png": pngBlob,
+    }),
+  ]);
+};
+
 const copyToClipboard = async () => {
   try {
     const mime = contentType.value || 'image/png';
-  
-    const bytes = atob(props.body.binaryContentBase64);
-  
-    const array = Uint8Array.from(
-      bytes,
-      c => c.charCodeAt(0),
-    );
-
-    const blob = new Blob(
-      [array],
-      {
-        type: mime
-      },
-    );
-
-    await navigator.clipboard.write([
-      new ClipboardItem({ [mime]: blob })
-    ]);
+    await copyImageToClipboard(props.body.binaryContentBase64, mime);
   } catch (err) {
     console.error('Unable to copy:', err);
   }
