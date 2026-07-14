@@ -56,6 +56,7 @@ const handleLogin = async (): Promise<void> => {
 }
 
 const handleLogout = (): void => {
+  localStorage.removeItem('URL_TOKEN')
   localStorage.removeItem('TOKEN_ID')
   localStorage.removeItem('REFRESH_TOKEN')
   isAuthenticated.value = false

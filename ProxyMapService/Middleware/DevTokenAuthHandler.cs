@@ -28,6 +28,10 @@ namespace ProxyMapService.Middleware
             {
                 providedToken = queryToken.ToString();
             }
+            else if (Request.Query.TryGetValue("access_token", out var accessToken))
+            {
+                providedToken = accessToken.ToString();
+            }
             else if (Request.Headers.TryGetValue("Authorization", out var authHeader))
             {
                 var headerValue = authHeader.ToString();

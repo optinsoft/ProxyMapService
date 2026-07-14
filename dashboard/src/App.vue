@@ -264,6 +264,7 @@ watch(currentToken, (newToken) => {
 }, { immediate: true })
 
 const onLogout = (): void => {
+  localStorage.removeItem('URL_TOKEN')
   localStorage.removeItem('TOKEN_ID')
   localStorage.removeItem('REFRESH_TOKEN')
   currentToken.value = ''
@@ -399,10 +400,26 @@ const clearNetworkData = () => {
 }
 
 onMounted(async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  let urlToken = urlParams.get('token');
+
+  if (urlToken) {
+    localStorage.setItem('URL_TOKEN', urlToken);
+    const baseUrl = import.meta.env.BASE_URL;
+    window.history.replaceState({}, document.title, baseUrl);     
+  }
+  else {
+    urlToken = localStorage.getItem('URL_TOKEN')
+  }
+
   const savedToken = localStorage.getItem('TOKEN_ID')
   const savedRefreshToken = localStorage.getItem('REFRESH_TOKEN')
   
-  if (savedToken && !isTokenExpired(savedToken)) {
+  if (urlToken) {
+    currentToken.value = urlToken;
+    currentRefreshToken.value = '';
+  }
+  else if (savedToken && !isTokenExpired(savedToken)) {
     currentToken.value = savedToken
     currentRefreshToken.value = savedRefreshToken || ''
     startExpiryCheck() 
