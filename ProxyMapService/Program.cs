@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
@@ -78,11 +79,11 @@ builder.Services.AddCors(options =>
         });
 });
 
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        if (jwtAuthEnabled)
+if (jwtAuthEnabled)
+{
+    builder.Services
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
             {
@@ -107,8 +108,25 @@ builder.Services
                     return Task.CompletedTask;
                 }
             };
-        }
-    });
+        });
+}
+
+builder.Services.AddAuthorization(options =>
+{
+    if (jwtAuthEnabled)
+    {
+        options.DefaultPolicy = new AuthorizationPolicyBuilder()
+            .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+            .RequireAuthenticatedUser()
+            .Build();
+    }
+    else
+    {
+        options.DefaultPolicy = new AuthorizationPolicyBuilder()
+            .RequireAssertion(_ => true)
+            .Build();
+    }
+});
 
 builder.Services.Configure<WebSocketMonitoringOptions>(builder.Configuration.GetSection("WebSocketMonitoring"));
 
