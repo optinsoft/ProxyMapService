@@ -1,9 +1,13 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Middleware;
+using ProxyMapService.Models;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Services;
 using ProxyMapService.Vite;
@@ -25,6 +29,8 @@ if (logggingEventLog.Exists())
 
 var jwtAuthConfig = builder.Configuration.GetSection("Authentication:Jwt");
 var jwtAuthEnabled = jwtAuthConfig.GetValue<bool>("Enabled");
+var devTokenConfig = builder.Configuration.GetSection("Authentication:DevToken");
+var devTokenEnabled = devTokenConfig.GetValue<bool>("Enabled");
 
 var AllowAllCors = "AllowAllCors";
 
@@ -79,6 +85,8 @@ builder.Services.AddCors(options =>
         });
 });
 
+string? devToken = null;
+
 if (jwtAuthEnabled)
 {
     builder.Services
@@ -110,6 +118,14 @@ if (jwtAuthEnabled)
             };
         });
 }
+else if (devTokenEnabled)
+{
+    devToken = Guid.NewGuid().ToString("N");
+    builder.Services.AddSingleton(new DevTokenProvider(devToken));
+    builder.Services
+        .AddAuthentication("DevTokenScheme")
+        .AddScheme<AuthenticationSchemeOptions, DevTokenAuthHandler>("DevTokenScheme", null);
+}
 
 builder.Services.AddAuthorization(options =>
 {
@@ -117,6 +133,13 @@ builder.Services.AddAuthorization(options =>
     {
         options.DefaultPolicy = new AuthorizationPolicyBuilder()
             .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+            .RequireAuthenticatedUser()
+            .Build();
+    }
+    else if (devTokenEnabled)
+    {
+        options.DefaultPolicy = new AuthorizationPolicyBuilder()
+            .AddAuthenticationSchemes("DevTokenScheme")
             .RequireAuthenticatedUser()
             .Build();
     }
@@ -166,5 +189,27 @@ app.MapGet("/", () => "Hello World!");
 app.MapControllers();
 
 app.MapHub<LogHub>("/updates");
+
+if (devToken != null)
+{
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        var server = app.Services.GetRequiredService<IServer>();
+        var devTokenProvider = app.Services.GetRequiredService<DevTokenProvider>();
+
+        var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses;
+
+        if (addresses != null && addresses.Any())
+        {
+            logger.LogWarning("DEVELOPMENT TOKEN GENERATED: {Token}", devTokenProvider.Token);
+            foreach (var address in addresses)
+            {
+                var cleanAddress = address.TrimEnd('/');
+                logger.LogWarning("Use URL: {Address}/ProxyMapDashboard/?token={Token}", cleanAddress, devTokenProvider.Token);
+            }
+        }
+    });
+}
 
 app.Run();

@@ -519,7 +519,9 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
   border-bottom: 1px solid #3c3c3c;
 }
 .status-indicator { display: flex; align-items: center; font-size: 14px; }
-.dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; background-color: #4caf50; }
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+.dot.online { background-color: #4caf50; }
+.dot.offline { background-color: #f44336; }
 .btn-clear {
   background: #3c3c3c; color: #fff; border: 1px solid #555;
   padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 13px;
