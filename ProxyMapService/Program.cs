@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Middleware;
@@ -34,11 +33,7 @@ var jwtAuthEnabled = jwtAuthConfig.GetValue<bool>("Enabled");
 var devTokenConfig = builder.Configuration.GetSection("Authentication:DevToken");
 var devTokenEnabled = devTokenConfig.GetValue<bool>("Enabled");
 var serveDashboard = builder.Configuration.GetValue<bool>("Dashboard:Enabled");
-
-bool isRunningUnderIis = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APP_POOL_ID")) ||
-                         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANCM_LAUNCH_DATA"));
-
-string routePrefix = isRunningUnderIis ? "" : "/ProxyMapService";
+var routePrefix = builder.Configuration.GetValue<string>("Routing:RoutePrefix") ?? "/ProxyMapService";
 
 string hubPath = $"{routePrefix}/updates";
 
@@ -168,7 +163,7 @@ builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, W
 
 builder.Services.AddControllers(options =>
 {
-    if (!isRunningUnderIis)
+    if (!string.IsNullOrEmpty(routePrefix))
     {
         options.Conventions.Add(new GlobalRoutePrefixConvention("ProxyMapService"));
     }
