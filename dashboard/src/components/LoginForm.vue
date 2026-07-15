@@ -7,9 +7,10 @@ const emit = defineEmits<{
   (e: 'logout'): void
 }>()
 
+const errorMessage = defineModel<string>('errorMessage', {default: ''})
+
 const username = ref<string>('')
 const password = ref<string>('')
-const errorMessage = ref<string>('')
 const isLoading = ref<boolean>(false)
 
 const savedToken = localStorage.getItem('TOKEN_ID')

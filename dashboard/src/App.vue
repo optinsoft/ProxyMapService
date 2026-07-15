@@ -24,6 +24,7 @@ const requestBodies = ref<HttpBodyEntry[]>([])
 const responseBodies = ref<HttpBodyEntry[]>([])
 const isConnected = ref<boolean>(false)
 const isInitializing = ref(true) 
+const loginErrorMessage = ref<string>('')
 
 const currentToken = ref<string>('')
 const currentRefreshToken = ref<string>('')
@@ -92,6 +93,13 @@ const fetchStats = async () => {
         'Content-Type': 'application/json'
       }
     })
+
+    if (response.status === 401) {
+      const errorMessage = `Server error: ${response.status} ${response.statusText}`
+      loginErrorMessage.value = errorMessage
+      onLogout()
+      throw new Error(errorMessage)
+    }
 
     if (!response.ok) {
       throw new Error(`Server error: ${response.status}`)
@@ -461,7 +469,9 @@ const columnFilters = reactive<ColumnFilters>(
 
   <main class="app-content">    
     <LoginForm 
-      v-if="!isInitializing && !currentToken" @login-success="onLoginSuccess" 
+      v-if="!isInitializing && !currentToken" 
+      @login-success="onLoginSuccess" 
+      v-model:error-message="loginErrorMessage"
     />
 
     <div v-if="currentToken" class="dashboard-layout">
