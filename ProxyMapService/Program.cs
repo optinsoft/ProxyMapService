@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
 using ProxyMapService.Middleware;
 using ProxyMapService.Models;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Services;
+using ProxyMapService.Utils;
 using ProxyMapService.Vite;
 using ProxyMapService.WebLogging;
 using System.Text;
@@ -31,6 +33,14 @@ var jwtAuthConfig = builder.Configuration.GetSection("Authentication:Jwt");
 var jwtAuthEnabled = jwtAuthConfig.GetValue<bool>("Enabled");
 var devTokenConfig = builder.Configuration.GetSection("Authentication:DevToken");
 var devTokenEnabled = devTokenConfig.GetValue<bool>("Enabled");
+var serveDashboard = builder.Configuration.GetValue<bool>("Dashboard:Enabled");
+
+bool isRunningUnderIis = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APP_POOL_ID")) ||
+                         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ANCM_LAUNCH_DATA"));
+
+string routePrefix = isRunningUnderIis ? "" : "/ProxyMapService";
+
+string hubPath = $"{routePrefix}/updates";
 
 var AllowAllCors = "AllowAllCors";
 
@@ -109,7 +119,7 @@ if (jwtAuthEnabled)
                 {
                     var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
-                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/updates"))
+                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments(hubPath))
                     {
                         context.Token = accessToken;
                     }
@@ -156,7 +166,14 @@ builder.Services.Configure<WebSocketMonitoringOptions>(builder.Configuration.Get
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<ILoggerProvider, WebSocketLoggerProvider>());
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    if (!isRunningUnderIis)
+    {
+        options.Conventions.Add(new GlobalRoutePrefixConvention("ProxyMapService"));
+    }
+});
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -186,30 +203,80 @@ app.UseAuthorization();
 
 app.MapGet("/", () => "Hello World!");
 
+if (serveDashboard)
+{
+    app.UseStaticFiles();
+    app.MapFallbackToFile("/ProxyMapDashboard/{*path:nonfile}", "ProxyMapDashboard/index.html");
+}
+
 app.MapControllers();
 
-app.MapHub<LogHub>("/updates");
+app.MapHub<LogHub>(hubPath);
 
-if (devToken != null)
+bool shouldLaunch = Environment.GetEnvironmentVariable("LAUNCH_DASHBOARD_IN_BROWSER") == "true";
+if (shouldLaunch || devToken != null)
 {
-    app.Lifetime.ApplicationStarted.Register(() =>
+    if (devToken != null)
     {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        var server = app.Services.GetRequiredService<IServer>();
-        var devTokenProvider = app.Services.GetRequiredService<DevTokenProvider>();
-
-        var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses;
-
-        if (addresses != null && addresses.Any())
+        app.Lifetime.ApplicationStarted.Register(() =>
         {
-            logger.LogWarning("DEVELOPMENT TOKEN GENERATED: {Token}", devTokenProvider.Token);
-            foreach (var address in addresses)
+            var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("DevTokenLauncher");
+            var server = app.Services.GetRequiredService<IServer>();
+            var devTokenProvider = app.Services.GetRequiredService<DevTokenProvider>();
+
+            var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses;
+
+            if (addresses != null && addresses.Count != 0)
             {
-                var cleanAddress = address.TrimEnd('/');
-                logger.LogWarning("Use URL: {Address}/ProxyMapDashboard/?token={Token}", cleanAddress, devTokenProvider.Token);
+                logger.LogWarning("DEVELOPMENT TOKEN GENERATED: {Token}", devTokenProvider.Token);
+
+                string targetUrl = "";
+
+                if (Environment.GetEnvironmentVariable("START_VITE") == "true")
+                {
+                    targetUrl = $"http://localhost:5173/ProxyMapDashboard/?token={devTokenProvider.Token}";
+                }
+                else
+                {
+                    var primaryAddress = addresses.First().TrimEnd('/');
+                    targetUrl = $"{primaryAddress}/ProxyMapDashboard/?token={devTokenProvider.Token}";
+                }
+
+                logger.LogWarning("Dashboard URL: {url}", targetUrl);
+
+                if (shouldLaunch)
+                {
+                    BrowserLauncher.OpenBrowser(targetUrl);
+                }
             }
-        }
-    });
+        });
+    }
+    else
+    {
+        app.Lifetime.ApplicationStarted.Register(() =>
+        {
+            var server = app.Services.GetRequiredService<IServer>();
+            var addresses = server.Features.Get<IServerAddressesFeature>()?.Addresses;
+
+            if (addresses != null && addresses.Count != 0)
+            {
+                string targetUrl = "";
+
+                if (Environment.GetEnvironmentVariable("START_VITE") == "true")
+                {
+                    targetUrl = $"http://localhost:5173/ProxyMapDashboard/";
+                }
+                else
+                {
+                    var primaryAddress = addresses.First().TrimEnd('/');
+                    targetUrl = $"{primaryAddress}/ProxyMapDashboard/";
+                }
+
+                BrowserLauncher.OpenBrowser(targetUrl);
+            }
+        });
+    }
 }
 
 app.Run();

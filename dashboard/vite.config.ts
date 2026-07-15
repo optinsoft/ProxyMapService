@@ -52,6 +52,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: '/ProxyMapDashboard/', 
+    build: {
+      outDir: '../ProxyMapService/wwwroot/ProxyMapDashboard', 
+      emptyOutDir: true
+    },
     plugins: [
       vue(),
       vueDevTools(),

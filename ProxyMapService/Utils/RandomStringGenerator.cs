@@ -2,7 +2,7 @@
 
 namespace ProxyMapService.Utils
 {
-    public class RandomStringGenerator
+    public static class RandomStringGenerator
     {
         private static readonly Random random = new(); // Initialize Random once
 

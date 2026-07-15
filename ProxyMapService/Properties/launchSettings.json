@@ -11,12 +11,13 @@
     "profiles": {
         "dashboard": {
             "commandName": "Project",
-            "launchBrowser": true,
+            "launchBrowser": false,
             "launchUrl": "http://localhost:5173/ProxyMapDashboard/",
             "applicationUrl": "http://localhost:5014",
             "environmentVariables": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "START_VITE": "true"
+                "START_VITE": "true",
+                "LAUNCH_DASHBOARD_IN_BROWSER": "true"
             },
             "dotnetRunMessages": true
         },
