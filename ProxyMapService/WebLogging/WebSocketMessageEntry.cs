@@ -1,4 +1,5 @@
-﻿using ProxyMapService.WebLogging.Dtos;
+﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.WebLogging.Dtos;
 
 namespace ProxyMapService.WebLogging
 {
@@ -77,6 +78,7 @@ namespace ProxyMapService.WebLogging
         int CacheResponses,
         long CacheBytesSent,
         bool LogCapture,
-        bool HttpCapture
+        bool HttpCapture,
+        IEnumerable<PortRange> ListenPorts
     ) : WebSocketMessageEntry;
 }

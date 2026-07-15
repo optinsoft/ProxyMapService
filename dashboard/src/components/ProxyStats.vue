@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import type { ProxyStatsData } from '../types/stats'
+import type { ProxyStatsData, PortRange } from '../types/stats'
 
 const props = defineProps<{
   stats: ProxyStatsData | null,
@@ -13,6 +13,14 @@ const formatBytes = (bytes: number): string => {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + '\u00A0' + sizes[i]
+}
+
+const formatPorts = (ports: PortRange[] | undefined | null): string => {
+  if (!ports || ports.length === 0) return 'None'
+  
+  return ports
+    .map(p => p.start === p.end ? `${p.start}` : `${p.start}-${p.end}`)
+    .join(', ')
 }
 </script>
 
@@ -29,6 +37,25 @@ const formatBytes = (bytes: number): string => {
         <p><strong>Started At:</strong> {{ stats.startTime }}</p>
         <p><strong>Current Time:</strong> {{ stats.currentTime }}</p>
       </div>
+
+      <!-- Listen Ports Card -->
+      <div class="stats-card">
+        <h4>Listen Ports</h4>
+        <div class="ports-container">
+          <div v-if="!stats.listenPorts || stats.listenPorts.length === 0" class="no-ports">
+            None
+          </div>
+          <!-- span 
+            v-else
+            v-for="(p, index) in stats.listenPorts" 
+            :key="index" 
+            class="ports-badge"
+          >
+            {{ p.start === p.end ? p.start : `${p.start}-${p.end}` }}
+          </span -->
+          <span v-else class="ports-badge">{{ formatPorts(stats.listenPorts) }}</span>
+        </div>        
+      </div>      
 
       <!-- Traffic Metrics Card -->
       <div class="stats-card">
@@ -86,6 +113,9 @@ const formatBytes = (bytes: number): string => {
 .stats-card { background-color: #1e1e1e; border: 1px solid #2d2d2d; border-radius: 6px; padding: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
 .stats-card h4 { margin: 0 0 12px 0; color: #4caf50; font-size: 0.95rem; border-bottom: 1px solid #2d2d2d; padding-bottom: 6px; text-transform: uppercase; }
 .stats-card p { margin: 6px 0; font-size: 13px; color: #ccc; display: flex; justify-content: space-between; }
+.ports-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ports-badge { background: #2d2d2d; border: 1px solid #444; padding: 6px 10px; border-radius: 4px; color: #2196f3; font-size: 13px; font-family: monospace; font-weight: bold; width: 100%; }
+.no-ports { color: #666; font-size: 13px; font-style: italic; }
 .system-info p { justify-content: flex-start; gap: 10px; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; }
 .grid-2x2 span { font-weight: bold; color: #fff; }

@@ -48,7 +48,8 @@ namespace ProxyMapService.Controllers
                 cacheResponses = service.GetCacheResponses(),
                 cacheBytesSent = service.GetCacheBytesSent(),
                 logCapture = eventLoggingSwitch.IsEventCapture,
-                httpCapture = httpLoggingSwitch.IsHttpCapture
+                httpCapture = httpLoggingSwitch.IsHttpCapture,
+                listenPorts = service.GetListenPorts(),
             });
         }
 

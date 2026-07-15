@@ -33,6 +33,7 @@ namespace ProxyMapService.Services
         private readonly List<CacheRule> _cacheRules = [];
         private CacheRepository? _cacheRepository;
         private CacheManager? _cacheManager;
+        private readonly List<PortRange> _listenPorts = [];
 
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -183,7 +184,8 @@ namespace ProxyMapService.Services
             List<Task> tasks = [];
             foreach (var mapping in proxyMappings)
             {
-                tasks.Add(new ProxyMapper(mapping, sessionAPI, _hostRules, _cacheRules, _cacheManager,
+                tasks.Add(new ProxyMapper(mapping, _listenPorts, 
+                    sessionAPI, _hostRules, _cacheRules, _cacheManager,
                     userAgent, sslClientOptions, sslServerOptions, _proxyCounters,
                     _logger, _sessionLogger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
@@ -353,6 +355,11 @@ namespace ProxyMapService.Services
         public long GetCacheBytesSent()
         {
             return _proxyCounters.IncomingSendCounter.CacheBytesSent;
+        }
+
+        public IEnumerable<PortRange> GetListenPorts()
+        {
+            return _listenPorts;
         }
 
         public IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats()

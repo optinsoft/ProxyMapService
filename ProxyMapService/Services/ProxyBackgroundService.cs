@@ -84,7 +84,8 @@ namespace ProxyMapService.Services
                             CacheResponses: _proxyService.GetCacheResponses(),
                             CacheBytesSent: _proxyService.GetCacheBytesSent(),
                             LogCapture: _eventLoggingSwitch.IsEventCapture,
-                            HttpCapture: _httpLoggingSwitch.IsHttpCapture
+                            HttpCapture: _httpLoggingSwitch.IsHttpCapture,
+                            ListenPorts: _proxyService.GetListenPorts()
                         );
 
                         await _hubContext.Clients.All.SendAsync("Stats", stats, stoppingToken);

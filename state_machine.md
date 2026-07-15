@@ -11,8 +11,7 @@ graph TD
     class Terminal_Terminate terminal;
         HttpBypassHandler -- Tunnel --> TunnelHandler
         HttpFileHandler -- HandleFileRequest --> FileRequestHandler
-        HttpHostActionHandler -- GetSession --> GetSessionHandler
-        HttpHostActionHandler -- ResetSession --> ResetSessionHandler
+        HttpHostActionHandler -- HttpSessionAPI --> HttpSessionAPIHandler
         HttpHostActionHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
         HttpHostActionHandler -- Proxy --> ProxyHandler
@@ -21,6 +20,7 @@ graph TD
         HttpProxyHandler -- Tunnel --> TunnelHandler
         HttpProxyHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
+        HttpSessionAPIHandler -- HandleSessionAPI --> SessionAPIHandler
         InitializeHandler -- HttpInitialized --> HttpAuthenticationHandler
         ProxyHandler -- HttpProxy --> HttpProxyHandler
     end
@@ -41,9 +41,11 @@ graph TD
         Socks4HostActionHandler -- Proxy --> ProxyHandler
         Socks4HostActionHandler -- Socks4Bypass --> Socks4BypassHandler
         Socks4HostActionHandler -- Socks4File --> Socks4FileHandler
+        Socks4HostActionHandler -- Socks4SessionAPI --> Socks4SessionAPIHandler
         Socks4ProxyHandler -- Tunnel --> TunnelHandler
         Socks4ProxyHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
+        Socks4SessionAPIHandler -- HandleSessionAPI --> SessionAPIHandler
     end
 
     subgraph Socks5 [SOCKS5 Protocol]
@@ -65,9 +67,11 @@ graph TD
         Socks5HostActionHandler -- Proxy --> ProxyHandler
         Socks5HostActionHandler -- Socks5Bypass --> Socks5BypassHandler
         Socks5HostActionHandler -- Socks5File --> Socks5FileHandler
+        Socks5HostActionHandler -- Socks5SessionAPI --> Socks5SessionAPIHandler
         Socks5ProxyHandler -- Tunnel --> TunnelHandler
         Socks5ProxyHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
+        Socks5SessionAPIHandler -- HandleSessionAPI --> SessionAPIHandler
         Socks5UsernamePasswordHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
         Socks5UsernamePasswordHandler -- Socks5Authenticated --> Socks5ConnectRequestHandler
@@ -76,13 +80,9 @@ graph TD
     subgraph General [Core & General Logic]
         FileRequestHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
-        GetSessionHandler -- Terminate --> Terminal_Terminate([Terminate])
-    class Terminal_Terminate terminal;
         InitializeHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
         ProxyHandler -- Terminate --> Terminal_Terminate([Terminate])
-    class Terminal_Terminate terminal;
-        ResetSessionHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
         TunnelHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;

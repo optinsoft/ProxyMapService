@@ -29,4 +29,10 @@ export interface ProxyStatsData {
   cacheBytesSent: number;
   logCapture: boolean;
   httpCapture: boolean;
+  listenPorts: PortRange[];
+}
+
+export interface PortRange {
+  start: number;
+  end: number;
 }

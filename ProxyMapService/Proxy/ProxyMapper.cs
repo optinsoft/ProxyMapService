@@ -11,7 +11,8 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy
 {
-    public class ProxyMapper(ProxyMapping mapping, SessionAPIConfig sessionAPI, List<HostRule> hostRules, 
+    public class ProxyMapper(ProxyMapping mapping, List<PortRange> listenPorts,
+        SessionAPIConfig sessionAPI, List<HostRule> hostRules, 
         List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
         SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
         ProxyCounters proxyCounters, ILogger serviceLogger, ILogger sessionLogger, 
@@ -78,7 +79,18 @@ namespace ProxyMapService.Proxy
                     }
                 }
 
-                await Task.WhenAll(tasks); ;
+                if (tasks.Count > 0)
+                {
+                    listenPorts.Add(mapping.Listen.PortRange);
+                    try
+                    {
+                        await Task.WhenAll(tasks);
+                    }
+                    finally
+                    {
+                        listenPorts.Remove(mapping.Listen.PortRange);
+                    }
+                }
             } 
             catch (Exception ex)
             {

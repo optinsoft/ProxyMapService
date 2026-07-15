@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Models;
+using ProxyMapService.Proxy.Configurations;
 
 namespace ProxyMapService.Interfaces
 {
@@ -36,6 +37,7 @@ namespace ProxyMapService.Interfaces
         long GetBypassBytesSent();
         int GetCacheResponses();
         long GetCacheBytesSent();
+        IEnumerable<PortRange> GetListenPorts();
         IEnumerable<KeyValuePair<string, HostStats>>? GetHostStats();
     }
 }
