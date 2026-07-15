@@ -344,6 +344,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "{ExceptionName}: {ErrorMessage}")]
         public static partial void LogExceptionWarning(this ILogger logger, string exceptionName, string errorMessage);
 
+        [LoggerMessage(
+            EventId = 1288,
+            Level = LogLevel.Warning,
+            Message = "No proxy server")]
+        public static partial void LogNoProxyServer(this ILogger logger);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

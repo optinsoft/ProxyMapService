@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Network;
+﻿using ProxyMapService.Proxy.Exceptions;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Socks;
@@ -17,7 +18,22 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.UsernameParameterResolver.PopulateContext(context);
 
-            context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
+            try
+            {
+                context.ProxyServer ??= context.ProxyProvider.GetProxyServer(context);
+            }
+            catch (NoProxyServerException)
+            {
+                context.Logger.LogNoProxyServer();
+                await (context switch
+                {
+                    { Http: not null } => HttpProto.HttpReplyBadGateway(context),
+                    { Socks4: not null } => Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed),
+                    { Socks5: not null } => Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure),
+                    _ => Task.CompletedTask
+                });
+                return HandleStep.Terminate;
+            }
 
             try
             {
