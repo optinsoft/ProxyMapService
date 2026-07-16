@@ -39,7 +39,7 @@ const isHttpCapturing = computed(() => stats.value?.httpCapture ?? false)
 
 const fetchLogHistory = async () => {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';    
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService';    
     const response = await fetch(`${baseUrl}/EventLog/recent`, {
       method: 'GET',
       headers: {
@@ -60,7 +60,7 @@ const fetchLogHistory = async () => {
 
 const fetchTrafficHistory = async () => {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';    
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService';    
     const response = await fetch(`${baseUrl}/TrafficHistory/recent`, {
       method: 'GET',
       headers: {
@@ -85,7 +85,7 @@ const fetchTrafficHistory = async () => {
 
 const fetchStats = async () => {
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014'
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService'
     const response = await fetch(`${baseUrl}/ProxyStats`, {
       method: 'GET',
       headers: {
@@ -120,7 +120,7 @@ const handleToggleLogCapture = async () => {
   stats.value.logCapture = targetState
 
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014'
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService'
     const response = await fetch(`${baseUrl}/EventLog/toggle`, {
       method: 'POST',
       headers: {
@@ -146,7 +146,7 @@ const handleToggleHttpCapture = async () => {
   stats.value.httpCapture = targetState
 
   try {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014'
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService'
     const response = await fetch(`${baseUrl}/TrafficHistory/toggle`, {
       method: 'POST',
       headers: {
@@ -171,7 +171,7 @@ const startSignalR = () => {
     isConnected.value = false
   }
 
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService';
 
   connection = new signalR.HubConnectionBuilder()
     .withUrl(`${baseUrl}/updates`, {
@@ -353,7 +353,7 @@ const doRefreshToken = async (token: string | null, refreshToken: string | null)
 }
 
 const clearLogs = (): void => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService';
 
   fetch(`${baseUrl}/EventLog/clear`, {
     method: 'POST',
@@ -380,7 +380,7 @@ const clearLogs = (): void => {
 }
 
 const clearNetworkData = () => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5014';
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService';
 
   fetch(`${baseUrl}/TrafficHistory/clear`, {
     method: 'POST',

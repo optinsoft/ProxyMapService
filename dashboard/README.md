@@ -34,7 +34,7 @@ Open the newly created .env.development file and define the following parameters
 
 ```ini
 # The base URL where ProxyMapService backend is running (no trailing slash)
-VITE_API_BASE_URL=http://localhost:5014
+VITE_API_BASE_URL=http://localhost:5014/ProxyMapService
 
 # The endpoint used for JWT authentication requests
 VITE_LOGIN_URL=/api/login
