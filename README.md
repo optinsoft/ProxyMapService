@@ -18,7 +18,7 @@ For security, the Proxy Map Service only listens for incoming connections on the
 Clone the repository from GitHub using the following command:
 
 ```bash
-git clone https://github.com
+git clone https://github.com/optinsoft/ProxyMapService.git
 cd ProxyMapService
 ```
 
