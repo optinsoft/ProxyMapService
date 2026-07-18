@@ -22,6 +22,7 @@ namespace ProxyMapService.Services
         private readonly ProxyCounters _proxyCounters;
         private readonly HostsCounter _hostsCounter;
         private readonly BytesLogger _bytesLogger;
+        private readonly CertManager _certManager;
         private const int _maxListenerStartRetries = 10;
         private CancellationToken _stoppingToken = CancellationToken.None;
         private CancellationTokenSource _cts = new();
@@ -54,6 +55,7 @@ namespace ProxyMapService.Services
             _proxyCounters = new ProxyCounters();
             _hostsCounter = new HostsCounter();
             _bytesLogger = new BytesLogger(_sessionLogger);
+            _certManager = new CertManager(_logger);
             var HostStatsEnabled = _configuration.GetSection("HostStats")?.GetValue<bool>("Enabled") ?? false;
             if (HostStatsEnabled)
             {
@@ -171,6 +173,8 @@ namespace ProxyMapService.Services
             {
                 throw new NoMappingsException();
             }
+
+            _certManager.CreateProxyMapRootCertificate("DO_NOT_TRUST_ProxyMapRoot");
 
             _cts = new CancellationTokenSource();
             CancellationToken cancellationToken = _stoppingToken == CancellationToken.None
