@@ -9,9 +9,7 @@
 		<Message Text="BUILDING VUE APP BEFORE PUBLISH..." Importance="high" />
 		<Message Text="====================================================" Importance="high" />
 		
-		<Exec Command="npm install --loglevel=error"
-			WorkingDirectory="$(VueAppDir)"
-			Condition="!Exists('$(VueAppDir)node_modules')" />
+		<Exec Command="npm install --loglevel=error" WorkingDirectory="$(VueAppDir)" Condition="!Exists('$(VueAppDir)node_modules')" />
 
 		<Exec Command="npm run build" WorkingDirectory="$(VueAppDir)" />
 	</Target>
