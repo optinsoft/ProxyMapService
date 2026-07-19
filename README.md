@@ -54,7 +54,7 @@ Dashboard URL: http://localhost:5000/ProxyMapDashboard/?token=b0a24910a0884e08b3
 
 Open the provided **Dashboard URL** in your web browser to access the management interface.
 
-## Monitoring Traffic
+## Dashboard
 
 The ProxyMap Dashboard consists of three main tabs:
 * **Stats**: Displays general service information (uptime), active **LISTEN PORTS** (port `5001` is open by default as a proxy port in `appsettings.json`), data transfer counters (bytes sent/received), and current session details.
