@@ -37,6 +37,8 @@ After a successful build, the executable `ProxyMapService.exe` will be located i
 
 Application settings are managed via `appsettings.json`. Instead of modifying the main configuration file directly, it is highly recommended to create an `appsettings.Production.json` file in the same directory and place your custom overrides there.
 
+For your convenience, a sample file named `appsettings.Production-Example.json` is available in the `publish` directory. This file demonstrates how to properly configure the `ProxyMappings` rules. You can simply rename this file to `appsettings.Production.json` and modify it according to your needs.
+
 ## Run
 
 Navigate to the publish directory and launch the executable:

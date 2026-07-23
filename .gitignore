@@ -1,4 +1,4 @@
-appsettings.Development.json
+appsettings.Development*.json
 appsettings.Production.json
 *-host-rules.json
 *-proxy-servers.json
