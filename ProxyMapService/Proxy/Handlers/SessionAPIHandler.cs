@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Headers;
+﻿using Microsoft.AspNetCore.WebUtilities;
+using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using System.Text.Json;
@@ -17,7 +18,22 @@ namespace ProxyMapService.Proxy.Handlers
         protected override async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, 
             HttpRequestHeader http, MemoryStream bodyStream)
         {
-            if (http.HTTPVerb == "POST" && http.HTTPTargetPath == "/session/new")
+            if (http.HTTPTargetPath == null)
+            {
+                context.Logger.LogHttpNotFound(http.HTTPTargetPath);
+                await HttpProto.HttpReplyNotFound(context, incomingStream);
+                return HandleStep.Terminate;
+            }
+
+            var pathAndQuery = http.HTTPTargetPath;
+            int queryIndex = pathAndQuery.IndexOf('?');
+            string path = queryIndex >= 0 ? pathAndQuery.Substring(0, queryIndex) : pathAndQuery;
+
+            var queryParams = queryIndex >= 0
+                ? QueryHelpers.ParseQuery(http.HTTPTargetPath.Substring(queryIndex))
+                : new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>();
+
+            if (http.HTTPVerb == "POST" && path == "/session/new")
             {
                 using var reader = new StreamReader(bodyStream, System.Text.Encoding.UTF8, leaveOpen: true);
                 string jsonBody = await reader.ReadToEndAsync();
@@ -69,17 +85,22 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            if (http.HTTPTargetPath == "/session/")
+            if (path == "/session/")
             {
                 await GetSession(context, incomingStream);
                 return HandleStep.Terminate;
             }
-            if (http.HTTPTargetPath == "/session/new")
+            if (path == "/session/new")
             {
-                await NewSession(context, incomingStream, null);
+                Dictionary<string, string>? parameters = queryParams.Count > 0 
+                    ? queryParams.ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.ToString()) 
+                    : null;
+                await NewSession(context, incomingStream, parameters);
                 return HandleStep.Terminate;
             }
-            if (http.HTTPTargetPath == "/session/reset")
+            if (path == "/session/reset")
             {
                 await ResetSession(context, incomingStream);
                 return HandleStep.Terminate;
