@@ -5,7 +5,7 @@ using System.Text;
 namespace ProxyMapService.Proxy.Http
 {
     public class ChunkedBodyTracker(ILogger logger, string? contentType, string? contentEncoding, 
-        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate) : IBodyTracker
+        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
     {
         private enum State
         {
@@ -33,7 +33,7 @@ namespace ProxyMapService.Proxy.Http
         private long _chunkBytesRemaining;
 
         private long _bodyLength;
-        private MemoryStream? _bodyStream = shouldAccumulate ? new() : null;
+        private MemoryStream? _bodyStream = shouldAccumulate && accumulateStream == null ? new() : null;
 
         public bool Completed => _state == State.Completed;
 
@@ -175,7 +175,11 @@ namespace ProxyMapService.Proxy.Http
             if (available >= _chunkBytesRemaining)
             {
                 _bodyLength += _chunkBytesRemaining;
-                _bodyStream?.Write(data.Slice(pos, (int)_chunkBytesRemaining));
+                if (shouldAccumulate)
+                {
+                    accumulateStream?.Write(data.Slice(pos, (int)_chunkBytesRemaining));
+                    _bodyStream?.Write(data.Slice(pos, (int)_chunkBytesRemaining));
+                }
                 pos += (int)_chunkBytesRemaining;
                 _chunkBytesRemaining = 0;
                 _state = State.ReadChunkDataCRLF;
@@ -183,7 +187,11 @@ namespace ProxyMapService.Proxy.Http
             else
             {
                 _bodyLength += available;
-                _bodyStream?.Write(data.Slice(pos, available));
+                if (shouldAccumulate)
+                {
+                    accumulateStream?.Write(data.Slice(pos, available));
+                    _bodyStream?.Write(data.Slice(pos, available));
+                }
                 _chunkBytesRemaining -= available;
                 pos = data.Length;
             }
@@ -240,7 +248,7 @@ namespace ProxyMapService.Proxy.Http
                     if (_lineLength == 2)
                     {
                         _state = State.Completed;
-                        bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, _bodyStream);
+                        bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, accumulateStream ?? _bodyStream);
                         return pos;
                     }
 

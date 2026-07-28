@@ -13,5 +13,17 @@
             Value = resolvedValue;
             Resolved = true;
         }
+        public UsernameParameter Clone()
+        {
+            return new UsernameParameter
+            {
+                Name = this.Name,
+                Value = this.Value,
+                Default = this.Default,
+                SessionId = this.SessionId,
+                SessionTime = this.SessionTime,
+                Resolved = this.Resolved
+            };
+        }
     }
 }

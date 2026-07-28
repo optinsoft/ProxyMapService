@@ -2,6 +2,9 @@
 {
     public class UsernameParameterList : List<UsernameParameter>
     {
+        public UsernameParameterList() { }
+        public UsernameParameterList(IEnumerable<UsernameParameter> collection) : base(collection) { }
+
         public UsernameParameter? SessionId => this.Find(p => p.SessionId);
         public UsernameParameter? SessionTime => this.Find(p => p.SessionTime);
 

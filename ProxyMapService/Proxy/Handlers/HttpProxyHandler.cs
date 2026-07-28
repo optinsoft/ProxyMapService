@@ -78,7 +78,7 @@ namespace ProxyMapService.Proxy.Handlers
 
                     if (!context.RequestHeader.BadRequest)
                     {
-                        CreateRequestBodyTracker(context, null);
+                        CreateRequestBodyTracker(context, context.RequestHeader, null, null);
                     }
 
                     var cacheEntry = await GetCacheEntry(context);
@@ -119,7 +119,7 @@ namespace ProxyMapService.Proxy.Handlers
                         context.ResponseHeadersLogger?.OnHttpHeader(context, context.ResponseHeader);
                         if (!context.ResponseHeader.BadResponse)
                         {
-                            CreateResponseBodyTracker(context, null);
+                            CreateResponseBodyTracker(context, context.ResponseHeader, null, null);
                             if (CreateResponseCacheFileStream(context))
                             {
                                 if (context.ResponseCacheFileStream != null)

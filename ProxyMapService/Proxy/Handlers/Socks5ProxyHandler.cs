@@ -125,7 +125,7 @@ namespace ProxyMapService.Proxy.Handlers
                                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
                                     if (!context.RequestHeader.BadRequest)
                                     {
-                                        CreateRequestBodyTracker(context, null);
+                                        CreateRequestBodyTracker(context, context.RequestHeader, null, null);
                                     }
                                     var cacheEntry = await GetCacheEntry(context);
                                     if (cacheEntry != null)

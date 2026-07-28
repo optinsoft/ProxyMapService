@@ -186,5 +186,15 @@ namespace ProxyMapService.Proxy.Http
                 BodyBytes = body.ToArray(),
             };
         }
+
+        public static HttpHeaderLinesAndBody? GetRequestHeaderLinesAndBody(MemoryStream ms, int headersEnd)
+        {
+            return GetHeaderLinesAndBody(ms, false, headersEnd);
+        }
+
+        public static HttpHeaderLinesAndBody? GetResponseHeaderLinesAndBody(MemoryStream ms, int headersEnd)
+        {
+            return GetHeaderLinesAndBody(ms, true, headersEnd);
+        }
     }
 }

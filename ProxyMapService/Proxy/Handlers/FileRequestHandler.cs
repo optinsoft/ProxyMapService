@@ -77,10 +77,12 @@ namespace ProxyMapService.Proxy.Handlers
 
                     var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
 
+                    using MemoryStream bodyStream = new();
+
                     var http = context.Http;
                     if (http == null || (incomingSslStream != null && http.HTTPVerb == "CONNECT"))
                     {
-                        await ReadHttpRequest(context, incomingStream);
+                        await ReadHttpRequest(context, incomingStream, bodyStream);
                         if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
                         {
                             http = context.RequestHeader;
@@ -92,8 +94,31 @@ namespace ProxyMapService.Proxy.Handlers
                             return HandleStep.Terminate;
                         }
                     }
+                    else
+                    {
+                        if (http.BadRequest)
+                        {
+                            context.Logger.LogHttpBadRequest();
+                            await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                            return HandleStep.Terminate;
+                        }
+                        CreateRequestBodyTracker(context, http, null, bodyStream);
+                    }
 
-                    return await HandleRequest(context, incomingStream, http);
+                    if (context.RequestBodyTracker != null)
+                    {
+                        await ReadHttpRequestBody(context, incomingStream, context.RequestBodyTracker, bodyStream);
+                        if (context.RequestBodyTracker.Failed)
+                        {
+                            context.Logger.LogHttpBadRequest();
+                            await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                            return HandleStep.Terminate;
+                        }
+                    }
+
+                    bodyStream.Position = 0;
+
+                    return await HandleRequest(context, incomingStream, http, bodyStream);
                 }
             }
             return HandleStep.Terminate;
@@ -104,7 +129,7 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task ReadHttpRequest(SessionContext context, Stream incomingStream)
+        private static async Task ReadHttpRequest(SessionContext context, Stream incomingStream, MemoryStream bodyStream)
         {
             var buffer = new byte[BufferSize];
             using var ms = new MemoryStream();
@@ -120,14 +145,14 @@ namespace ProxyMapService.Proxy.Handlers
                     ms.Write(buffer, 0, bytesRead);
                     if ((headersEnd = HttpParser.FindRequestHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
                     {
-                        var headerBytes = HttpParser.GetRequestHeaderBytes(ms, headersEnd);
-                        if (headerBytes != null && headerBytes.Length > 0)
+                        var headerAndBody = HttpParser.GetRequestHeaderLinesAndBody(ms, headersEnd);
+                        if (headerAndBody != null)
                         {
-                            context.RequestHeader = new HttpRequestHeader(headerBytes);
+                            context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines);
                             context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                             if (!context.RequestHeader.BadRequest)
                             {
-                                CreateRequestBodyTracker(context, null);
+                                CreateRequestBodyTracker(context, context.RequestHeader, headerAndBody.BodyBytes, bodyStream);
                             }
                         }
                         return;
@@ -136,7 +161,37 @@ namespace ProxyMapService.Proxy.Handlers
             } while (bytesRead > 0 && !token.IsCancellationRequested);
         }
 
-        protected virtual async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, HttpRequestHeader http)
+        private static async Task<bool> ReadHttpRequestBody(SessionContext context, Stream incomingStream, IBodyTracker bodyTracker, MemoryStream bodyStream)
+        {
+            var buffer = new byte[BufferSize];
+
+            CancellationToken token = context.Token;
+
+            int bytesRead;
+            do
+            {
+                if (bodyTracker.Completed || bodyTracker.Failed)
+                {
+                    break;
+                }
+                bytesRead = await incomingStream.ReadAsync(buffer.AsMemory(0, BufferSize), token);
+                if (bytesRead > 0)
+                {
+                    if (!bodyTracker.TryAppend(buffer.AsSpan(0, bytesRead)))
+                    {
+                        break;
+                    }
+                }
+            } while (bytesRead > 0 && !token.IsCancellationRequested);
+            if (bodyTracker.Completed)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        protected virtual async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, 
+            HttpRequestHeader http, MemoryStream bodyStream)
         {
             if (http.HTTPVerb != "GET")
             {

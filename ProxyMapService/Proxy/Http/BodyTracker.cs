@@ -3,7 +3,7 @@
 namespace ProxyMapService.Proxy.Http
 {
     public class BodyTracker(ILogger logger, string? contentType, string? contentEncoding, long contentLength, 
-        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate) : IBodyTracker
+        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
     {
         private enum State
         {
@@ -12,10 +12,10 @@ namespace ProxyMapService.Proxy.Http
             Failed
         }
 
-        private State _state = State.ReadData;
+        private State _state = contentLength > 0 ? State.ReadData : State.Completed;
 
         private long _bodyLength;
-        private MemoryStream? _bodyStream = shouldAccumulate ? new() : null;
+        private MemoryStream? _bodyStream = shouldAccumulate && accumulateStream == null ? new() : null;
 
         public bool Completed => _state == State.Completed;
 
@@ -44,12 +44,16 @@ namespace ProxyMapService.Proxy.Http
             }
 
             _bodyLength += data.Length;
-            _bodyStream?.Write(data);
+            if (shouldAccumulate)
+            {
+                accumulateStream?.Write(data);
+                _bodyStream?.Write(data);
+            }
 
             if (_bodyLength >= contentLength)
             {
                 _state = State.Completed;
-                bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, _bodyStream);
+                bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, accumulateStream ?? _bodyStream);
             }
 
             return true;

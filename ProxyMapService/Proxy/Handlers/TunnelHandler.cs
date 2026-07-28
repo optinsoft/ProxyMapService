@@ -367,7 +367,7 @@ namespace ProxyMapService.Proxy.Handlers
                                         context.ResponseHeadersLogger?.OnHttpHeader(context, context.ResponseHeader);
                                         if (!context.ResponseHeader.BadResponse)
                                         {
-                                            CreateResponseBodyTracker(context, headerAndBody.BodyBytes);
+                                            CreateResponseBodyTracker(context, context.ResponseHeader, headerAndBody.BodyBytes, null);
                                             if (CreateResponseCacheFileStream(context))
                                             {
                                                 if (context.ResponseCacheFileStream != null)
@@ -386,7 +386,7 @@ namespace ProxyMapService.Proxy.Handlers
                                         context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                                         if (!context.RequestHeader.BadRequest)
                                         {
-                                            CreateRequestBodyTracker(context, headerAndBody.BodyBytes);
+                                            CreateRequestBodyTracker(context, context.RequestHeader, headerAndBody.BodyBytes, null);
                                         }
                                         requestCacheEntry = await GetCacheEntry(context);
                                         if (context.Host.Overwritten)

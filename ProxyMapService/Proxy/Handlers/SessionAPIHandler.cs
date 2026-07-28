@@ -1,6 +1,7 @@
 ﻿using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
+using System.Text.Json;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -13,8 +14,54 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        protected override async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, HttpRequestHeader http)
+        protected override async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, 
+            HttpRequestHeader http, MemoryStream bodyStream)
         {
+            if (http.HTTPVerb == "POST" && http.HTTPTargetPath == "/session/new")
+            {
+                using var reader = new StreamReader(bodyStream, System.Text.Encoding.UTF8, leaveOpen: true);
+                string jsonBody = await reader.ReadToEndAsync();
+
+                Dictionary<string, string>? parameters = null;
+
+                if (!string.IsNullOrWhiteSpace(jsonBody))
+                {
+                    try
+                    {
+                        using var jsonDocument = JsonDocument.Parse(jsonBody);
+                        var root = jsonDocument.RootElement;
+                        if (root.ValueKind == JsonValueKind.Object &&
+                            root.TryGetProperty("UsernameParameters", out var nestedElement))
+                        {
+                            if (nestedElement.ValueKind == JsonValueKind.Object)
+                            {
+                                parameters = new();
+                                foreach (var property in nestedElement.EnumerateObject()) 
+                                {
+                                    string value = property.Value.ValueKind switch
+                                    {
+                                        JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                                        JsonValueKind.Null => string.Empty,
+                                        _ => property.Value.GetRawText()
+                                    };
+                                    parameters[property.Name] = value;
+                                }
+                            }
+                        }
+
+                    }
+                    catch (JsonException ex)
+                    {
+                        context.Logger.LogInvalidJsonPayload(ex.Message);
+                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                        return HandleStep.Terminate;
+                    }
+                }
+
+                await NewSession(context, incomingStream, parameters);
+                return HandleStep.Terminate;
+            }
+
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
@@ -29,7 +76,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             if (http.HTTPTargetPath == "/session/new")
             {
-                await NewSession(context, incomingStream);
+                await NewSession(context, incomingStream, null);
                 return HandleStep.Terminate;
             }
             if (http.HTTPTargetPath == "/session/reset")
@@ -46,36 +93,34 @@ namespace ProxyMapService.Proxy.Handlers
         private static async Task GetSession(SessionContext context, Stream incomingStream)
         {
             context.UsernameParameterResolver.PopulateContext(context);
-            var response = new
-            {
-                SessionId = context.UsernameParameterResolver.CurrentSessionId,
-                ExpiresAt = context.UsernameParameterResolver.CurrentSessionExpiresAt.HasValue ? $"{context.UsernameParameterResolver.CurrentSessionExpiresAt.Value.ToUniversalTime():R}" : null,
-                Expired = context.UsernameParameterResolver.CurrentSessionExpired,
-            };
+            var info = context.UsernameParameterResolver.CurrentSessionInfo;
             string[] headers = [
-                $"X-Session-Id: \"{response.SessionId}\"",
-                $"X-Expires-At: {response.ExpiresAt ?? "null"}",
-                $"X-Expired: {response.Expired}"
+                $"X-Session-Id: {info.SessionId ?? "null"}",
+                info.SessionTime.HasValue ? $"X-Session-Time: {info.SessionTime.Value}" : "X-Session-Time: null",
+                info.ExpiresAt.HasValue ? $"X-Expires-At: {info.ExpiresAt.Value.ToUniversalTime():R}" : "X-Expires-At: null"
             ];
-            await HttpProto.HttpReplyJson(context, incomingStream, response, headers);
+            await HttpProto.HttpReplyJson(context, incomingStream, info, headers);
         }
 
-        private static async Task NewSession(SessionContext context, Stream incomingStream)
+        private static async Task NewSession(SessionContext context, Stream incomingStream, Dictionary<string, string>? parameters)
         {
             context.UsernameParameterResolver.ResetSessionId();
-            context.UsernameParameterResolver.PopulateContext(context);
-            var response = new
+            if (parameters != null)
             {
-                SessionId = context.UsernameParameterResolver.CurrentSessionId,
-                ExpiresAt = context.UsernameParameterResolver.CurrentSessionExpiresAt.HasValue ? $"{context.UsernameParameterResolver.CurrentSessionExpiresAt.Value.ToUniversalTime():R}" : null,
-                Expired = context.UsernameParameterResolver.CurrentSessionExpired,
-            };
+                context.UsernameParameters ??= new();
+                foreach (var param in parameters)
+                {
+                    context.UsernameParameters.SetValue(param.Key, param.Value);
+                }
+            }
+            context.UsernameParameterResolver.PopulateContext(context);
+            var info = context.UsernameParameterResolver.CurrentSessionInfo;
             string[] headers = [
-                $"X-Session-Id: \"{response.SessionId}\"",
-                $"X-Expires-At: {response.ExpiresAt ?? "null"}",
-                $"X-Expired: {response.Expired}"
+                $"X-Session-Id: {info.SessionId ?? "null"}",
+                info.SessionTime.HasValue ? $"X-Session-Time: {info.SessionTime.Value}" : "X-Session-Time: null",
+                info.ExpiresAt.HasValue ? $"X-Expires-At: {info.ExpiresAt.Value.ToUniversalTime():R}" : "X-Expires-At: null"
             ];
-            await HttpProto.HttpReplyJson(context, incomingStream, response, headers);
+            await HttpProto.HttpReplyJson(context, incomingStream, info, headers);
         }
 
         private static async Task ResetSession(SessionContext context, Stream incomingStream)

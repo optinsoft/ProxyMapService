@@ -1,4 +1,4 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 
@@ -6,30 +6,33 @@ namespace ProxyMapService.Proxy.Utils
 {
     public static class HttpBodyUtils
     {
-        public static void CreateRequestBodyTracker(SessionContext context, byte[]? bodyBytes)
+        public static void CreateRequestBodyTracker(SessionContext context, HttpRequestHeader? requestHeader, 
+            byte[]? bodyBytes, MemoryStream? accumulateBodyStream)
         {
-            if (context.RequestHeader != null)
+            if (requestHeader != null)
             {
-                if (context.RequestHeader.TransferEncodingChunked)
+                if (requestHeader.TransferEncodingChunked)
                 {
                     context.RequestBodyTracker = new ChunkedBodyTracker(
                         context.Logger,
-                        context.RequestHeader.ContentType,
-                        context.RequestHeader.ContentEncoding,
+                        requestHeader.ContentType,
+                        requestHeader.ContentEncoding,
                         context.RequestBodyLogger,
                         context,
-                        context.RequestBodyLogger != null);
+                        context.RequestBodyLogger != null || accumulateBodyStream != null,
+                        accumulateBodyStream);
                 }
                 else
                 {
                     context.RequestBodyTracker = new BodyTracker(
                         context.Logger,
-                        context.RequestHeader.ContentType,
-                        context.RequestHeader.ContentEncoding,
-                        context.RequestHeader.ContentLength ?? 0,
+                        requestHeader.ContentType,
+                        requestHeader.ContentEncoding,
+                        requestHeader.ContentLength ?? 0,
                         context.RequestBodyLogger,
                         context,
-                        context.RequestBodyLogger != null);
+                        context.RequestBodyLogger != null || accumulateBodyStream != null,
+                        accumulateBodyStream);
                 }
                 if (bodyBytes != null)
                 {
@@ -38,30 +41,33 @@ namespace ProxyMapService.Proxy.Utils
             }
         }
 
-        public static void CreateResponseBodyTracker(SessionContext context, byte[]? bodyBytes)
+        public static void CreateResponseBodyTracker(SessionContext context, HttpResponseHeader? responseHeader, 
+            byte[]? bodyBytes, MemoryStream? accumulateBodyStream)
         {
-            if (context.ResponseHeader != null)
+            if (responseHeader != null)
             {
-                if (context.ResponseHeader.TransferEncodingChunked)
+                if (responseHeader.TransferEncodingChunked)
                 {
                     context.ResponseBodyTracker = new ChunkedBodyTracker(
                         context.Logger,
-                        context.ResponseHeader.ContentType,
-                        context.ResponseHeader.ContentEncoding,
+                        responseHeader.ContentType,
+                        responseHeader.ContentEncoding,
                         context.ResponseBodyLogger,
                         context,
-                        context.ResponseBodyLogger != null);
+                        context.ResponseBodyLogger != null || accumulateBodyStream != null,
+                        accumulateBodyStream);
                 }
                 else
                 {
                     context.ResponseBodyTracker = new BodyTracker(
                         context.Logger,
-                        context.ResponseHeader.ContentType,
-                        context.ResponseHeader.ContentEncoding,
-                        context.ResponseHeader.ContentLength ?? 0,
+                        responseHeader.ContentType,
+                        responseHeader.ContentEncoding,
+                        responseHeader.ContentLength ?? 0,
                         context.ResponseBodyLogger,
                         context,
-                        context.ResponseBodyLogger != null);
+                        context.ResponseBodyLogger != null || accumulateBodyStream != null,
+                        accumulateBodyStream);
                 }
                 if (bodyBytes != null)
                 {

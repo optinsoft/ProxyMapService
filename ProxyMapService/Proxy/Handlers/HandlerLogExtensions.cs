@@ -350,6 +350,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "No proxy server")]
         public static partial void LogNoProxyServer(this ILogger logger);
 
+        [LoggerMessage(
+            EventId = 1289,
+            Level = LogLevel.Warning,
+            Message = "Invalid JSON payload: {ErrorMessage}")]
+        public static partial void LogInvalidJsonPayload(this ILogger logger, string errorMessage);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;
