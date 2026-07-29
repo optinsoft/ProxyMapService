@@ -2,6 +2,7 @@
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -9,13 +10,13 @@ namespace ProxyMapService.Proxy.Handlers
     public class SessionAPIHandler : FileRequestHandler, IHandler
     {
         private static readonly SessionAPIHandler Self = new();
-        
+
         public static new SessionAPIHandler Instance()
         {
             return Self;
         }
 
-        protected override async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, 
+        protected override async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream,
             HttpRequestHeader http, MemoryStream bodyStream)
         {
             if (http.HTTPTargetPath == null)
@@ -52,7 +53,7 @@ namespace ProxyMapService.Proxy.Handlers
                             if (nestedElement.ValueKind == JsonValueKind.Object)
                             {
                                 parameters = new();
-                                foreach (var property in nestedElement.EnumerateObject()) 
+                                foreach (var property in nestedElement.EnumerateObject())
                                 {
                                     string value = property.Value.ValueKind switch
                                     {
@@ -85,6 +86,11 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
+            if (path == "/")
+            {
+                await ShowDownloadPage(context, incomingStream);
+                return HandleStep.Terminate;
+            }
             if (path == "/session/")
             {
                 await GetSession(context, incomingStream);
@@ -92,10 +98,10 @@ namespace ProxyMapService.Proxy.Handlers
             }
             if (path == "/session/new")
             {
-                Dictionary<string, string>? parameters = queryParams.Count > 0 
+                Dictionary<string, string>? parameters = queryParams.Count > 0
                     ? queryParams.ToDictionary(
                         kvp => kvp.Key,
-                        kvp => kvp.Value.ToString()) 
+                        kvp => kvp.Value.ToString())
                     : null;
                 await NewSession(context, incomingStream, parameters);
                 return HandleStep.Terminate;
@@ -103,6 +109,11 @@ namespace ProxyMapService.Proxy.Handlers
             if (path == "/session/reset")
             {
                 await ResetSession(context, incomingStream);
+                return HandleStep.Terminate;
+            }
+            if (path == "/session/certificate")
+            {
+                await DownloadCertificate(context, incomingStream);
                 return HandleStep.Terminate;
             }
 
@@ -152,6 +163,52 @@ namespace ProxyMapService.Proxy.Handlers
                 Success = true,
             };
             await HttpProto.HttpReplyJson(context, incomingStream, response);
+        }
+
+        private static async Task DownloadCertificate(SessionContext context, Stream incomingStream)
+        {
+            try
+            {
+                if (context.CACertificate == null)
+                {
+                    context.Logger.LogError("CA Certificate is missing in SessionContext.");
+                    await HttpProto.HttpReplyNotFound(context, incomingStream);
+                    return;
+                }
+                byte[] certBytes = context.CACertificate.Export(X509ContentType.Cert);
+                await HttpProto.HttpReplyFileBytes(context, incomingStream, "ProxyMapRoot.crt", "application/x-x509-ca-cert", certBytes);
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogError("Error downloading CA certificate: {Message}", ex.Message);
+                await HttpProto.HttpReplyInternalServerError(context, incomingStream, "Error downloading CA certificate");
+            }
+        }
+
+        private static async Task ShowDownloadPage(SessionContext context, Stream incomingStream)
+        {
+            string html = @"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>Download Certificate</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; background: #f5f5f7; color: #1d1d1f; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        p { font-size: 16px; line-height: 1.5; color: #515154; }
+        a { color: #0066cc; text-decoration: none; font-weight: 600; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h1>Certificate Installation</h1>
+        <p>You can download the <a href='/session/certificate'>ProxyMapService Root CA Certificate</a></p>
+    </div>
+</body>
+</html>";
+            await HttpProto.HttpReplyHtml(context, incomingStream, html);
         }
     }
 }

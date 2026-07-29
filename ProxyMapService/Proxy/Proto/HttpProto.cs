@@ -1,6 +1,8 @@
 ﻿using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Sessions;
+using System.IO;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 
@@ -76,6 +78,26 @@ namespace ProxyMapService.Proxy.Proto
             await HttpReplyError(context, context.IncomingStream, httpStatusLine, null, errorMessage);
         }
 
+        public static async Task HttpReplyInternalServerError(SessionContext context, Stream? incomingStream, string? errorMessage)
+        {
+            await HttpReplyError(context, incomingStream, "HTTP/1.1 500 Internal Server Error", null, errorMessage);
+        }
+
+        public static async Task HttpReplyInternalServerError(SessionContext context, string? errorMessage)
+        {
+            await HttpReplyInternalServerError(context, context.IncomingStream, errorMessage);
+        }
+
+        public static async Task HttpReplyNotImplemented(SessionContext context, Stream? incomingStream, string? errorMessage)
+        {
+            await HttpReplyError(context, incomingStream, "HTTP/1.1 501 Not Implemented", null, errorMessage);
+        }
+
+        public static async Task HttpReplyNotImplemented(SessionContext context, string? errorMessage)
+        {
+            await HttpReplyNotImplemented(context, context.IncomingStream, errorMessage);
+        }
+
         public static async Task HttpReplyBadGateway(SessionContext context, Stream? incomingStream, string? errorMessage)
         {
             await HttpReplyError(context, incomingStream, "HTTP/1.1 502 Bad Gateway", null, errorMessage);
@@ -84,6 +106,16 @@ namespace ProxyMapService.Proxy.Proto
         public static async Task HttpReplyBadGateway(SessionContext context, string? errorMessage = null)
         {
             await HttpReplyBadGateway(context, context.IncomingStream, errorMessage);
+        }
+
+        public static async Task HttpReplyServiceUnavailable(SessionContext context, Stream? incomingStream, string? errorMessage)
+        {
+            await HttpReplyError(context, incomingStream, "HTTP/1.1 503 Service Unavailable", null, errorMessage);
+        }
+
+        public static async Task HttpReplyServiceUnavailable(SessionContext context, string? errorMessage)
+        {
+            await HttpReplyServiceUnavailable(context, context.IncomingStream, errorMessage);
         }
 
         public static async Task HttpReplyGatewayTimeout(SessionContext context, Stream? incomingStream, string? errorMessage)
@@ -189,6 +221,47 @@ namespace ProxyMapService.Proxy.Proto
             }
         }
 
+        public static async Task HttpReplyText(SessionContext context, string text)
+        {
+            await HttpReplyText(context, context.IncomingStream, text);
+        }
+
+        public static async Task HttpReplyHtml(SessionContext context, Stream? incomingStream, string html)
+        {
+            if (incomingStream == null) return;
+
+            byte[] htmlBytes = Encoding.UTF8.GetBytes(html);
+
+            string contentType = "text/html; charset=utf-8";
+
+            string[] headers = [
+                "HTTP/1.1 200 OK",
+                $"Date: {DateTime.UtcNow:R}",
+                "Connection: close",
+                $"Content-Length: {htmlBytes.Length}",
+                $"Content-Type: {contentType}"
+            ];
+
+            context.ResponseHeadersLogger?.OnHttpHeader(context, htmlBytes.Length <= 0, headers);
+
+            var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
+            var headerBytes = Encoding.ASCII.GetBytes(headerText);
+
+            await incomingStream.WriteAsync(headerBytes, context.Token);
+
+            if (htmlBytes.Length > 0)
+            {
+                context.ResponseBodyLogger?.OnCompleted(context, contentType, htmlBytes.Length, htmlBytes);
+                await incomingStream.WriteAsync(htmlBytes, context.Token);
+                context.CompletionLogger?.OnHttpCompleted(context);
+            }
+        }
+
+        public static async Task HttpReplyHtml(SessionContext context, string html)
+        {
+            await HttpReplyHtml(context, context.IncomingStream, html);
+        }
+
         public static async Task HttpReplyJson(SessionContext context, Stream? incomingStream, object data, string[]? customHeaders, 
             JsonSerializerOptions serializerOptions)
         {
@@ -257,6 +330,33 @@ namespace ProxyMapService.Proxy.Proto
         public static async Task HttpReplyJson(SessionContext context, object data, string[]? customHeaders)
         {
             await HttpReplyJson(context, context.IncomingStream, data, customHeaders, SnakeCaseOptions);
+        }
+
+        public static async Task HttpReplyFileBytes(SessionContext context, Stream? incomingStream, string Filename, string contentType, byte[] bytes)
+        {
+            if (incomingStream == null) return;
+
+            string[] headers = [
+                "HTTP/1.1 200 OK",
+                $"Date: {DateTime.UtcNow:R}",
+                "Connection: close",
+                $"Content-Length: {bytes.Length}",
+                $"Content-Type: {contentType}",
+                $"Content-Disposition: attachment; filename=\"{Filename}\""
+            ];
+
+            context.ResponseHeadersLogger?.OnHttpHeader(context, bytes.Length <= 0, headers);
+
+            var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
+            var headerBytes = Encoding.ASCII.GetBytes(headerText);
+
+            await incomingStream.WriteAsync(headerBytes, context.Token);
+
+            if (bytes.Length > 0)
+            {
+                await incomingStream.WriteAsync(bytes, context.Token);
+                context.CompletionLogger?.OnHttpCompleted(context);
+            }
         }
 
         public static async Task HttpReplyFileStream(SessionContext context, Stream? incomingStream, FileStream fileStream)
