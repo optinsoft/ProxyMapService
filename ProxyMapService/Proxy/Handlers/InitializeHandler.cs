@@ -32,6 +32,10 @@ namespace ProxyMapService.Proxy.Handlers
                                 //initialize context.Host before logging HttpRequestHeader
                                 context.Host = context.Http.HTTPTargetHost;
                             }
+                            else if (context.Http.Host  != null)
+                            {
+                                context.Host = context.Http.Host;
+                            }
                             context.RequestHeadersLogger?.OnHttpHeader(context, context.Http);
                             if (context.Http.BadRequest)
                             {
