@@ -12,6 +12,8 @@ namespace ProxyMapService.Proxy.Resolvers
         private UsernameParameterList? _currentSessionUsernameParameters = null;
         private readonly object _lock = new();
 
+        private static readonly string _defaultSessionIdPattern = "^[A-Za-z]{8}";
+
         public string? CurrentSessionId
         {
             get
@@ -133,7 +135,7 @@ namespace ProxyMapService.Proxy.Resolvers
             }
             if (context.SessionId == null && context.SessionTime > 0)
             {
-                context.SessionId = GenerateSessionId(context, "^[A-Za-z]{8}", now);
+                context.SessionId = GenerateSessionId(context, _defaultSessionIdPattern, now);
             }
             if (context.Mapping.Authentication.SetAuthentication)
             {
@@ -160,6 +162,15 @@ namespace ProxyMapService.Proxy.Resolvers
         private string GenerateSessionId(SessionContext context, string pattern, DateTime now)
         {
             var newId = GenerateValue(pattern);
+            return UpdateCurrentSessionId(context, newId, now);
+        }
+
+        private string UpdateCurrentSessionId(SessionContext context, string newId, DateTime now)
+        {
+            if (newId.Length == 0)
+            {
+                return newId;
+            }
             lock (_lock)
             {
                 if (!String.IsNullOrEmpty(_currentSessionId))
@@ -191,7 +202,21 @@ namespace ProxyMapService.Proxy.Resolvers
             {
                 contextParamName = value.Substring(1);
                 contextParamValue = context.UsernameParameters?.GetValue(contextParamName);
-                value = contextParamValue ?? parameter.Default;
+                if (contextParamValue != null)
+                {
+                    if (parameter.SessionId)
+                    {
+                        value = UpdateCurrentSessionId(context, contextParamValue, now);
+                    }
+                    else
+                    {
+                        value = contextParamValue;
+                    }
+                }
+                else 
+                {
+                    value = parameter.Default;
+                }
             }
             if (contextParamValue == null)
             {
