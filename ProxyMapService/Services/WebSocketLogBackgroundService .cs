@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using ProxyMapService.WebLogging;
+using ProxyMapService.WebLogging.Dtos;
 using System.Threading.Channels;
 
 namespace ProxyMapService.Services
@@ -84,12 +85,12 @@ namespace ProxyMapService.Services
 
                         case HttpRequestBodyEntry body:
                             _httpTrafficStorage.AddRequestBodyEntry(body);
-                            await _hubContext.Clients.All.SendAsync("HttpRequestBody", new HttpBodyPayload(body.Dto, maxTrafficEntries), token);
+                            await _hubContext.Clients.All.SendAsync("HttpRequestBody", new HttpBodyPayload(HttpBodyDto.CreateWithoutContent(body.Dto), maxTrafficEntries), token);
                             break;
 
                         case HttpResponseBodyEntry body:
                             _httpTrafficStorage.AddResponseBodyEntry(body);
-                            await _hubContext.Clients.All.SendAsync("HttpResponseBody", new HttpBodyPayload(body.Dto, maxTrafficEntries) , token);
+                            await _hubContext.Clients.All.SendAsync("HttpResponseBody", new HttpBodyPayload(HttpBodyDto.CreateWithoutContent(body.Dto), maxTrafficEntries) , token);
                             break;
 
                     }

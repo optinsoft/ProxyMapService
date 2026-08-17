@@ -10,6 +10,8 @@ namespace ProxyMapService.WebLogging
         void AddRequestBodyEntry(HttpRequestBodyEntry entry);
         void AddResponseBodyEntry(HttpResponseBodyEntry entry);
         HttpTrafficHistoryDto GetRecentEntries();
+        HttpBodyDto? GetRequestBodyById(string id);
+        HttpBodyDto? GetResponseBodyById(string id);
         void Clear();
     }
 }

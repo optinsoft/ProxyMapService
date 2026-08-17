@@ -12,6 +12,8 @@ const props = defineProps<{
   responseBodies: HttpBodyEntry[],
   isConnected: boolean,
   isCapturing: boolean,
+  loadRequestBodyFn: (id: string) => Promise<HttpBodyEntry>,
+  loadResponseBodyFn: (id: string) => Promise<HttpBodyEntry>,
 }>()
 
 const emit = defineEmits<{
@@ -442,6 +444,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
               </div>
               <HttpBodyViewer
                 :body="selectedTransaction.requestBody"
+                :load-body-fn="loadRequestBodyFn"
               />
             </div>
             <div
@@ -483,6 +486,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
               <HttpBodyViewer  
                 :headers="selectedTransaction.responseHeaders"            
                 :body="selectedTransaction.responseBody"
+                :load-body-fn="loadResponseBodyFn"
               />
             </div>
             <div

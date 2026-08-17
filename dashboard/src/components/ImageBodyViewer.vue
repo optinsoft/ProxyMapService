@@ -1,11 +1,41 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { HttpImageBodyEntry } from '@/types/http';
+import { computed, ref, watchEffect } from 'vue';
+import type { HttpImageBodyEntry, HttpBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   contentType: string | null,
   body: HttpImageBodyEntry;
+  loadBodyFn: (id: string) => Promise<HttpBodyEntry>;
 }>();
+
+const localBinaryContent = ref<string | null>(null);
+const isLoading = ref(false);
+const errorMessage = ref<string | null>(null);
+
+const handleLoad = async (id: string) => {
+  isLoading.value = true;
+  errorMessage.value = null;  
+  try {
+    const data = await props.loadBodyFn(id) as HttpImageBodyEntry;
+    localBinaryContent.value = data.binaryContentBase64 || ''; 
+  } catch (err) {
+    console.error(err);
+    errorMessage.value = 'Failed to load content';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watchEffect(() => {
+  if (props.body.binaryContentBase64) {
+    localBinaryContent.value = props.body.binaryContentBase64;
+    errorMessage.value = null;
+  } else if (props.body.hasBinaryContent && props.body.id) {
+    handleLoad(props.body.id);
+  } else {
+    localBinaryContent.value = '';
+  }
+});
 
 const mimeToExt: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -21,8 +51,8 @@ const contentType = computed(() => {
 });
 
 const imageUrl = computed(() => {
-  const mime = contentType || 'image/png';
-  return `data:${mime};base64,${props.body.binaryContentBase64}`
+  const mime = contentType.value || 'image/png';
+  return `data:${mime};base64,${localBinaryContent.value}`
 });
 
 const base64ToBlob = (
@@ -94,9 +124,10 @@ const copyImageToClipboard = async (
 };
 
 const copyToClipboard = async () => {
+  if (!localBinaryContent.value) return;
   try {
     const mime = contentType.value || 'image/png';
-    await copyImageToClipboard(props.body.binaryContentBase64, mime);
+    await copyImageToClipboard(localBinaryContent.value, mime);
   } catch (err) {
     console.error('Unable to copy:', err);
   }
@@ -115,7 +146,10 @@ const downloadFilename = computed(() => {
 </script>
 
 <template>
-  <div class="image-viewer-container">
+  <div v-if="errorMessage" class="error-alert">
+    {{ errorMessage }}
+  </div>
+  <div v-else class="image-viewer-container">
     <div class="actions-panel">
       <button @click="copyToClipboard" class="action-btn">
         📋 Copy
@@ -168,5 +202,15 @@ const downloadFilename = computed(() => {
 .image-viewer img {
   max-width: 100%;
   max-height: 800px;
+}
+
+.error-alert {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
 }
 </style>

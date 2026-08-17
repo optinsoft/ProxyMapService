@@ -21,6 +21,36 @@ namespace ProxyMapService.Controllers
             return Ok(history);
         }
 
+        [HttpGet("requestBody/{id}")]
+        public ActionResult<HttpBodyDto> GetRequestBody([FromRoute] string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest("The id parameter is required.");
+            }
+            var body = httpTrafficStorage.GetRequestBodyById(id);
+            if (body == null)
+            {
+                return NotFound(new { Message = $"Request body with id {id} was not found." });
+            }
+            return Ok(body);
+        }
+
+        [HttpGet("responseBody/{id}")]
+        public ActionResult<HttpBodyDto> GetResponseBody([FromRoute] string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest("The id parameter is required.");
+            }
+            var body = httpTrafficStorage.GetResponseBodyById(id);
+            if (body == null)
+            {
+                return NotFound(new { Message = $"Response body with id {id} was not found." });
+            }
+            return Ok(body);
+        }
+
         [HttpPost("clear")]
         public ActionResult<SuccessResponse> Clear()
         {

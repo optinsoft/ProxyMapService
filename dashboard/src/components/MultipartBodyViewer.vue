@@ -11,10 +11,11 @@ import JavascriptBodyViewer from './JavascriptBodyViewer.vue';
 import TypescriptBodyViewer from './TypescriptBodyViewer.vue';
 import MicrosoftAjaxDeltaBodyViewer from './MicrosoftAjaxDeltaBodyViewer.vue';
 
-import { type HttpMultipartBodyEntry, HttpContentKind } from '@/types/http';
+import { type HttpMultipartBodyEntry, type HttpBodyEntry, HttpContentKind } from '@/types/http';
 
 const props = defineProps<{
   body: HttpMultipartBodyEntry;
+  loadBodyFn: (id: string) => Promise<HttpBodyEntry>;
 }>();
 </script>
 
@@ -51,57 +52,68 @@ const props = defineProps<{
         <JsonBodyViewer
           v-if="part.contentKind === HttpContentKind.Json"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <XmlBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Xml"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <HtmlBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Html"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <TextBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Text"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <JavascriptBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Javascript"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <TypescriptBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Typescript"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <MicrosoftAjaxDeltaBodyViewer
           v-else-if="part.contentKind === HttpContentKind.MicrosoftAjaxDelta"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <FormUrlEncodedBodyViewer
           v-else-if="part.contentKind === HttpContentKind.FormUrlEncoded"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <MultipartBodyViewer
           v-else-if="part.contentKind === HttpContentKind.MultipartFormData"
           :body="part"
-        />        
+          :load-body-fn="loadBodyFn"
+        />
 
         <ImageBodyViewer
           v-else-if="part.contentKind === HttpContentKind.Image"
           :content-type="part.contentType || null"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
 
         <BinaryBodyViewer
            v-else-if="part.contentKind === HttpContentKind.Binary"
           :body="part"
+          :load-body-fn="loadBodyFn"
         />
       </div>
     </div>

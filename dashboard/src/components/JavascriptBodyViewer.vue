@@ -1,20 +1,54 @@
 <script setup lang="ts">
-import type { HttpJavascriptBodyEntry } from '@/types/http';
+import { ref, watchEffect } from 'vue';
+import type { HttpJavascriptBodyEntry, HttpBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   body: HttpJavascriptBodyEntry;
+  loadBodyFn: (id: string) => Promise<HttpBodyEntry>;
 }>();
 
-const copyToClipboard = async () => {
+const localContent = ref<string | null>(null);
+const isLoading = ref(false);
+const errorMessage = ref<string | null>(null);
+
+const handleLoad = async (id: string) => {
+  isLoading.value = true;
+  errorMessage.value = null;  
   try {
-    await navigator.clipboard.writeText(props.body.content);
+    const data = await props.loadBodyFn(id) as HttpJavascriptBodyEntry;
+    localContent.value = data.content || ''; 
+  } catch (err) {
+    console.error(err);
+    errorMessage.value = 'Failed to load content';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watchEffect(() => {
+  if (props.body.content) {
+    localContent.value = props.body.content;
+    errorMessage.value = null;
+  } else if (props.body.hasContent && props.body.id) {
+    handleLoad(props.body.id);
+  } else {
+    localContent.value = '';
+  }
+});
+
+const copyToClipboard = async () => {
+  if (!localContent.value) return;
+  try {
+    await navigator.clipboard.writeText(localContent.value);
   } catch (err) {
     console.error('Unable to copy:', err);
   }
 };
 
 const downloadAsFile = () => {
-  const blob = new Blob([props.body.content], { type: 'text/javascript' });
+  if (!localContent.value) return;
+  
+  const blob = new Blob([localContent.value], { type: 'text/javascript' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   
@@ -27,7 +61,10 @@ const downloadAsFile = () => {
 </script>
 
 <template>
-  <div class="text-viewer-container">
+  <div v-if="errorMessage" class="error-alert">
+    {{ errorMessage }}
+  </div>  
+  <div v-else class="text-viewer-container">
     <div class="actions-panel">
       <button @click="copyToClipboard" class="action-btn">
         📋 Copy
@@ -36,7 +73,7 @@ const downloadAsFile = () => {
         💾 Download .js
       </button>
     </div>    
-    <pre class="text-viewer">{{ body.content }}</pre>
+    <pre class="text-viewer">{{ localContent }}</pre>
   </div>
 
 </template>
@@ -69,5 +106,15 @@ const downloadAsFile = () => {
   padding: 12px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.error-alert {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
 }
 </style>

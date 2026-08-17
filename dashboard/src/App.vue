@@ -83,6 +83,38 @@ const fetchTrafficHistory = async () => {
   }
 }
 
+const fetchRequestBody = async (id: string): Promise<HttpBodyEntry> => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService';    
+  const response = await fetch(`${baseUrl}/TrafficHistory/requestBody/${id}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${currentToken.value}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch traffic history. Error: ${response.status}`);
+  }
+  
+  return await response.json();    
+}
+
+const fetchResponseBody = async (id: string): Promise<HttpBodyEntry> => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService';    
+  const response = await fetch(`${baseUrl}/TrafficHistory/responseBody/${id}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${currentToken.value}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch traffic history. Error: ${response.status}`);
+  }
+  
+  return await response.json();    
+}
+
 const fetchStats = async () => {
   try {
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/ProxyMapService'
@@ -519,6 +551,8 @@ const columnFilters = reactive<ColumnFilters>(
           :response-bodies="responseBodies"
           :isConnected="isConnected"
           :is-capturing="isHttpCapturing"
+          :load-request-body-fn="fetchRequestBody"
+          :load-response-body-fn="fetchResponseBody"
           @clear-network="clearNetworkData"
           @toggle-capture="handleToggleHttpCapture"
         />          

@@ -1,13 +1,43 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { HttpFormUrlEncodedBodyEntry } from '@/types/http';
+import { computed, ref, watchEffect } from 'vue';
+import type { HttpFormUrlEncodedBodyEntry, HttpBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   body: HttpFormUrlEncodedBodyEntry;
+  loadBodyFn: (id: string) => Promise<HttpBodyEntry>;
 }>();
 
+const localContent = ref<string | null>(null);
+const isLoading = ref(false);
+const errorMessage = ref<string | null>(null);
+
+const handleLoad = async (id: string) => {
+  isLoading.value = true;
+  errorMessage.value = null;  
+  try {
+    const data = await props.loadBodyFn(id) as HttpFormUrlEncodedBodyEntry;
+    localContent.value = data.content || ''; 
+  } catch (err) {
+    console.error(err);
+    errorMessage.value = 'Failed to load content';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watchEffect(() => {
+  if (props.body.content) {
+    localContent.value = props.body.content;
+    errorMessage.value = null;
+  } else if (props.body.hasContent && props.body.id) {
+    handleLoad(props.body.id);
+  } else {
+    localContent.value = '';
+  }
+});
+
 const entries = computed(() => {
-  const params = new URLSearchParams(props.body.content);
+  const params = new URLSearchParams(localContent.value || '');
 
   return [...params.entries()].map(([key, value]) => ({
     key,
@@ -16,15 +46,18 @@ const entries = computed(() => {
 });
 
 const copyToClipboard = async () => {
+  if (!localContent.value) return;
   try {
-    await navigator.clipboard.writeText(props.body.content);
+    await navigator.clipboard.writeText(localContent.value);
   } catch (err) {
     console.error('Unable to copy:', err);
   }
 };
 
 const downloadAsFile = () => {
-  const blob = new Blob([props.body.content], { type: 'text/plain' });
+  if (!localContent.value) return;
+  
+  const blob = new Blob([localContent.value], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   
@@ -37,7 +70,10 @@ const downloadAsFile = () => {
 </script>
 
 <template>
-  <div class="form-viewer-container">
+  <div v-if="errorMessage" class="error-alert">
+    {{ errorMessage }}
+  </div>
+  <div v-else class="form-viewer-container">
     <div class="actions-panel">
       <button @click="copyToClipboard" class="action-btn">
         📋 Copy
@@ -121,5 +157,15 @@ const downloadAsFile = () => {
   word-break: break-all;
   white-space: pre-wrap;
   vertical-align: top;
+}
+
+.error-alert {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
 }
 </style>

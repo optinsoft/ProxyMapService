@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using ProxyMapService.Models;
 using ProxyMapService.WebLogging.Dtos;
 using System.IO.Compression;
 using System.Text;
@@ -38,6 +39,7 @@ namespace ProxyMapService.WebLogging
                 case HttpBodyContentKind.Typescript:
                 case HttpBodyContentKind.MicrosoftAjaxDelta:
                     dto.Content = Encoding.UTF8.GetString(bodySpan);
+                    dto.HasContent = true;
                     break;
 
                 case HttpBodyContentKind.MultipartFormData:
@@ -49,6 +51,7 @@ namespace ProxyMapService.WebLogging
                     {
                         dto.ContentKind = HttpBodyContentKind.Text;
                         dto.Content = Encoding.UTF8.GetString(bodySpan);
+                        dto.HasContent = true;
                     }
                     break;
 
@@ -56,6 +59,7 @@ namespace ProxyMapService.WebLogging
                 case HttpBodyContentKind.Binary:
                 default:
                     dto.BinaryContentBase64 = Convert.ToBase64String(bodySpan);
+                    dto.HasBinaryContent = true;
                     break;
             }
 
@@ -114,6 +118,7 @@ namespace ProxyMapService.WebLogging
                     case HttpBodyContentKind.Typescript:
                     case HttpBodyContentKind.MicrosoftAjaxDelta:
                         part.Content = Encoding.UTF8.GetString(bytesSpan);
+                        part.HasContent = true;
                         break;
 
                     case HttpBodyContentKind.MultipartFormData:
@@ -125,6 +130,7 @@ namespace ProxyMapService.WebLogging
                         {
                             part.ContentKind = HttpBodyContentKind.Text;
                             part.Content = Encoding.UTF8.GetString(bytesSpan);
+                            part.HasContent = true;
                         }
                         break;
 
@@ -132,6 +138,7 @@ namespace ProxyMapService.WebLogging
                     case HttpBodyContentKind.Binary:
                     default:
                         part.BinaryContentBase64 = Convert.ToBase64String(bytesSpan);
+                        part.HasBinaryContent = true;
                         break;
                 }
 

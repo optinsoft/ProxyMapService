@@ -68,8 +68,8 @@ namespace ProxyMapService.WebLogging
                 Requests = FilterEntries<HttpRequestMessageEntry, HttpRequestDto>(_requestQueue.CurrentQueue, e => e.Dto),
                 Responses = FilterEntries<HttpResponseMessageEntry, HttpResponseDto>(_responseQueue.CurrentQueue, e => e.Dto),
                 Completions = FilterEntries<HttpCompletionEntry, HttpCompletionDto>(_completionQueue.CurrentQueue, e => e.Dto),
-                RequestBodies = FilterEntries<HttpRequestBodyEntry, HttpBodyDto>(_requestBodyQueue.CurrentQueue, e => e.Dto),
-                ResponseBodies = FilterEntries<HttpResponseBodyEntry, HttpBodyDto>(_responseBodyQueue.CurrentQueue, e => e.Dto)
+                RequestBodies = FilterEntries<HttpRequestBodyEntry, HttpBodyDto>(_requestBodyQueue.CurrentQueue, e => HttpBodyDto.CreateWithoutContent(e.Dto)),
+                ResponseBodies = FilterEntries<HttpResponseBodyEntry, HttpBodyDto>(_responseBodyQueue.CurrentQueue, e => HttpBodyDto.CreateWithoutContent(e.Dto))
             };
         }
 
@@ -83,6 +83,22 @@ namespace ProxyMapService.WebLogging
                     yield return selector(target);
                 }
             }
+        }
+
+        public HttpBodyDto? GetRequestBodyById(string id)
+        {
+            return _requestBodyQueue.CurrentQueue.Entries
+                 .OfType<HttpRequestBodyEntry>()
+                 .FirstOrDefault(e => e.Dto.Id == id)?
+                 .Dto;
+        }
+
+        public HttpBodyDto? GetResponseBodyById(string id)
+        {
+            return _responseBodyQueue.CurrentQueue.Entries
+                 .OfType<HttpResponseBodyEntry>()
+                 .FirstOrDefault(e => e.Dto.Id == id)?
+                 .Dto;
         }
 
         public void Clear()

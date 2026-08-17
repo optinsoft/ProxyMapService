@@ -70,7 +70,7 @@ export type HttpMultipartPartEntry =
   | HttpMicrosoftAjaxDeltaBodyEntry;
 
 interface HttpMultipartPartBaseEntry {
-  id: string;
+  id?: string | null;
   length: number;
   contentType?: string | null;
   name?: string | null;
@@ -94,60 +94,70 @@ export enum HttpContentKind {
 export interface HttpJsonBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Json;
+  hasContent: boolean;
   content: string;
 }
 
 export interface HttpXmlBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Xml;
+  hasContent: boolean;
   content: string;
 }
 
 export interface HttpHtmlBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Html;
+  hasContent: boolean;
   content: string;
 }
 
 export interface HttpTextBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Text;
+  hasContent: boolean;
   content: string;
 }
 
 export interface HttpJavascriptBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Javascript;
+  hasContent: boolean;
   content: string;
 }
 
 export interface HttpTypescriptBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Typescript;
+  hasContent: boolean;
   content: string;
 }
 
 export interface HttpMicrosoftAjaxDeltaBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.MicrosoftAjaxDelta;
+  hasContent: boolean;
   content: string;
 }
 
 export interface HttpImageBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Image;
+  hasBinaryContent: boolean;
   binaryContentBase64: string;
 }
 
 export interface HttpBinaryBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.Binary;
+  hasBinaryContent: boolean;
   binaryContentBase64: string;
 }
 
 export interface HttpFormUrlEncodedBodyEntry
   extends HttpMultipartPartBaseEntry {
   contentKind: HttpContentKind.FormUrlEncoded;
+  hasContent: boolean;
   content: string;
 }
 

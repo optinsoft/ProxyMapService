@@ -1,33 +1,66 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { HttpJsonBodyEntry } from '@/types/http';
+import { computed, ref, watchEffect } from 'vue';
+import type { HttpJsonBodyEntry, HttpBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   body: HttpJsonBodyEntry;
+  loadBodyFn: (id: string) => Promise<HttpBodyEntry>;
 }>();
 
-const formattedJson = computed(() => {
+const localContent = ref<string | null>(null);
+const isLoading = ref(false);
+const errorMessage = ref<string | null>(null);
+
+const formatJsonContent = (content: string) => {
   try {
     return JSON.stringify(
-      JSON.parse(props.body.content),
+      JSON.parse(content),
       null,
       2,
     );
   } catch {
-    return props.body.content;
+    return content;
+  }
+};
+
+const handleLoad = async (id: string) => {
+  isLoading.value = true;
+  errorMessage.value = null;  
+  try {
+    const data = await props.loadBodyFn(id) as HttpJsonBodyEntry;
+    localContent.value = formatJsonContent(data.content) || ''; 
+  } catch (err) {
+    console.error(err);
+    errorMessage.value = 'Failed to load content';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watchEffect(() => {
+  if (props.body.content) {
+    localContent.value = formatJsonContent(props.body.content);
+    errorMessage.value = null;
+  } else if (props.body.hasContent && props.body.id) {
+    handleLoad(props.body.id);
+  } else {
+    localContent.value = '';
   }
 });
 
 const copyToClipboard = async () => {
+  if (!localContent.value) return;
   try {
-    await navigator.clipboard.writeText(props.body.content);
+    await navigator.clipboard.writeText(localContent.value);
   } catch (err) {
     console.error('Unable to copy:', err);
   }
 };
 
 const downloadAsFile = () => {
-  const blob = new Blob([props.body.content], { type: 'application/json' });
+  if (!localContent.value) return;
+
+  const blob = new Blob([localContent.value], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   
@@ -40,7 +73,10 @@ const downloadAsFile = () => {
 </script>
 
 <template>
-  <div class="json-viewer-container">
+  <div v-if="errorMessage" class="error-alert">
+    {{ errorMessage }}
+  </div>  
+  <div v-else class="json-viewer-container">
     <div class="actions-panel">
       <button @click="copyToClipboard" class="action-btn">
         📋 Copy
@@ -49,7 +85,7 @@ const downloadAsFile = () => {
         💾 Download .json
       </button>
     </div>    
-    <pre class="json-viewer">{{ formattedJson }}</pre>
+    <pre class="json-viewer">{{ localContent }}</pre>
   </div>
 </template>
 
@@ -81,5 +117,15 @@ const downloadAsFile = () => {
   padding: 12px;
   font-family: monospace;
   white-space: pre-wrap;
+}
+
+.error-alert {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
 }
 </style>

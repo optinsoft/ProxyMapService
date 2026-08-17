@@ -1,25 +1,57 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import type { HttpHtmlBodyEntry } from '@/types/http';
+import { computed, ref, watchEffect } from 'vue';
+import type { HttpHtmlBodyEntry, HttpBodyEntry } from '@/types/http';
 
 const props = defineProps<{
   body: HttpHtmlBodyEntry;
+  loadBodyFn: (id: string) => Promise<HttpBodyEntry>;
 }>();
 
 const tab = ref<'source' | 'preview'>('source');
+const localContent = ref<string | null>(null);
+const isLoading = ref(false);
+const errorMessage = ref<string | null>(null);
 
-const iframeSrcDoc = computed(() => props.body.content);
+const handleLoad = async (id: string) => {
+  isLoading.value = true;
+  errorMessage.value = null;  
+  try {
+    const data = await props.loadBodyFn(id) as HttpHtmlBodyEntry;
+    localContent.value = data.content || ''; 
+  } catch (err) {
+    console.error(err);
+    errorMessage.value = 'Failed to load content';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watchEffect(() => {
+  if (props.body.content) {
+    localContent.value = props.body.content;
+    errorMessage.value = null;
+  } else if (props.body.hasContent && props.body.id) {
+    handleLoad(props.body.id);
+  } else {
+    localContent.value = '';
+  }
+});
+
+const iframeSrcDoc = computed(() => localContent.value || '');
 
 const copyToClipboard = async () => {
+  if (!localContent.value) return;
   try {
-    await navigator.clipboard.writeText(props.body.content);
+    await navigator.clipboard.writeText(localContent.value);
   } catch (err) {
     console.error('Unable to copy:', err);
   }
 };
 
 const downloadAsFile = () => {
-  const blob = new Blob([props.body.content], { type: 'text/html' });
+  if (!localContent.value) return;
+
+  const blob = new Blob([localContent.value], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   
@@ -32,7 +64,10 @@ const downloadAsFile = () => {
 </script>
 
 <template>
-  <div class="html-viewer-container">
+  <div v-if="errorMessage" class="error-alert">
+    {{ errorMessage }}
+  </div>
+  <div v-else class="html-viewer-container">
     <div class="actions-panel">
       <button @click="copyToClipboard" class="action-btn">
         📋 Copy
@@ -68,7 +103,7 @@ const downloadAsFile = () => {
       <pre
         v-else
         class="source"
-      >{{ body.content }}</pre>
+      >{{ localContent }}</pre>
     </div>
   </div>
 </template>
@@ -139,5 +174,15 @@ const downloadAsFile = () => {
   padding: 12px;
   white-space: pre-wrap;
   font-family: monospace;
+}
+
+.error-alert {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
 }
 </style>
