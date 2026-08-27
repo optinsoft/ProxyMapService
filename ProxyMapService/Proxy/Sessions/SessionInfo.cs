@@ -1,8 +1,7 @@
-﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Converters;
+﻿using ProxyMapService.Proxy.Converters;
 using System.Text.Json.Serialization;
 
-namespace ProxyMapService.Proxy.Resolvers
+namespace ProxyMapService.Proxy.Sessions
 {
     public class SessionInfo
     {

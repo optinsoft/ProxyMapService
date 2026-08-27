@@ -1,10 +1,9 @@
 ﻿using Fare;
 using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Sessions;
 
-namespace ProxyMapService.Proxy.Resolvers
+namespace ProxyMapService.Proxy.Sessions
 {
-    public class UsernameParameterResolver : IUsernameParameterResolver
+    public class SessionManager : ISessionManager
     {
         private string? _currentSessionId = null;
         private int? _currentSessionTime = null;
@@ -83,12 +82,12 @@ namespace ProxyMapService.Proxy.Resolvers
 
         public string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList)
         {
-            if (!String.IsNullOrEmpty(username) && parameterList != null)
+            if (!string.IsNullOrEmpty(username) && parameterList != null)
             {
                 foreach (var p in parameterList)
                 {
                     string? value = ResolveParameterValue(context, p, DateTime.Now);
-                    if (!String.IsNullOrEmpty(value))
+                    if (!string.IsNullOrEmpty(value))
                     {
                         if (p.Name != "account")
                         {
@@ -173,7 +172,7 @@ namespace ProxyMapService.Proxy.Resolvers
             }
             lock (_lock)
             {
-                if (!String.IsNullOrEmpty(_currentSessionId))
+                if (!string.IsNullOrEmpty(_currentSessionId))
                 {
                     if (_currentSessionExpiresAt != null && now < _currentSessionExpiresAt)
                     {

@@ -5,7 +5,6 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Listeners;
 using ProxyMapService.Proxy.Providers;
-using ProxyMapService.Proxy.Resolvers;
 using ProxyMapService.Proxy.Sessions;
 using System.Net.Sockets;
 
@@ -102,11 +101,11 @@ namespace ProxyMapService.Proxy
         {
             var inboundEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, listenPort);
 
-            UsernameParameterResolver usernameParameterResolver = new();
+            SessionManager sessionManager = new();
 
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
                 await Session.Run(inboundEndPoint, client, mapping, sessionAPI,
-                    proxyProvider, proxyAuthenticator, usernameParameterResolver,
+                    proxyProvider, proxyAuthenticator, sessionManager,
                     hostRules, _cacheRules ?? cacheRules, cacheManager, userAgent, 
                     sslClientConfig, sslServerConfig,
                     proxyCounters, sessionLogger, logStep, token);

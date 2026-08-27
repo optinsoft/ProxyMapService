@@ -1,9 +1,8 @@
 ﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Sessions;
 
-namespace ProxyMapService.Proxy.Resolvers
+namespace ProxyMapService.Proxy.Sessions
 {
-    public interface IUsernameParameterResolver
+    public interface ISessionManager
     {
         string? CurrentSessionId { get; }
         int? CurrentSessionTime { get; }

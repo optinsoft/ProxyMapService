@@ -16,7 +16,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.ProxyCounters.SessionsCounter?.OnHostProxified(context);
 
-            context.UsernameParameterResolver.PopulateContext(context);
+            context.SessionManager.PopulateContext(context);
 
             try
             {

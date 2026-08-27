@@ -8,7 +8,6 @@ using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
-using ProxyMapService.Proxy.Resolvers;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -38,7 +37,7 @@ namespace ProxyMapService.Proxy.Sessions
         public X509Certificate2? CACertificate { get; set; }
         public IProxyProvider ProxyProvider { get; private set; }
         public IProxyAuthenticator ProxyAuthenticator { get; private set; }
-        public IUsernameParameterResolver UsernameParameterResolver { get; private set; }
+        public ISessionManager SessionManager { get; private set; }
         public List<HostRule> HostRules { get; private set; }
         public List<CacheRule> CacheRules { get; set; }
         public CacheManager CacheManager { get; private set; }
@@ -197,7 +196,7 @@ namespace ProxyMapService.Proxy.Sessions
             System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, SessionAPIConfig sessionAPI, 
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
-            IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
+            ISessionManager sessionManager, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
@@ -218,7 +217,7 @@ namespace ProxyMapService.Proxy.Sessions
             CACertificate = caCertificate;
             ProxyProvider = proxyProvider;
             ProxyAuthenticator = proxyAuthenticator;
-            UsernameParameterResolver = usernameParameterResolver;
+            SessionManager = sessionManager;
             HostRules = hostRules;
             CacheRules = cacheRules;
             CacheManager = cacheManager;

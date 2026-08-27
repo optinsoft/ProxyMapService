@@ -124,8 +124,8 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task GetSession(SessionContext context, Stream incomingStream)
         {
-            context.UsernameParameterResolver.PopulateContext(context);
-            var info = context.UsernameParameterResolver.CurrentSessionInfo;
+            context.SessionManager.PopulateContext(context);
+            var info = context.SessionManager.CurrentSessionInfo;
             string[] headers = [
                 $"X-Session-Id: {info.SessionId ?? "null"}",
                 info.SessionTime.HasValue ? $"X-Session-Time: {info.SessionTime.Value}" : "X-Session-Time: null",
@@ -136,7 +136,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task NewSession(SessionContext context, Stream incomingStream, Dictionary<string, string>? parameters)
         {
-            context.UsernameParameterResolver.ResetSessionId();
+            context.SessionManager.ResetSessionId();
             if (parameters != null)
             {
                 context.UsernameParameters ??= new();
@@ -145,8 +145,8 @@ namespace ProxyMapService.Proxy.Handlers
                     context.UsernameParameters.SetValue(param.Key, param.Value);
                 }
             }
-            context.UsernameParameterResolver.PopulateContext(context);
-            var info = context.UsernameParameterResolver.CurrentSessionInfo;
+            context.SessionManager.PopulateContext(context);
+            var info = context.SessionManager.CurrentSessionInfo;
             string[] headers = [
                 $"X-Session-Id: {info.SessionId ?? "null"}",
                 info.SessionTime.HasValue ? $"X-Session-Time: {info.SessionTime.Value}" : "X-Session-Time: null",
@@ -157,7 +157,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         private static async Task ResetSession(SessionContext context, Stream incomingStream)
         {
-            context.UsernameParameterResolver.ResetSessionId();
+            context.SessionManager.ResetSessionId();
             var response = new
             {
                 Success = true,

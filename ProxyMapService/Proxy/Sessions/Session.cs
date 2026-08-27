@@ -1,11 +1,9 @@
-﻿using Microsoft.VisualBasic;
-using ProxyMapService.Proxy.Authenticator;
+﻿using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Providers;
-using ProxyMapService.Proxy.Resolvers;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -75,7 +73,7 @@ namespace ProxyMapService.Proxy.Sessions
 
         public static async Task Run(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
             ProxyMapping mapping, SessionAPIConfig sessionAPI, IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
-            IUsernameParameterResolver usernameParameterResolver, List<HostRule> hostRules, 
+            ISessionManager sessionManager, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
@@ -117,7 +115,7 @@ namespace ProxyMapService.Proxy.Sessions
                 using var context = new SessionContext(
                     inboundEndpoint, incomingClient, incomingEndPoint, 
                     mapping, sessionAPI, serverCertificate, caCertificate,
-                    proxyProvider, proxyAuthenticator, usernameParameterResolver,
+                    proxyProvider, proxyAuthenticator, sessionManager,
                     hostRules, cacheRules, cacheManager, userAgent,
                     sslClientConfig, sslServerConfig,
                     proxyCounters, logger, token);

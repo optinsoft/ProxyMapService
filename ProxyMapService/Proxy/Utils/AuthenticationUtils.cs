@@ -6,13 +6,13 @@ namespace ProxyMapService.Proxy.Utils
     {
         public static void OnAuthenticationNotRequired(SessionContext context)
         {
-            //context.UsernameParameterResolver.PopulateContext(context);
+            //context.SessionManager.PopulateContext(context);
             context.ProxyCounters.SessionsCounter?.OnAuthenticationNotRequired(context);
         }
 
         public static void OnAuthenticated(SessionContext context)
         {
-            //context.UsernameParameterResolver.PopulateContext(context);
+            //context.SessionManager.PopulateContext(context);
             context.ProxyCounters.SessionsCounter?.OnAuthenticated(context);
         }
 
