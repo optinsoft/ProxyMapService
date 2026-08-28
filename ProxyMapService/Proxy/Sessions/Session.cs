@@ -4,6 +4,7 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Providers;
+using ProxyMapService.Proxy.RoutingLoopDetector;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -73,7 +74,8 @@ namespace ProxyMapService.Proxy.Sessions
         #endregion
 
         public static async Task Run(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
-            ProxyMapping mapping, SessionAPIConfig sessionAPI, IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
+            ProxyMapping mapping, IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, 
+            IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
             ISessionManager sessionManager, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
@@ -115,7 +117,8 @@ namespace ProxyMapService.Proxy.Sessions
             {
                 using var context = new SessionContext(
                     inboundEndpoint, incomingClient, incomingEndPoint, 
-                    mapping, sessionAPI, serverCertificate, caCertificate,
+                    mapping, loopDetector, sessionAPI, 
+                    serverCertificate, caCertificate,
                     proxyProvider, proxyAuthenticator, sessionManager,
                     hostRules, cacheRules, cacheManager, userAgent,
                     sslClientConfig, sslServerConfig,

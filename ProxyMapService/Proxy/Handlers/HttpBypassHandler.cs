@@ -1,9 +1,10 @@
 ﻿using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Socks;
 using System.Net.Sockets;
-using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {
@@ -40,6 +41,14 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception ex)
             {
                 context.Logger.LogHostError(ex.Message, context.Host.Hostname);
+                context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+                await HttpProto.HttpReplyBadGateway(context);
+                return HandleStep.Terminate;
+            }
+
+            if (context.RoutingLoopDetector.IsSelfTargeting(context.OutgoingEndPoint.Address, context.OutgoingEndPoint.Port))
+            {
+                context.Logger.LogRoutingLoopPrevented(context.OutgoingEndPoint);
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
                 await HttpProto.HttpReplyBadGateway(context);
                 return HandleStep.Terminate;

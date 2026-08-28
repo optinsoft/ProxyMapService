@@ -362,6 +362,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Missing or empty {headerName} header")]
         public static partial void LogHttpHeaderMissing(this ILogger logger, string headerName);
 
+        [LoggerMessage(
+            EventId = 1291,
+            Level = LogLevel.Warning,
+            Message = "Routing loop prevented: connection to {outgoingEndPoint}")]
+        public static partial void LogRoutingLoopPrevented(this ILogger logger, System.Net.IPEndPoint outgoingEndPoint);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

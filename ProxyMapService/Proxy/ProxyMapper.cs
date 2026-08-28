@@ -5,13 +5,14 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Listeners;
 using ProxyMapService.Proxy.Providers;
+using ProxyMapService.Proxy.RoutingLoopDetector;
 using ProxyMapService.Proxy.Sessions;
 using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy
 {
     public class ProxyMapper(ProxyMapping mapping, List<PortRange> listenPorts,
-        SessionAPIConfig sessionAPI, List<HostRule> hostRules, 
+        IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, List<HostRule> hostRules, 
         List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
         SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
         ProxyCounters proxyCounters, ILogger serviceLogger, ILogger sessionLogger, 
@@ -104,8 +105,8 @@ namespace ProxyMapService.Proxy
             SessionManager sessionManager = new();
 
             async void incomingClientHandler(TcpClient client, CancellationToken token) =>
-                await Session.Run(inboundEndPoint, client, mapping, sessionAPI,
-                    proxyProvider, proxyAuthenticator, sessionManager,
+                await Session.Run(inboundEndPoint, client, mapping, loopDetector, 
+                    sessionAPI, proxyProvider, proxyAuthenticator, sessionManager,
                     hostRules, _cacheRules ?? cacheRules, cacheManager, userAgent, 
                     sslClientConfig, sslServerConfig,
                     proxyCounters, sessionLogger, logStep, token);

@@ -8,6 +8,7 @@ using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
+using ProxyMapService.Proxy.RoutingLoopDetector;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 
@@ -25,6 +26,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
+        public IRoutingLoopDetector RoutingLoopDetector { get; private set; }
         public SessionAPIConfig SessionAPI { get; set; }
         public SessionAction Action { get; set; }
         public bool DecryptSSL { get;set; }
@@ -193,7 +195,8 @@ namespace ProxyMapService.Proxy.Sessions
         }
 
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
-            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, SessionAPIConfig sessionAPI, 
+            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, 
+            IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, 
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             ISessionManager sessionManager, List<HostRule> hostRules, 
@@ -207,6 +210,7 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingClient = new TcpClient();
             OutgoingEndPoint = null;
             Mapping = mapping;
+            RoutingLoopDetector = loopDetector;
             SessionAPI = sessionAPI;
             Action = mapping.Listen.Action switch {
                 ActionEnum.Allow => SessionActionEnum.Proxy,

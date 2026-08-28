@@ -8,6 +8,7 @@ using ProxyMapService.Proxy;
 using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.RoutingLoopDetector;
 using ProxyMapService.Utils;
 using ProxyMapService.WebLogging;
 
@@ -35,6 +36,7 @@ namespace ProxyMapService.Services
         private CacheRepository? _cacheRepository;
         private CacheManager? _cacheManager;
         private readonly List<PortRange> _listenPorts = [];
+        private readonly IRoutingLoopDetector _routingLoopDetector = new RoutingLoopDetector();
 
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -186,9 +188,18 @@ namespace ProxyMapService.Services
                 serviceId,
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             List<Task> tasks = [];
+            _routingLoopDetector.ClearListenPorts();
             foreach (var mapping in proxyMappings)
             {
-                tasks.Add(new ProxyMapper(mapping, _listenPorts, 
+                for (int port = mapping.Listen.PortRange.Start; port <= mapping.Listen.PortRange.End; port++)
+                {
+                    _routingLoopDetector.AddListenPort(port);
+                }
+            }
+            _routingLoopDetector.InitLocalIpAddresses();
+            foreach (var mapping in proxyMappings)
+            {
+                tasks.Add(new ProxyMapper(mapping, _listenPorts, _routingLoopDetector, 
                     sessionAPI, _hostRules, _cacheRules, _cacheManager,
                     userAgent, sslClientOptions, sslServerOptions, _proxyCounters,
                     _logger, _sessionLogger, logStep, _maxListenerStartRetries, cancellationToken).Start());

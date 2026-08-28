@@ -33,10 +33,20 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
+            bool connected = false;
+
             try
             {
                 context.OutgoingEndPoint = await HostAddress.GetIPEndPoint(context.ProxyServer.Host, context.ProxyServer.Port);
-                await context.OutgoingClient.ConnectAsync(context.OutgoingEndPoint, context.Token);
+                if (context.RoutingLoopDetector.IsSelfTargeting(context.OutgoingEndPoint.Address, context.OutgoingEndPoint.Port))
+                {
+                    context.Logger.LogRoutingLoopPrevented(context.OutgoingEndPoint);
+                }
+                else
+                {
+                    await context.OutgoingClient.ConnectAsync(context.OutgoingEndPoint, context.Token);
+                    connected = true;
+                }
             }
             catch (Exception ex)
             {
@@ -48,6 +58,10 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.Logger.LogProxyServerConnectionFailed(ex.Message, context.OutgoingEndPoint, context.ProxyServer);
                 }
+            }
+
+            if (!connected) 
+            {
                 context.ProxyCounters.SessionsCounter?.OnProxyFailed(context);
                 await (context switch
                 {

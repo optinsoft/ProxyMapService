@@ -1,6 +1,4 @@
-﻿using ProxyMapService.Proxy.Configurations;
-
-namespace ProxyMapService.Proxy.Sessions
+﻿namespace ProxyMapService.Proxy.Sessions
 {
     public readonly struct SessionAction
     {
@@ -32,6 +30,6 @@ namespace ProxyMapService.Proxy.Sessions
         Deny = 1,
         Bypass = 2,
         File = 3,
-        SessionAPI = 4
+        SessionAPI = 4,
     }
 }

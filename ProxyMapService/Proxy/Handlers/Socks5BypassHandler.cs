@@ -27,6 +27,14 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
+            if (context.RoutingLoopDetector.IsSelfTargeting(context.OutgoingEndPoint.Address, context.OutgoingEndPoint.Port))
+            {
+                context.Logger.LogRoutingLoopPrevented(context.OutgoingEndPoint);
+                context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+                await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
+                return HandleStep.Terminate;
+            }
+
             try
             {
                 await context.OutgoingClient.ConnectAsync(context.OutgoingEndPoint, context.Token);
