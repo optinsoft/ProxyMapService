@@ -1,5 +1,6 @@
 ﻿using Fare;
 using ProxyMapService.Proxy.Configurations;
+using System.Net.WebSockets;
 
 namespace ProxyMapService.Proxy.Sessions
 {
@@ -153,7 +154,22 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
-        public bool IsCurrentSessionExpired(DateTime now)
+        public void AddOrUpdateSubscription(string sessionId, WebSocket socket, string urlPattern)
+        {
+            // throw new NotImplementedException();
+        }
+
+        public void RemoveSubscription(string sessionId)
+        {
+            // throw new NotImplementedException();
+        }
+
+        public void NotifyIfMatches(string interceptedUrl, object requestData)
+        {
+            throw new NotImplementedException();
+        }
+
+        private bool IsCurrentSessionExpired(DateTime now)
         {
             return _currentSessionExpiresAt != null && now >= _currentSessionExpiresAt;
         }

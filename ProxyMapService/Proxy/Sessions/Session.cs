@@ -41,6 +41,7 @@ namespace ProxyMapService.Proxy.Sessions
             { HandleStep.Tunnel, TunnelHandler.Instance() },
             { HandleStep.HandleFileRequest, FileRequestHandler.Instance() },
             { HandleStep.HandleSessionAPI, SessionAPIHandler.Instance() },
+            { HandleStep.HandleSessionWebSocket, SessionWebSocketHandler.Instance() },
         };
 
         #region High-Performance Logging

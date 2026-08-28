@@ -11,11 +11,6 @@ namespace ProxyMapService.Proxy.Sessions
             _value = value;
         }
 
-        public static implicit operator SessionAction(ActionEnum action)
-        {
-            return new SessionAction((SessionActionEnum)action);
-        }
-
         public static implicit operator SessionAction(SessionActionEnum action)
         {
             return new SessionAction(action);
@@ -33,7 +28,7 @@ namespace ProxyMapService.Proxy.Sessions
 
     public enum SessionActionEnum
     {
-        Allow = 0,
+        Proxy = 0,
         Deny = 1,
         Bypass = 2,
         File = 3,

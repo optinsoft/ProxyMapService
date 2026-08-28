@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using System.Net.WebSockets;
 
 namespace ProxyMapService.Proxy.Sessions
 {
@@ -11,5 +12,8 @@ namespace ProxyMapService.Proxy.Sessions
         string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList);
         void PopulateContext(SessionContext context);
         void ResetSessionId();
+        void AddOrUpdateSubscription(string sessionId, WebSocket socket, string urlPattern);
+        void RemoveSubscription(string sessionId);
+        void NotifyIfMatches(string interceptedUrl, object requestData);
     }
 }

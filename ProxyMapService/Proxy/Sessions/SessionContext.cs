@@ -26,7 +26,7 @@ namespace ProxyMapService.Proxy.Sessions
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
         public SessionAPIConfig SessionAPI { get; set; }
-        public ActionEnum Action { get; set; }
+        public SessionAction Action { get; set; }
         public bool DecryptSSL { get;set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
@@ -168,7 +168,7 @@ namespace ProxyMapService.Proxy.Sessions
             if (HostAction == null) return null;
             switch (HostAction.Value.ActionValue)
             {
-                case SessionActionEnum.Allow:
+                case SessionActionEnum.Proxy:
                     return $"{cachePrefix}proxy";
                 case SessionActionEnum.Bypass:
                     return $"{cachePrefix}direct";
@@ -208,7 +208,14 @@ namespace ProxyMapService.Proxy.Sessions
             OutgoingEndPoint = null;
             Mapping = mapping;
             SessionAPI = sessionAPI;
-            Action = mapping.Listen.Action;
+            Action = mapping.Listen.Action switch {
+                ActionEnum.Allow => SessionActionEnum.Proxy,
+                ActionEnum.Deny => SessionActionEnum.Deny,
+                ActionEnum.Bypass => SessionActionEnum.Bypass,
+                ActionEnum.File => SessionActionEnum.File,
+                ActionEnum.Proxy => SessionActionEnum.Proxy,
+                _ => SessionActionEnum.Proxy
+            };
             DecryptSSL = mapping.Listen.DecryptSSL;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;

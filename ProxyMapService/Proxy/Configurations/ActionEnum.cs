@@ -5,6 +5,7 @@
         Allow = 0,
         Deny = 1,
         Bypass = 2,
-        File = 3
+        File = 3,
+        Proxy = 4,
     }
 }

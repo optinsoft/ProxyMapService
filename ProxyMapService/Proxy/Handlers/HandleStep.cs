@@ -30,6 +30,7 @@
         Tunnel,
         HandleFileRequest,
         HandleSessionAPI,
+        HandleSessionWebSocket,
         Terminate,
     }
 }

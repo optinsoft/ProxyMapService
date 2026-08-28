@@ -31,6 +31,7 @@ namespace ProxyMapService.Proxy.Headers
         public string? ProxyAuthorization { get; private set; }
         public string? Accept { get; private set; }
         public string? XMicrosoftAjax {  get; private set; }
+        public string? SecWebSocketKey { get; private set; }
         public string[]? Headers { get; private set; }
 
         public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
@@ -63,6 +64,7 @@ namespace ProxyMapService.Proxy.Headers
                 self.ProxyAuthorization = GetBasicProxyAuthorization(strings);
                 self.Accept = GetFirstHeaderValue(strings, "accept:");
                 self.XMicrosoftAjax = GetFirstHeaderValue(strings, "x-microsoftajax:");
+                self.SecWebSocketKey = GetFirstHeaderValue(strings, "sec-websocket-key:");
                 self.Headers = strings;
             }
             catch (UriFormatException)

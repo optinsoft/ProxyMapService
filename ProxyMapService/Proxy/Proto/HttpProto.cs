@@ -150,14 +150,14 @@ namespace ProxyMapService.Proxy.Proto
             await HttpReplyProxyUnauthorized(context, context.IncomingStream);
         }
 
-        public static async Task HttpReplyBadRequest(SessionContext context, Stream? incomingStream)
+        public static async Task HttpReplyBadRequest(SessionContext context, Stream? incomingStream, string? errorMessage = null)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 400 Bad Request");
+            await HttpReplyError(context, incomingStream, "HTTP/1.1 400 Bad Request", errorMessage);
         }
 
-        public static async Task HttpReplyBadRequest(SessionContext context)
+        public static async Task HttpReplyBadRequest(SessionContext context, string? errorMessage = null)
         {
-            await HttpReplyBadRequest(context, context.IncomingStream);
+            await HttpReplyBadRequest(context, context.IncomingStream, errorMessage);
         }
 
         public static async Task HttpReplyForbidden(SessionContext context, Stream? incomingStream)
@@ -459,6 +459,33 @@ namespace ProxyMapService.Proxy.Proto
         public static async Task HttpReplyCacheFileStream(SessionContext context, CacheEntry cacheEntry, FileStream fileStream)
         {
             await HttpReplyCacheFileStream(context, context.IncomingStream, cacheEntry, fileStream);
+        }
+
+        public static async Task HttpReplyWebSocketHandshake(SessionContext context, Stream? incomingStream, string webSocketKey)
+        {
+            if (incomingStream == null) return;
+
+            string magicGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            string acceptKey = Convert.ToBase64String(
+                System.Security.Cryptography.SHA1.HashData(Encoding.UTF8.GetBytes(webSocketKey + magicGuid))
+            );
+
+            string[] headers = [
+                "HTTP/1.1 101 Switching Protocols",
+                "Upgrade: websocket",
+                "Connection: Upgrade",
+                $"Sec-WebSocket-Accept: {acceptKey}"
+            ];
+
+            context.ResponseHeadersLogger?.OnHttpHeader(context, true, headers);
+            var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
+            var bytes = Encoding.ASCII.GetBytes(headerText);
+            await incomingStream.WriteAsync(bytes, context.Token);
+        }
+
+        public static async Task HttpReplyWebSocketHandshake(SessionContext context, string webSocketKey)
+        {
+            await HttpReplyWebSocketHandshake(context, context.IncomingStream, webSocketKey);
         }
 
         public static async Task SendHttpRequest(Stream? outgoingStream, byte[] requestBytes, CancellationToken token)

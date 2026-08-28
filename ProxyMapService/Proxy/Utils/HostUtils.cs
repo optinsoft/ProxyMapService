@@ -14,9 +14,17 @@ namespace ProxyMapService.Proxy.Utils
                 return;
             }
             HostRule? hostRule = context.IgnoreHostRules ? null : HostRule.FindRule(context.Host, context.HostRules);
-            ActionEnum hostAction = hostRule?.Action ?? context.Action;
+            SessionAction hostAction = hostRule?.Action switch
+            {
+                ActionEnum.Allow => context.Action == SessionActionEnum.Bypass ? SessionActionEnum.Bypass : SessionActionEnum.Proxy,
+                ActionEnum.Deny => SessionActionEnum.Deny,
+                ActionEnum.Bypass => SessionActionEnum.Bypass,
+                ActionEnum.File => SessionActionEnum.File,
+                ActionEnum.Proxy => SessionActionEnum.Proxy,
+                _ => context.Action
+            };
             context.HostAction = hostAction;
-            if (hostAction != ActionEnum.Deny && hostRule != null)
+            if (hostAction != SessionActionEnum.Deny && hostRule != null)
             {
                 if (hostRule.OverrideHostName != null)
                 {
@@ -54,12 +62,16 @@ namespace ProxyMapService.Proxy.Utils
                     context.CacheRules = hostRule.HostCacheRules;
                 }
             }
-            if (hostAction == ActionEnum.Allow && hostRule != null)
+            if (hostAction == SessionActionEnum.Proxy && hostRule != null)
             {
                 if (hostRule.ProxyServer != null)
                 {
                     context.ProxyServer = hostRule.ProxyServer;
                 }
+            }
+            if (hostAction != SessionActionEnum.Deny)
+            {
+                context.SessionManager.PopulateContext(context);
             }
         }
 

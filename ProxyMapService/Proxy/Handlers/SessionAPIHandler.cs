@@ -70,7 +70,7 @@ namespace ProxyMapService.Proxy.Handlers
                     catch (JsonException ex)
                     {
                         context.Logger.LogInvalidJsonPayload(ex.Message);
-                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                        await HttpProto.HttpReplyBadRequest(context, incomingStream, "Invalid JSON payload");
                         return HandleStep.Terminate;
                     }
                 }
@@ -115,6 +115,18 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 await DownloadCertificate(context, incomingStream);
                 return HandleStep.Terminate;
+            }
+            if (path == "/session/ws")
+            {
+                if (string.IsNullOrEmpty(http.SecWebSocketKey))
+                {
+                    context.Logger.LogHttpHeaderMissing("Sec-WebSocket-Key");
+                    await HttpProto.HttpReplyBadRequest(context, incomingStream, "Header 'Sec-WebSocket-Key' is missing or invalid.");
+                    return HandleStep.Terminate;
+                }
+                context.SessionManager.PopulateContext(context);
+                await HttpProto.HttpReplyWebSocketHandshake(context, incomingStream, http.SecWebSocketKey);
+                return HandleStep.HandleSessionWebSocket;
             }
 
             context.Logger.LogHttpNotFound(http.HTTPTargetPath);

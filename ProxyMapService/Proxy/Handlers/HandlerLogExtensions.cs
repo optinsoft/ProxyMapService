@@ -356,6 +356,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Invalid JSON payload: {ErrorMessage}")]
         public static partial void LogInvalidJsonPayload(this ILogger logger, string errorMessage);
 
+        [LoggerMessage(
+            EventId = 1290,
+            Level = LogLevel.Warning,
+            Message = "Missing or empty {headerName} header")]
+        public static partial void LogHttpHeaderMissing(this ILogger logger, string headerName);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

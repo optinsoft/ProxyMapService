@@ -25,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             switch (context.HostAction?.ActionValue)
             {
-                case SessionActionEnum.Allow:
+                case SessionActionEnum.Proxy:
                     return HandleStep.Proxy;
                 case SessionActionEnum.Bypass:
                     return HandleStep.Socks4Bypass;

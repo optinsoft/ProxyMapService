@@ -84,6 +84,8 @@ graph TD
     class Terminal_Terminate terminal;
         ProxyHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
+        SessionWebSocketHandler -- Terminate --> Terminal_Terminate([Terminate])
+    class Terminal_Terminate terminal;
         TunnelHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
     end

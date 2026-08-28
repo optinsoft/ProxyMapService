@@ -80,7 +80,7 @@ namespace ProxyMapService.Proxy.Handlers
                     using MemoryStream bodyStream = new();
 
                     var http = context.Http;
-                    if (http == null || (incomingSslStream != null && http.HTTPVerb == "CONNECT"))
+                    if (http == null || http.HTTPVerb == "CONNECT")
                     {
                         await ReadHttpRequest(context, incomingStream, bodyStream);
                         if (context.RequestHeader != null && !context.RequestHeader.BadRequest)

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Traffic Monitor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            color: #333;
+            margin: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .btn-connect { background-color: #2ecc71; color: white; }
+        .btn-connect:hover { background-color: #27ae60; }
+        .btn-disconnect { background-color: #e74c3c; color: white; }
+        .btn-disconnect:hover { background-color: #c0392b; }
+        .btn-subscribe { background-color: #3498db; color: white; }
+        .btn-subscribe:hover { background-color: #2980b9; }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-disconnected { background-color: #ffe0e0; color: #cc0000; }
+        .status-connected { background-color: #e0ffe0; color: #008800; }
+        
+        .log-container {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            border-bottom: 1px solid #2d2d2d;
+            padding-bottom: 4px;
+        }
+        .log-time { color: #569cd6; }
+        .log-type-matched { color: #4fc1ff; font-weight: bold; }
+        .log-type-system { color: #6a9955; }
+        .log-type-error { color: #f44747; }
+        .log-details {
+            color: #b5cea8;
+            margin-left: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Connection and Configuration Section -->
+    <div class="card">
+        <h2>Proxy WebSocket Control Panel</h2>
+        
+        <div class="form-group">
+            <input type="text" id="wsUrl" value="ws://proxymapper/session/ws" placeholder="WebSocket Server URL">
+            <button id="connectBtn" class="btn-connect" onclick="toggleConnection()">Connect</button>
+        </div>
+
+        <div class="form-group">
+            <input type="text" id="filterPattern" value="(google\.com|yandex\.ru)/.*" placeholder="URL Regex Filter Pattern (e.g., api/v1/.*)" disabled>
+            <button id="subscribeBtn" class="btn-subscribe" onclick="sendSubscription()" disabled>Set Filter</button>
+        </div>
+
+        <div>
+            Status: <span id="statusLabel" class="status-badge status-disconnected">Disconnected</span>
+        </div>
+    </div>
+
+    <!-- Real-time Traffic Logs Section -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 style="margin: 0;">Live Traffic Interception Logs</h2>
+            <button onclick="clearLogs()" style="background-color: #7f8c8d; color: white; padding: 5px 10px; font-size: 12px;">Clear Logs</button>
+        </div>
+        <div id="logConsole" class="log-container">
+            <div class="log-entry log-type-system">System console initialized. Awaiting connection...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let socket = null;
+
+    const wsUrlInput = document.getElementById('wsUrl');
+    const connectBtn = document.getElementById('connectBtn');
+    const filterPatternInput = document.getElementById('filterPattern');
+    const subscribeBtn = document.getElementById('subscribeBtn');
+    const statusLabel = document.getElementById('statusLabel');
+    const logConsole = document.getElementById('logConsole');
+
+    // Main connection lifecycle controller
+    function toggleConnection() {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            appendLog("System", "Initiating manual disconnection...");
+            socket.close();
+            return;
+        }
+
+        const url = wsUrlInput.value.trim();
+        appendLog("System", `Connecting to ${url}...`);
+        
+        try {
+            socket = new WebSocket(url);
+            setupSocketEvents();
+        } catch (error) {
+            appendLog("Error", `Failed to instantiate WebSocket: ${error.message}`);
+        }
+    }
+
+    // Configures core WebSocket event hooks
+    function setupSocketEvents() {
+        socket.onopen = () => {
+            updateUiState(true);
+            appendLog("System", "Successfully connected to Proxy WebSocket!");
+            // Automatically send the initial filter payload on connection
+            sendSubscription();
+        };
+
+        socket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.status === "subscribed") {
+                    appendLog("System", "Server acknowledged successful URL subscription pattern.");
+                } else if (data.event_type === "url_matched") {
+                    const metadata = `Method: ${data.details?.Method || 'UNKNOWN'} | Intercepted URL: ${data.url}`;
+                    const rawDetails = JSON.stringify(data.details, null, 2);
+                    appendLog("Matched", metadata, rawDetails);
+                } else {
+                    appendLog("System", `Received arbitrary payload: ${event.data}`);
+                }
+            } catch (error) {
+                appendLog("System", `Received raw text message: ${event.data}`);
+            }
+        };
+
+        socket.onclose = (event) => {
+            updateUiState(false);
+            if (event.wasClean) {
+                appendLog("System", `Connection closed cleanly (Code: ${event.code}, Reason: ${event.reason || 'None'})`);
+            } else {
+                appendLog("Error", "Connection collapsed or was explicitly rejected by the remote host.");
+            }
+        };
+
+        socket.onerror = (error) => {
+            appendLog("Error", "An unexpected WebSocket error occurred.");
+        };
+    }
+
+    // Constructs JSON payload and transmits filter pattern to server
+    function sendSubscription() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+        const pattern = filterPatternInput.value.trim();
+        const payload = {
+            action: "subscribe",
+            pattern: pattern
+        };
+
+        appendLog("System", `Transmitting URL filter regex target: ${pattern}`);
+        socket.send(JSON.stringify(payload));
+    }
+
+    // Dynamic UI state mutation engine
+    function updateUiState(isConnected) {
+        if (isConnected) {
+            statusLabel.textContent = "Connected";
+            statusLabel.className = "status-badge status-connected";
+            connectBtn.textContent = "Disconnect";
+            connectBtn.className = "btn-disconnect";
+            filterPatternInput.disabled = false;
+            subscribeBtn.disabled = false;
+            wsUrlInput.disabled = true;
+        } else {
+            statusLabel.textContent = "Disconnected";
+            statusLabel.className = "status-badge status-disconnected";
+            connectBtn.textContent = "Connect";
+            connectBtn.className = "btn-connect";
+            filterPatternInput.disabled = true;
+            subscribeBtn.disabled = true;
+            wsUrlInput.disabled = false;
+            socket = null;
+        }
+    }
+
+    // Formats and appends rows inside the visual dark console element
+    function appendLog(type, message, details = null) {
+        const timestamp = new Date().toLocaleTimeString();
+        
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        let typeClass = 'log-type-system';
+        if (type === 'Matched') typeClass = 'log-type-matched';
+        if (type === 'Error') typeClass = 'log-type-error';
+
+        logEntry.innerHTML = `
+            <span class="log-time">[${timestamp}]</span> 
+            <span class="${typeClass}">[${type.toUpperCase()}]</span> ${message}
+        `;
+
+        if (details) {
+            const detailsBlock = document.createElement('div');
+            detailsBlock.className = 'log-details';
+            detailsBlock.textContent = `Context details:\n${details}`;
+            logEntry.appendChild(detailsBlock);
+        }
+
+        logConsole.appendChild(logEntry);
+        logConsole.scrollTop = logConsole.scrollHeight; // Auto-scroll to latest event
+    }
+
+    function clearLogs() {
+        logConsole.innerHTML = '<div class="log-entry log-type-system">Console logs cleared.</div>';
+    }
+</script>
+
+</body>
+</html>
