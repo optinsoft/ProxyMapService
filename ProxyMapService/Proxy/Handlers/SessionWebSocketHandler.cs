@@ -61,7 +61,7 @@ namespace ProxyMapService.Proxy.Handlers
                             {
                                 string pattern = root.GetProperty("pattern").GetString() ?? ".*";
 
-                                context.SessionManager.AddOrUpdateSubscription(sessionId, webSocket, pattern);
+                                context.SessionManager.AddOrUpdateUrlSubscription(sessionId, webSocket, pattern);
 
                                 byte[] confirm = Encoding.UTF8.GetBytes($"{{\"status\":\"subscribed\",\"session_id\":\"{sessionId}\"}}");
                                 await webSocket.SendAsync(new ArraySegment<byte>(confirm), WebSocketMessageType.Text, true, token);
@@ -77,7 +77,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             finally
             {
-                context.SessionManager.RemoveSubscription(sessionId);
+                context.SessionManager.RemoveUrlSubscription(sessionId);
             }
         }
 

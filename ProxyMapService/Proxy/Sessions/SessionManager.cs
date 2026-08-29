@@ -154,17 +154,17 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
-        public void AddOrUpdateSubscription(string sessionId, WebSocket socket, string urlPattern)
+        public void AddOrUpdateUrlSubscription(string sessionId, WebSocket socket, string urlPattern)
         {
             // throw new NotImplementedException();
         }
 
-        public void RemoveSubscription(string sessionId)
+        public void RemoveUrlSubscription(string sessionId)
         {
             // throw new NotImplementedException();
         }
 
-        public void NotifyIfMatches(string interceptedUrl, object requestData)
+        public void NotifyIfUrlMatches(string interceptedUrl, object requestData)
         {
             throw new NotImplementedException();
         }

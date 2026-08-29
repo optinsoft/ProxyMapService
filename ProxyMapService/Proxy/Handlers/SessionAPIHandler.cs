@@ -116,7 +116,7 @@ namespace ProxyMapService.Proxy.Handlers
                 await DownloadCertificate(context, incomingStream);
                 return HandleStep.Terminate;
             }
-            if (path == "/session/ws")
+            if (context.SessionAPI.WebSocketsEnabled && path == "/session/ws")
             {
                 if (string.IsNullOrEmpty(http.SecWebSocketKey))
                 {

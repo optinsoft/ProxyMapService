@@ -12,8 +12,8 @@ namespace ProxyMapService.Proxy.Sessions
         string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList);
         void PopulateContext(SessionContext context);
         void ResetSessionId();
-        void AddOrUpdateSubscription(string sessionId, WebSocket socket, string urlPattern);
-        void RemoveSubscription(string sessionId);
-        void NotifyIfMatches(string interceptedUrl, object requestData);
+        void AddOrUpdateUrlSubscription(string sessionId, WebSocket socket, string urlPattern);
+        void RemoveUrlSubscription(string sessionId);
+        void NotifyIfUrlMatches(string interceptedUrl, object requestData);
     }
 }
