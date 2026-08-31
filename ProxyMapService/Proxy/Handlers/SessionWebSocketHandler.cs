@@ -30,7 +30,7 @@ namespace ProxyMapService.Proxy.Handlers
                 keepAliveInterval: TimeSpan.FromSeconds(30)
             );
 
-            string sessionId = context.SessionId ?? Guid.NewGuid().ToString();
+            string sessionId = !string.IsNullOrEmpty(context.SessionId) ? context.SessionId : $":{context.Mapping.Listen.Port}"; // : Guid.NewGuid().ToString();
             var buffer = new byte[BufferSize];
 
             CancellationToken token = context.Token;

@@ -193,12 +193,15 @@ namespace ProxyMapService.Proxy.Sessions
                 return;
             }
 
-            if (string.IsNullOrEmpty(context.SessionId) || string.IsNullOrEmpty(requestHeader.HTTPVerb))
+            var sessionId = !string.IsNullOrEmpty(context.SessionId) ? context.SessionId : $":{context.Mapping.Listen.Port}"; 
+            var method = requestHeader.HTTPVerb;
+
+            if ( /* string.IsNullOrEmpty(sessionId) || */ string.IsNullOrEmpty(method))
             {
                 return;
             }
 
-            if (!_urlSubscriptions.ContainsKey(context.SessionId))
+            if (!_urlSubscriptions.ContainsKey(sessionId))
             {
                 return;
             }
@@ -209,7 +212,7 @@ namespace ProxyMapService.Proxy.Sessions
                 return;
             }
 
-            _eventChannel.Writer.TryWrite((context.SessionId, requestHeader.HTTPVerb, interceptedUrl));
+            _eventChannel.Writer.TryWrite((sessionId, method, interceptedUrl));
         }
 
         public async Task StartEventProcessingLoop(CancellationToken stoppingToken)
