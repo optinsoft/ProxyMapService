@@ -21,7 +21,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.Host = context.Socks5.Host;
 
-            GetContextHostAction(context, false);
+            SetContextHostAction(context, false);
 
             switch (context.HostAction?.ActionValue)
             {

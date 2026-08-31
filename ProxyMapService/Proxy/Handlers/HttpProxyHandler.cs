@@ -73,6 +73,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
                     if (context.Http == null)
                     {
+                        // CONNECT request
                         context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                     }
 

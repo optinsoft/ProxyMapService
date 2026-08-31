@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Headers;
+﻿using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
+using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Counters
 {

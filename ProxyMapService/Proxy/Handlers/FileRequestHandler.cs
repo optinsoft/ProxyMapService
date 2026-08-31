@@ -23,14 +23,14 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && !context.Token.IsCancellationRequested)
             {
-                SslStream? incomingSslStream;
+                bool isIncomingSSL;
                 try
                 {
-                    incomingSslStream = context.SslMode switch
+                    isIncomingSSL = context.SslMode switch
                     {
-                        SslMode.Yes => new(context.IncomingStream),
-                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
-                        _ => null
+                        SslMode.Yes => true,
+                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token),
+                        _ => false
                     };
                 }
                 catch (Exception ex) when (ex is IOException or SocketException)
@@ -39,87 +39,84 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Terminate;
                 }
 
-                using (incomingSslStream)
-                {
+                using SslStream? incomingSslStream = isIncomingSSL ? new(context.IncomingStream) : null;
 
+                if (incomingSslStream != null)
+                {
                     string subjectName = $"CN=*.{context.Host.OriginalHostname}";
                     X509Certificate2? serverCertificate = context.ServerCertificate;
-
-                    if (incomingSslStream != null)
-                    {
-                        using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null
-                            ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
-                            : null;
-                        serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
-                        var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
-                        try
-                        {
-                            await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
-                        }
-                        catch (AuthenticationException ex)
-                        {
-                            context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
-                            return HandleStep.Terminate;
-                        }
-                        context.Logger.LogServerTLSHandshakeSucceeded();
-                    }
-
-                    using CountingStream? incomingSslCountingStream =
-                        incomingSslStream != null
-                        ? new CountingStream(incomingSslStream, context,
-                            context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
-                            context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
+                    using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null
+                        ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
                         : null;
-                    if (incomingSslCountingStream != null)
+                    serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
+                    var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
+                    try
                     {
-                        context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
+                        await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
                     }
-
-                    var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
-
-                    using MemoryStream bodyStream = new();
-
-                    var http = context.Http;
-                    if (http == null || http.HTTPVerb == "CONNECT")
+                    catch (AuthenticationException ex)
                     {
-                        await ReadHttpRequest(context, incomingStream, bodyStream);
-                        if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
-                        {
-                            http = context.RequestHeader;
-                        }
-                        else
-                        {
-                            context.Logger.LogHttpBadRequest();
-                            await HttpProto.HttpReplyBadRequest(context, incomingStream);
-                            return HandleStep.Terminate;
-                        }
+                        context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                        return HandleStep.Terminate;
+                    }
+                    context.Logger.LogServerTLSHandshakeSucceeded();
+                }
+
+                using CountingStream? incomingSslCountingStream =
+                    incomingSslStream != null
+                    ? new CountingStream(incomingSslStream, context,
+                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
+                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
+                    : null;
+                if (incomingSslCountingStream != null)
+                {
+                    context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
+                }
+
+                var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
+
+                using MemoryStream bodyStream = new();
+
+                var http = context.Http;
+                if (http == null || http.HTTPVerb == "CONNECT")
+                {
+                    await ReadHttpRequest(context, incomingStream, isIncomingSSL, bodyStream);
+                    if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
+                    {
+                        http = context.RequestHeader;
                     }
                     else
                     {
-                        if (http.BadRequest)
-                        {
-                            context.Logger.LogHttpBadRequest();
-                            await HttpProto.HttpReplyBadRequest(context, incomingStream);
-                            return HandleStep.Terminate;
-                        }
-                        CreateRequestBodyTracker(context, http, null, bodyStream);
+                        context.Logger.LogHttpBadRequest();
+                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                        return HandleStep.Terminate;
                     }
-
-                    if (context.RequestBodyTracker != null)
-                    {
-                        await ReadHttpRequestBody(context, incomingStream, context.RequestBodyTracker, bodyStream);
-                        if (context.RequestBodyTracker.Failed)
-                        {
-                            context.Logger.LogHttpBadRequest();
-                            await HttpProto.HttpReplyBadRequest(context, incomingStream);
-                            return HandleStep.Terminate;
-                        }
-                    }
-
-                    bodyStream.Position = 0;
-
-                    return await HandleRequest(context, incomingStream, http, bodyStream);
                 }
+                else
+                {
+                    if (http.BadRequest)
+                    {
+                        context.Logger.LogHttpBadRequest();
+                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                        return HandleStep.Terminate;
+                    }
+                    CreateRequestBodyTracker(context, http, null, bodyStream);
+                }
+
+                if (context.RequestBodyTracker != null)
+                {
+                    await ReadHttpRequestBody(context, incomingStream, context.RequestBodyTracker, bodyStream);
+                    if (context.RequestBodyTracker.Failed)
+                    {
+                        context.Logger.LogHttpBadRequest();
+                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                        return HandleStep.Terminate;
+                    }
+                }
+
+                bodyStream.Position = 0;
+
+                return await HandleRequest(context, incomingStream, http, bodyStream);                
             }
             return HandleStep.Terminate;
         }
@@ -129,7 +126,7 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task ReadHttpRequest(SessionContext context, Stream incomingStream, MemoryStream bodyStream)
+        private static async Task ReadHttpRequest(SessionContext context, Stream incomingStream, bool isSecure, MemoryStream bodyStream)
         {
             var buffer = new byte[BufferSize];
             using var ms = new MemoryStream();
@@ -152,6 +149,7 @@ namespace ProxyMapService.Proxy.Handlers
                             context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                             if (!context.RequestHeader.BadRequest)
                             {
+                                context.SessionManager.NotifyIfRequestUrlMatches(context, context.RequestHeader, isSecure);
                                 CreateRequestBodyTracker(context, context.RequestHeader, headerAndBody.BodyBytes, bodyStream);
                             }
                         }

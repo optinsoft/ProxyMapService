@@ -105,7 +105,7 @@
         </div>
 
         <div class="form-group">
-            <input type="text" id="filterPattern" value="(google\.com|yandex\.ru)/.*" placeholder="URL Regex Filter Pattern (e.g., api/v1/.*)" disabled>
+            <input type="text" id="filterPattern" value=".*" placeholder="URL Regex Filter Pattern (e.g., api/v1/.*)">
             <button id="subscribeBtn" class="btn-subscribe" onclick="sendSubscription()" disabled>Set Filter</button>
         </div>
 
@@ -171,9 +171,8 @@
                 if (data.status === "subscribed") {
                     appendLog("System", "Server acknowledged successful URL subscription pattern.");
                 } else if (data.event_type === "url_matched") {
-                    const metadata = `Method: ${data.details?.Method || 'UNKNOWN'} | Intercepted URL: ${data.url}`;
-                    const rawDetails = JSON.stringify(data.details, null, 2);
-                    appendLog("Matched", metadata, rawDetails);
+                    const metadata = `Method: ${data.method}, URL: ${data.url}`;
+                    appendLog("Matched", metadata);
                 } else {
                     appendLog("System", `Received arbitrary payload: ${event.data}`);
                 }
@@ -217,7 +216,6 @@
             statusLabel.className = "status-badge status-connected";
             connectBtn.textContent = "Disconnect";
             connectBtn.className = "btn-disconnect";
-            filterPatternInput.disabled = false;
             subscribeBtn.disabled = false;
             wsUrlInput.disabled = true;
         } else {
@@ -225,7 +223,6 @@
             statusLabel.className = "status-badge status-disconnected";
             connectBtn.textContent = "Connect";
             connectBtn.className = "btn-connect";
-            filterPatternInput.disabled = true;
             subscribeBtn.disabled = true;
             wsUrlInput.disabled = false;
             socket = null;

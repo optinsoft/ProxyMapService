@@ -6,7 +6,7 @@ namespace ProxyMapService.Proxy.Utils
 {
     public static class HostUtils
     {
-        public static void GetContextHostAction(SessionContext context, bool httpMode)
+        public static void SetContextHostAction(SessionContext context, bool httpMode)
         {
             if (IsSessionAPIHost(context.SessionAPI, context.Host))
             {

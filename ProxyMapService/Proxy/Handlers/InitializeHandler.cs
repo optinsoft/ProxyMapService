@@ -34,7 +34,11 @@ namespace ProxyMapService.Proxy.Handlers
                             }
                             else if (context.Http.Host  != null)
                             {
-                                context.Host = context.Http.Host;
+                                var hostAddress = HostAddress.GetHostAddress(context.Http.Host, false);
+                                if (hostAddress != null)
+                                {
+                                    context.Host = hostAddress;
+                                }
                             }
                             context.RequestHeadersLogger?.OnHttpHeader(context, context.Http);
                             if (context.Http.BadRequest)

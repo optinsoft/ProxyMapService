@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Hosting;
-
-namespace ProxyMapService.Proxy.Network
+﻿namespace ProxyMapService.Proxy.Network
 {
     public class HostAddress
     {
@@ -126,6 +124,21 @@ namespace ProxyMapService.Proxy.Network
         public static bool IsHostnameIP(string hostname)
         {
             return System.Net.IPAddress.TryParse(hostname, out _);
+        }
+
+        public static HostAddress? GetHostAddress(string? host, bool isSecure)
+        {
+            if (host == null)
+            {
+                return null;
+            }
+            var split = host.Split(':');
+            return split?.Length switch
+            {
+                1 => new HostAddress(split[0], isSecure ? 433 : 80),
+                2 => new HostAddress(split[0], int.Parse(split[1])),
+                _ => null
+            };
         }
     }
 }

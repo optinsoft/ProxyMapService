@@ -102,17 +102,19 @@ namespace ProxyMapService.Proxy
         {
             var inboundEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, listenPort);
 
-            SessionManager sessionManager = new();
+            SessionManager sessionManager = new(sessionLogger);
 
-            async void incomingClientHandler(TcpClient client, CancellationToken token) =>
-                await Session.Run(inboundEndPoint, client, mapping, loopDetector, 
+            async void incomingClientHandler(TcpClient client, CancellationToken token)
+            {
+                await Session.Run(inboundEndPoint, client, mapping, loopDetector,
                     sessionAPI, proxyProvider, proxyAuthenticator, sessionManager,
-                    hostRules, _cacheRules ?? cacheRules, cacheManager, userAgent, 
+                    hostRules, _cacheRules ?? cacheRules, cacheManager, userAgent,
                     sslClientConfig, sslServerConfig,
                     proxyCounters, sessionLogger, logStep, token);
+            }
 
             using var listener = new Listener(inboundEndPoint, incomingClientHandler, serviceLogger);
-            await listener.Start(maxListenerStartRetries, stoppingToken);
+            await listener.Start(maxListenerStartRetries, sessionManager, stoppingToken);
         }
     }
 }

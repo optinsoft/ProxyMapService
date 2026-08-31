@@ -1,8 +1,8 @@
 ﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Headers;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Cache
 {

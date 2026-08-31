@@ -17,6 +17,19 @@
             8443  // Alternative HTTPS / Management
         };
 
+        private static readonly HashSet<int> StandardCleartextPorts = new HashSet<int>
+        {
+            80,   // HTTP (Web traffic)
+            25,   // SMTP (Email sending)
+            119,  // NNTP (News)
+            389,  // LDAP (Directory access)
+            21,   // FTP Control (File transfer)
+            23,   // Telnet
+            143,  // IMAP (Email retrieval)
+            110,  // POP3 (Email retrieval)
+            3268  // Microsoft Global Catalog
+        };
+
         /// <summary>
         /// Checks if the specified port is a standard port configured for TLS encryption.
         /// </summary>
@@ -31,6 +44,22 @@
             }
 
             return StandardTlsPorts.Contains(port);
+        }
+
+        /// <summary>
+        /// Checks if the specified port is a standard port configured for unencrypted (cleartext) traffic.
+        /// </summary>
+        /// <param name="port">The TCP port number to validate.</param>
+        /// <returns>True if the port is a standard cleartext port; otherwise, false.</returns>
+        public static bool IsStandardCleartextPort(int port)
+        {
+            // Validate the TCP port range
+            if (port < 1 || port > 65535)
+            {
+                return false;
+            }
+
+            return StandardCleartextPorts.Contains(port);
         }
     }
 }

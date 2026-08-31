@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
-using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {

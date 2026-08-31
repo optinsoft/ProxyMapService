@@ -1,6 +1,12 @@
 ﻿using Fare;
 using ProxyMapService.Proxy.Configurations;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Channels;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Sessions
 {
@@ -13,6 +19,21 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly object _lock = new();
 
         private static readonly string _defaultSessionIdPattern = "^[A-Za-z]{8}";
+
+        private readonly ConcurrentDictionary<string, (WebSocket Socket, Regex Filter)> _urlSubscriptions = new();
+        private readonly Channel<(string SessionId, string Method, string Url)> _eventChannel;
+
+        private readonly ILogger _logger;
+
+        public SessionManager(ILogger logger)
+        {
+            _logger = logger;
+
+            _eventChannel = Channel.CreateUnbounded<(string, string, string)>(new UnboundedChannelOptions
+            {
+                SingleReader = true
+            });
+        }
 
         public string? CurrentSessionId
         {
@@ -156,17 +177,115 @@ namespace ProxyMapService.Proxy.Sessions
 
         public void AddOrUpdateUrlSubscription(string sessionId, WebSocket socket, string urlPattern)
         {
-            // throw new NotImplementedException();
+            var regex = new Regex(urlPattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            _urlSubscriptions[sessionId] = (socket, regex);
         }
 
         public void RemoveUrlSubscription(string sessionId)
         {
-            // throw new NotImplementedException();
+            _urlSubscriptions.TryRemove(sessionId, out _);
         }
 
-        public void NotifyIfUrlMatches(string interceptedUrl, object requestData)
+        public void NotifyIfRequestUrlMatches(SessionContext context, HttpRequestHeader requestHeader, bool isSecure)
         {
-            throw new NotImplementedException();
+            if (!context.SessionAPI.Enabled || !context.SessionAPI.WebSocketsEnabled)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(context.SessionId) || string.IsNullOrEmpty(requestHeader.HTTPVerb))
+            {
+                return;
+            }
+
+            if (!_urlSubscriptions.ContainsKey(context.SessionId))
+            {
+                return;
+            }
+
+            var interceptedUrl = GetHttpRequestUrl(context, requestHeader, isSecure);
+            if (string.IsNullOrEmpty(interceptedUrl))
+            {
+                return;
+            }
+
+            _eventChannel.Writer.TryWrite((context.SessionId, requestHeader.HTTPVerb, interceptedUrl));
+        }
+
+        public async Task StartEventProcessingLoop(CancellationToken stoppingToken)
+        {
+            var reader = _eventChannel.Reader;
+
+            try
+            {
+                while (await reader.WaitToReadAsync(stoppingToken))
+                {
+                    while (reader.TryRead(out var item))
+                    {
+                        try
+                        {
+                            await DistributeEventToWebSockets(item.SessionId, item.Method, item.Url, stoppingToken);
+                        }
+                        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to distribute event for session {SessionId}", item.SessionId);
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Event processing loop was stopped gracefully.");
+            }
+        }
+
+        private async Task DistributeEventToWebSockets(string sessionId, string method, string url, CancellationToken stoppingToken)
+        {
+            if (!_urlSubscriptions.TryGetValue(sessionId, out var subscription))
+            {
+                return;
+            }
+
+            var (socket, filter) = subscription;
+
+            if (socket.State == WebSocketState.Open && filter.IsMatch(url))
+            {
+
+                var serializerOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                    WriteIndented = false
+                };
+
+                var payload = JsonSerializer.Serialize(new
+                {
+                    event_type = "url_matched",
+                    timestamp = DateTime.UtcNow,
+                    session_id = sessionId,
+                    method,
+                    url
+                }, serializerOptions);
+
+                byte[] responseBytes = Encoding.UTF8.GetBytes(payload);
+
+                try
+                {
+                    await socket.SendAsync(
+                        new ArraySegment<byte>(responseBytes),
+                        WebSocketMessageType.Text,
+                        endOfMessage: true,
+                        stoppingToken
+                    );
+                }
+                catch
+                {
+                    _urlSubscriptions.TryRemove(sessionId, out _);
+                }
+            }
         }
 
         private bool IsCurrentSessionExpired(DateTime now)
@@ -296,5 +415,52 @@ namespace ProxyMapService.Proxy.Sessions
             var xeger = new Xeger(pattern);
             return xeger.Generate();
         }
+
+        private static string? GetHttpRequestUrl(SessionContext context, HttpRequestHeader requestHeader, bool isSecure)
+        {
+            if (string.Equals(requestHeader.HTTPVerb, "CONNECT", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            if (requestHeader.HTTPTarget != null && requestHeader.HTTPTarget.Contains("://"))
+            {
+                return requestHeader.HTTPTarget;
+            }
+
+            string scheme = isSecure ? "https" : "http";
+
+            if (!string.IsNullOrEmpty(requestHeader.Host))
+            {
+                var builder = new UriBuilder
+                {
+                    Scheme = scheme,
+                    Path = requestHeader.HTTPTargetPath ?? "/",
+                    Host = requestHeader.Host,
+                };
+
+                return builder.Uri.ToString();
+            }
+            else
+            {
+                var host = requestHeader.HTTPTargetHost ?? context.Host;
+
+                if (host == null)
+                {
+                    return requestHeader.HTTPTargetPath;
+                }
+
+                var builder = new UriBuilder
+                {
+                    Scheme = scheme,
+                    Path = requestHeader.HTTPTargetPath ?? "/",
+                    Host = host.Hostname,
+                    Port = host.Port,
+                };
+
+                return builder.Uri.ToString();
+            }
+        }
+
     }
 }

@@ -41,7 +41,12 @@ namespace ProxyMapService.Proxy.Handlers
                 return HandleStep.Terminate;
             }
 
-            GetContextHostAction(context, httpMode);
+            SetContextHostAction(context, httpMode);
+
+            if (httpMode && context.Http != null)
+            {
+                context.SessionManager.NotifyIfRequestUrlMatches(context, context.Http, false);
+            }
 
             switch (context.HostAction?.ActionValue)
             {

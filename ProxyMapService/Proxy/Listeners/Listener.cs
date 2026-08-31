@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using ProxyMapService.Proxy.Sessions;
+using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Listeners
 {
@@ -30,7 +31,7 @@ namespace ProxyMapService.Proxy.Listeners
             }
         }
 
-        public async Task Start(int maxListenerStartRetries, CancellationToken stoppingToken)
+        public async Task Start(int maxListenerStartRetries, ISessionManager sessionManager, CancellationToken stoppingToken)
         {
             _listener = new TcpListener(inboundEndPoint);
 
@@ -88,6 +89,10 @@ namespace ProxyMapService.Proxy.Listeners
                         _listener.Stop();
                     }))
                     {
+                        _ = Task.Run(
+                             async () => await sessionManager.StartEventProcessingLoop(stoppingToken),
+                             stoppingToken
+                        );
                         try
                         {
                             await AcceptClients(_listener, stoppingToken);

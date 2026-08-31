@@ -9,6 +9,7 @@ namespace ProxyMapService.Proxy.Counters
     {
         private bool _readCountPaused = false;
         private bool _sendCountPaused = false;
+        private bool? _isTls = null;
 
         public long ReadTunnelId { get; set; } = readTunnelId;
         public long SendTunnelId { get; set; } = sendTunnelId;
@@ -100,6 +101,11 @@ namespace ProxyMapService.Proxy.Counters
 
         public async Task<bool> IsTLS(CancellationToken cancellationToken = default)
         {
+            if (_isTls != null)
+            {
+                return _isTls.Value;
+            }
+
             if (stream is not NetworkStream networkStream)
             {
                 return false;
@@ -116,12 +122,14 @@ namespace ProxyMapService.Proxy.Counters
 
             if (bytesRead < 2)
             {
-                return false;
+                _isTls = false;
+            }
+            else
+            {
+                _isTls = peekBuffer[0] == 0x16 && peekBuffer[1] == 0x03;
             }
 
-            bool isTls = peekBuffer[0] == 0x16 && peekBuffer[1] == 0x03;
-
-            return isTls;
+            return _isTls.Value;
         }
     }
 }

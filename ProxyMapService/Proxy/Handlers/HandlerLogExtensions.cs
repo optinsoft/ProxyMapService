@@ -1,8 +1,8 @@
 ﻿using ProxyMapService.Proxy.Configurations;
-using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Socks;
 using System.Net.Sockets;
+using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Handlers
 {

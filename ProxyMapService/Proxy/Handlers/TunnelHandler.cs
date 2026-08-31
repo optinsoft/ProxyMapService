@@ -29,56 +29,61 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && context.OutgoingStream != null && !context.Token.IsCancellationRequested)
             {
-                SslStream? incomingSslStream;
+                bool isIncomingSSL;
                 try
                 {
-                    incomingSslStream = context.DecryptSSL ? context.SslMode switch
+                    isIncomingSSL = context.SslMode switch
                     {
-                        SslMode.Yes => new(context.IncomingStream),
-                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token) ? new(context.IncomingStream) : null,
-                        _ => null
-                    } : null;
+                        SslMode.Yes => true,
+                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token),
+                        _ => false
+                    };
                 }
                 catch (Exception ex) when (ex is IOException or SocketException)
                 {
                     LogTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
                     return HandleStep.Terminate;
                 }
-                using (incomingSslStream)
+
+                bool isOutgoingSSL = context.UpstreamSslMode switch
                 {
-                    using SslStream? outgoingSslStream = context.DecryptSSL ? context.UpstreamSslMode switch
-                    {
-                        SslMode.Yes => new(context.OutgoingStream),
-                        SslMode.Auto => NetworkSecurityHelper.IsStandardTlsPort(context.Host.Port) ? new(context.OutgoingStream) : null,
-                        _ => null
-                    } : null;
+                    SslMode.Yes => true,
+                    SslMode.Auto => NetworkSecurityHelper.IsStandardTlsPort(context.Host.Port) ?
+                        true : (NetworkSecurityHelper.IsStandardCleartextPort(context.Host.Port) ? false : isIncomingSSL),
+                    _ => false
+                };
 
-                    using CountingStream? incomingSslCountingStream =
-                        incomingSslStream != null
-                        ? new CountingStream(incomingSslStream, context,
-                            context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
-                            context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
-                        : null;
-                    using CountingStream? outgoingSslCountingStream =
-                        outgoingSslStream != null
-                        ? new CountingStream(outgoingSslStream, context,
-                            context.ProxyCounters.OutgoingReadSslCounter, context.ProxyCounters.OutgoingSendSslCounter,
-                            context.OutgoingStream.ReadTunnelId, context.OutgoingStream.SendTunnelId)
-                        : null;
+                context.RequestTunnelState.IsSecure = isIncomingSSL;
+                context.ResponseTunnelState.IsSecure = isOutgoingSSL;
 
-                    var incomingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                    var outgoingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                using SslStream? incomingSslStream = context.DecryptSSL && isIncomingSSL ? new(context.IncomingStream) : null;
+                using SslStream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL ? new(context.OutgoingStream) : null;
 
-                    var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
-                    var outgoingStream = outgoingSslCountingStream ?? context.OutgoingStream;
+                using CountingStream? incomingSslCountingStream =
+                    incomingSslStream != null
+                    ? new CountingStream(incomingSslStream, context,
+                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
+                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
+                    : null;
+                using CountingStream? outgoingSslCountingStream =
+                    outgoingSslStream != null
+                    ? new CountingStream(outgoingSslStream, context,
+                        context.ProxyCounters.OutgoingReadSslCounter, context.ProxyCounters.OutgoingSendSslCounter,
+                        context.OutgoingStream.ReadTunnelId, context.OutgoingStream.SendTunnelId)
+                    : null;
 
-                    var requestTunnelTask = RequestTunnel(context, incomingSslStream,
-                        incomingStream, outgoingStream, incomingReady, outgoingReady);
-                    var responseTunnelTask = ResponseTunnel(context, outgoingSslStream,
-                        incomingStream, outgoingStream, incomingReady, outgoingReady);
+                var incomingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var outgoingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                    await Task.WhenAny(requestTunnelTask, responseTunnelTask);
-                }
+                var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
+                var outgoingStream = outgoingSslCountingStream ?? context.OutgoingStream;
+
+                var requestTunnelTask = RequestTunnel(context, incomingSslStream,
+                    incomingStream, outgoingStream, incomingReady, outgoingReady);
+                var responseTunnelTask = ResponseTunnel(context, outgoingSslStream,
+                    incomingStream, outgoingStream, incomingReady, outgoingReady);
+
+                await Task.WhenAny(requestTunnelTask, responseTunnelTask);
             }
 
             return HandleStep.Terminate;
@@ -386,6 +391,7 @@ namespace ProxyMapService.Proxy.Handlers
                                         context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                                         if (!context.RequestHeader.BadRequest)
                                         {
+                                            context.SessionManager.NotifyIfRequestUrlMatches(context, context.RequestHeader, selfState.IsSecure);
                                             CreateRequestBodyTracker(context, context.RequestHeader, headerAndBody.BodyBytes, null);
                                         }
                                         requestCacheEntry = await GetCacheEntry(context);

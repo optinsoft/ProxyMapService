@@ -22,7 +22,7 @@ namespace ProxyMapService.Proxy.Headers
         public string? HTTPTargetPath { get; private set; }
         public HostAddress? HTTPTargetHost { get; private set; }
         public string? HTTPProtocol { get; private set; }
-        public HostAddress? Host { get; private set; }
+        public string? Host { get; private set; }
         public long? ContentLength { get; private set; }
         public string? ContentType { get; private set; }
         public string? ContentEncoding { get; private set; }
@@ -33,6 +33,8 @@ namespace ProxyMapService.Proxy.Headers
         public string? XMicrosoftAjax {  get; private set; }
         public string? SecWebSocketKey { get; private set; }
         public string[]? Headers { get; private set; }
+
+        public bool? IsSSL { get; set; }
 
         public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {
@@ -45,7 +47,7 @@ namespace ProxyMapService.Proxy.Headers
             Parse(self, strings);
         }
 
-        private static void Parse(HttpRequestHeader self, string[] strings/*, IHttpLoggersProvider? httpLoggersProvider, Action<HttpRequestHeader>? onParse*/)
+        private static void Parse(HttpRequestHeader self, string[] strings)
         {
             self.BadRequest = false;
             try
@@ -55,7 +57,7 @@ namespace ProxyMapService.Proxy.Headers
                 self.HTTPTargetPath = GetHTTPTargetPath(self.HTTPTarget, self.HTTPVerb);
                 self.HTTPTargetHost = GetHTTPTargetHost(self.HTTPTarget, self.HTTPVerb);
                 self.HTTPProtocol = GetHTTPProtocol(strings);
-                self.Host = GetHostAddress(strings);
+                self.Host = GetFirstHeaderValue(strings, "host:"); // GetHostAddress(strings, targetHost ?? self.HTTPTargetHost);
                 self.ContentLength = GetContentLength(strings);
                 self.ContentType = GetFirstHeaderValue(strings, "content-type:");
                 self.ContentEncoding = GetFirstHeaderValue(strings, "content-encoding:");
@@ -71,8 +73,6 @@ namespace ProxyMapService.Proxy.Headers
             {
                 self.BadRequest = true;
             }
-            //onParse?.Invoke(self);
-            //httpLoggersProvider?.RequestHeadersLogger?.OnHttpHeader(httpLoggersProvider, self.ContentLength.HasValue && self.ContentLength.Value == 0, strings);
         }
 
         private static byte[] GetBytes(string[]? headers, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
@@ -139,7 +139,7 @@ namespace ProxyMapService.Proxy.Headers
             return Encoding.ASCII.GetBytes(header);
         }
 
-        private static HostAddress? GetHostAddress(IEnumerable<string> strings)
+        private static HostAddress? GetHostAddress(IEnumerable<string> strings, HostAddress? targetHost)
         {
             const string key = "host:";
 
@@ -151,7 +151,7 @@ namespace ProxyMapService.Proxy.Headers
 
             return split?.Length switch
             {
-                1 => new HostAddress(split[0], 80),
+                1 => new HostAddress(split[0], targetHost != null ? targetHost.Port : 80),
                 2 => new HostAddress(split[0], int.Parse(split[1])),
                 _ => null //throw new FormatException(string.Join(":", split)),
             };
