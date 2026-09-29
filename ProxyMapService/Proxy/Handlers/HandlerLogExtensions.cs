@@ -368,6 +368,18 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Routing loop prevented: connection to {outgoingEndPoint}")]
         public static partial void LogRoutingLoopPrevented(this ILogger logger, System.Net.IPEndPoint outgoingEndPoint);
 
+        [LoggerMessage(
+            EventId = 1292,
+            Level = LogLevel.Warning,
+            Message = "HTTP Request Header is null ({hostname}:{port})")]
+        private static partial void LogNullHTTPRequestHeaderInternal(this ILogger logger, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1293,
+            Level = LogLevel.Warning,
+            Message = "HTTP Response Header is not null ({hostname}:{port})")]
+        private static partial void LogNotNullHTTPResponseHeaderInternal(this ILogger logger, string hostname, int port);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;
@@ -550,6 +562,16 @@ namespace ProxyMapService.Proxy.Handlers
         public static void LogClientTLSHandshakeFailed(this ILogger logger, string message, HostAddress host)
         {
             logger.LogClientTLSHandshakeFailedInternal(message, host.Hostname, host.Port);
+        }
+
+        public static void LogNullHTTPRequestHeader(this ILogger logger, HostAddress host)
+        {
+            logger.LogNullHTTPRequestHeaderInternal(host.Hostname, host.Port);
+        }
+
+        public static void LogNotNullHTTPResponseHeader(this ILogger logger, HostAddress host)
+        {
+            logger.LogNotNullHTTPResponseHeaderInternal(host.Hostname, host.Port);
         }
     }
 }

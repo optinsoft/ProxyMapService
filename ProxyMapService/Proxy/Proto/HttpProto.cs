@@ -1,8 +1,6 @@
 ﻿using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Sessions;
-using System.IO;
-using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 
@@ -21,6 +19,7 @@ namespace ProxyMapService.Proxy.Proto
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, context.Token);
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyConnectionEstablished(SessionContext context)
@@ -54,8 +53,8 @@ namespace ProxyMapService.Proxy.Proto
             {
                 context.ResponseBodyLogger?.OnCompleted(context, contentType, contentBytes.Length, contentBytes);
                 await incomingStream.WriteAsync(contentBytes, context.Token);
-                context.CompletionLogger?.OnHttpCompleted(context);
             }
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyError(SessionContext context, Stream? incomingStream, string httpStatusLine, List<string>? customHeaders)
@@ -217,8 +216,9 @@ namespace ProxyMapService.Proxy.Proto
             {
                 context.ResponseBodyLogger?.OnCompleted(context, contentType, textBytes.Length, textBytes);
                 await incomingStream.WriteAsync(textBytes, context.Token);
-                context.CompletionLogger?.OnHttpCompleted(context);
             }
+
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyText(SessionContext context, string text)
@@ -253,8 +253,9 @@ namespace ProxyMapService.Proxy.Proto
             {
                 context.ResponseBodyLogger?.OnCompleted(context, contentType, htmlBytes.Length, htmlBytes);
                 await incomingStream.WriteAsync(htmlBytes, context.Token);
-                context.CompletionLogger?.OnHttpCompleted(context);
             }
+
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyHtml(SessionContext context, string html)
@@ -291,8 +292,9 @@ namespace ProxyMapService.Proxy.Proto
             {
                 context.ResponseBodyLogger?.OnCompleted(context, contentType, jsonBytes.Length, jsonBytes);
                 await incomingStream.WriteAsync(jsonBytes, context.Token);
-                context.CompletionLogger?.OnHttpCompleted(context);
             }
+
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         private static readonly JsonSerializerOptions SnakeCaseOptions = new()
@@ -355,8 +357,9 @@ namespace ProxyMapService.Proxy.Proto
             if (bytes.Length > 0)
             {
                 await incomingStream.WriteAsync(bytes, context.Token);
-                context.CompletionLogger?.OnHttpCompleted(context);
             }
+
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyFileStream(SessionContext context, Stream? incomingStream, FileStream fileStream)
@@ -398,8 +401,9 @@ namespace ProxyMapService.Proxy.Proto
                 {
                     await fileStream.CopyToAsync(incomingStream, context.Token);
                 }
-                context.CompletionLogger?.OnHttpCompleted(context);
             }
+
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyFileStream(SessionContext context, FileStream fileStream)
@@ -447,8 +451,9 @@ namespace ProxyMapService.Proxy.Proto
                     {
                         await fileStream.CopyToAsync(incomingStream, context.Token);
                     }
-                    context.CompletionLogger?.OnHttpCompleted(context);
                 }
+
+                context.CompletionLogger?.OnHttpCompleted(context);
             }
             finally
             {
@@ -481,6 +486,8 @@ namespace ProxyMapService.Proxy.Proto
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, context.Token);
+
+            context.CompletionLogger?.OnHttpCompleted(context);
         }
 
         public static async Task HttpReplyWebSocketHandshake(SessionContext context, string webSocketKey)

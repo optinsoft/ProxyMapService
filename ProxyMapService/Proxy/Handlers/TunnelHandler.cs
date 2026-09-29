@@ -367,7 +367,11 @@ namespace ProxyMapService.Proxy.Handlers
                                     }
                                     if (selfState.Response)
                                     {
-                                        Debug.Assert(context.RequestHeader != null, "!!! HTTP Request Header is null !!!");
+                                        if (context.RequestHeader == null)
+                                        {
+                                            context.Logger.LogNullHTTPRequestHeader(context.Host);
+                                            //Debug.Assert(false, "HTTP Request Header is null");
+                                        }
                                         context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4);
                                         context.ResponseHeadersLogger?.OnHttpHeader(context, context.ResponseHeader);
                                         if (!context.ResponseHeader.BadResponse)
@@ -386,7 +390,11 @@ namespace ProxyMapService.Proxy.Handlers
                                     }
                                     else
                                     {
-                                        Debug.Assert(context.ResponseHeader == null, "!!! HTTP Response Header is not null !!!");
+                                        if (context.ResponseHeader != null)
+                                        {
+                                            context.Logger.LogNotNullHTTPResponseHeader(context.Host);
+                                            //Debug.Assert(false, "HTTP Response Header is not null");
+                                        }
                                         context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines);
                                         context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                                         if (!context.RequestHeader.BadRequest)
@@ -425,7 +433,6 @@ namespace ProxyMapService.Proxy.Handlers
                                         context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                                         if (context.ResponseCacheFileStream != null)
                                         {
-                                            Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");
                                             if (context.ResponseCacheEntry != null)
                                             {
                                                 await context.ResponseCacheFileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
@@ -433,6 +440,8 @@ namespace ProxyMapService.Proxy.Handlers
                                             }
                                             else
                                             {
+                                                //context.Logger.LogDebug("Response cache entry is null (1)");
+                                                Debug.Assert(false, "Response cache entry is null (1)");
                                                 context.DisposeResponseCacheFileStream();
                                             }
                                         }
@@ -481,7 +490,6 @@ namespace ProxyMapService.Proxy.Handlers
                                 context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                                 if (context.ResponseCacheFileStream != null)
                                 {
-                                    Debug.Assert(context.ResponseCacheEntry != null, "!!! Response cache entry is null !!!");
                                     if (context.ResponseCacheEntry != null)
                                     {
                                         await context.ResponseCacheFileStream.WriteAsync(buffer.AsMemory(0, bytesRead));
@@ -489,6 +497,8 @@ namespace ProxyMapService.Proxy.Handlers
                                     }
                                     else
                                     {
+                                        //context.Logger.LogDebug("Response cache entry is null (2)");
+                                        Debug.Assert(false, "Response cache entry is null (2)");
                                         context.DisposeResponseCacheFileStream();
                                     }
                                 }

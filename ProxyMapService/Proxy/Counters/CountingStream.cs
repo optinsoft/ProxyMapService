@@ -112,7 +112,7 @@ namespace ProxyMapService.Proxy.Counters
             }
 
             Socket socket = networkStream.Socket;
-            byte[] peekBuffer = new byte[2];
+            byte[] peekBuffer = new byte[1];
 
             int bytesRead = await socket.ReceiveAsync(
                 new ArraySegment<byte>(peekBuffer),
@@ -120,13 +120,33 @@ namespace ProxyMapService.Proxy.Counters
                 cancellationToken
             );
 
-            if (bytesRead < 2)
+            if (bytesRead < 1 || peekBuffer[0] != 0x16)
             {
                 _isTls = false;
             }
             else
             {
-                _isTls = peekBuffer[0] == 0x16 && peekBuffer[1] == 0x03;
+                peekBuffer = new byte[2];
+
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(500));
+
+                try
+                {
+                    bytesRead = await socket.ReceiveAsync(
+                       new ArraySegment<byte>(peekBuffer),
+                        SocketFlags.Peek,
+                        timeoutCts.Token
+                    );
+
+                    _isTls = bytesRead >= 2 && peekBuffer[0] == 0x16 && peekBuffer[1] == 0x03;
+                }
+                catch (OperationCanceledException) when (
+                    timeoutCts.IsCancellationRequested &&
+                    !cancellationToken.IsCancellationRequested)
+                {
+                    _isTls = false;
+                }
             }
 
             return _isTls.Value;
