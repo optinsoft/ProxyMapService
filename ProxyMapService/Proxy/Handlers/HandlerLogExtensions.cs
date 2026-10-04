@@ -1,7 +1,10 @@
-﻿using ProxyMapService.Proxy.Configurations;
+﻿using Microsoft.AspNetCore.Http.Connections;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Socks;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Text;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Handlers
@@ -197,8 +200,8 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1251,
             Level = LogLevel.Information,
-            Message = "TLS handshake with {hostname}:{port} completed successfully.")]
-        private static partial void LogClientTLSHandshakeSucceededInternal(this ILogger logger, string hostname, int port);
+            Message = "TLS handshake with {hostname}:{port} completed successfully, protocol: {protocol}.")]
+        private static partial void LogClientTLSHandshakeSucceededInternal(this ILogger logger, string hostname, int port, string protocol);
 
         [LoggerMessage(
             EventId = 1252,
@@ -554,9 +557,22 @@ namespace ProxyMapService.Proxy.Handlers
             }
         }
 
-        public static void LogClientTLSHandshakeSucceeded(this ILogger logger, HostAddress host)
+        public static void LogClientTLSHandshakeSucceeded(this ILogger logger, HostAddress host, SslApplicationProtocol negotiatedProtocol)
         {
-            logger.LogClientTLSHandshakeSucceededInternal(host.Hostname, host.Port);
+            string protocolName;
+            if (negotiatedProtocol == SslApplicationProtocol.Http2)
+            {
+                protocolName = "HTTP/2";
+            }
+            else if (negotiatedProtocol == SslApplicationProtocol.Http11)
+            {
+                protocolName = "HTTP/1.1";
+            }
+            else
+            {
+                protocolName = Encoding.UTF8.GetString(negotiatedProtocol.Protocol.Span);
+            }
+            logger.LogClientTLSHandshakeSucceededInternal(host.Hostname, host.Port, protocolName);
         }
 
         public static void LogClientTLSHandshakeFailed(this ILogger logger, string message, HostAddress host)

@@ -246,7 +246,7 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     var sslClientOptions = SslOptionsFactory.BuildSslClientOptions(context);
                     await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.Token);
-                    context.Logger.LogClientTLSHandshakeSucceeded(context.Host);
+                    context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                 }
                 outgoingReady.SetResult();
