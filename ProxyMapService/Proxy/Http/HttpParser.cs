@@ -19,8 +19,7 @@ namespace ProxyMapService.Proxy.Http
         private static readonly string[] HttpVersions =
         {
             "HTTP/1.0",
-            "HTTP/1.1",
-            "HTTP/2"
+            "HTTP/1.1"
         };
 
         private static readonly byte[][] HttpVersionPrefixBytes =
