@@ -13,6 +13,9 @@ namespace ProxyMapService.Proxy.Http
         private static readonly byte[][] HttpMethodPrefixBytes =
             HttpMethods.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
 
+        private static readonly string[] HttpMethodPrefixStrings =
+            HttpMethods.Select(m => m + " ").ToArray();
+
         private static readonly string[] HttpVersions =
         {
             "HTTP/1.0",
@@ -23,7 +26,38 @@ namespace ProxyMapService.Proxy.Http
         private static readonly byte[][] HttpVersionPrefixBytes =
             HttpVersions.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
 
-        public static bool StartsWithHttpMethod(ReadOnlySpan<byte> lineSpan, bool partially)
+        private static readonly string[] HttpVersionPrefixStrings =
+            HttpVersions.Select(m => m + " ").ToArray();
+
+        public static bool IsValidHttpMethod(ReadOnlySpan<char> methodSpan)
+        {
+            return methodSpan.Trim() switch
+            {
+                "GET" => true,
+                "POST" => true,
+                "PUT" => true,
+                "DELETE" => true,
+                "HEAD" => true,
+                "OPTIONS" => true,
+                "PATCH" => true,
+                "TRACE" => true,
+                "CONNECT" => true,
+                _ => false
+            };
+        }
+
+        public static bool IsValidHttpVersion(ReadOnlySpan<char> versionSpan)
+        {
+            return versionSpan.Trim() switch
+            {
+                "HTTP/1.0" => true,
+                "HTTP/1.1" => true,
+                "HTTP/2" => true,
+                _ => false
+            };
+        }
+
+        public static int StartsWithHttpMethod(ReadOnlySpan<byte> lineSpan, bool partially)
         {
             foreach (var method in HttpMethodPrefixBytes)
             {
@@ -32,14 +66,29 @@ namespace ProxyMapService.Proxy.Http
                 if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength)
                         .SequenceEqual(methodSpan.Slice(0, compareLength)))
                 {
-                    return true;
+                    return compareLength;
                 }
             }
 
-            return false;
+            return 0;
         }
 
-        public static bool StartsWithHttpVersion(ReadOnlySpan<byte> lineSpan, bool partially)
+        public static int StartsWithHttpMethod(ReadOnlySpan<char> lineSpan, bool partially)
+        {
+            foreach (var method in HttpMethodPrefixStrings)
+            {
+                var methodSpan = method.AsSpan();
+                int compareLength = partially ? Math.Min(lineSpan.Length, methodSpan.Length) : methodSpan.Length;
+                if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength)
+                        .SequenceEqual(methodSpan.Slice(0, compareLength)))
+                {
+                    return compareLength;
+                }
+            }
+            return 0;
+        }
+
+        public static int StartsWithHttpVersion(ReadOnlySpan<byte> lineSpan, bool partially)
         {
             foreach (var version in HttpVersionPrefixBytes)
             {
@@ -48,11 +97,26 @@ namespace ProxyMapService.Proxy.Http
                 if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength)
                         .SequenceEqual(versionSpan.Slice(0, compareLength)))
                 {
-                    return true;
+                    return compareLength;
                 }
             }
 
-            return false;
+            return 0;
+        }
+
+        public static int StartsWithHttpVersion(ReadOnlySpan<char> lineSpan, bool partially)
+        {
+            foreach (var version in HttpVersionPrefixStrings)
+            {
+                var versionSpan = version.AsSpan();
+                int compareLength = partially ? Math.Min(lineSpan.Length, versionSpan.Length) : versionSpan.Length;
+                if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength)
+                        .SequenceEqual(versionSpan.Slice(0, compareLength)))
+                {
+                    return compareLength;
+                }
+            }
+            return 0;
         }
 
         public static int FindHeadersEnd(MemoryStream ms, bool response, ref int searchStart)
@@ -65,7 +129,7 @@ namespace ProxyMapService.Proxy.Http
             if (response)
             {
                 // Validate the beginning of the HTTP response
-                if (!StartsWithHttpVersion(span, true))
+                if (StartsWithHttpVersion(span, true) <= 0)
                 {
                     // ATTENTION!!! Terminate searching
                     searchStart = -1;
@@ -75,7 +139,7 @@ namespace ProxyMapService.Proxy.Http
             else
             {
                 // Validate the beginning of the HTTP request
-                if (!StartsWithHttpMethod(span, true))
+                if (StartsWithHttpMethod(span, true) <= 0)
                 {
                     // ATTENTION!!! Terminate searching
                     searchStart = -1;
@@ -121,13 +185,13 @@ namespace ProxyMapService.Proxy.Http
             if (response)
             {
                 // Validate the beginning of the HTTP response
-                if (!StartsWithHttpVersion(span, false))
+                if (StartsWithHttpVersion(span, false) <= 0)
                     return null;
             }
             else
             {
                 // Validate the beginning of the HTTP request
-                if (!StartsWithHttpMethod(span, false))
+                if (StartsWithHttpMethod(span, false) <= 0)
                     return null;
             }
 
@@ -161,13 +225,13 @@ namespace ProxyMapService.Proxy.Http
             if (response)
             {
                 // Validate the beginning of the HTTP response
-                if (!StartsWithHttpVersion(span, false))
+                if (StartsWithHttpVersion(span, false) <= 0)
                     return null;
             }
             else
             {
                 // Validate the beginning of the HTTP request
-                if (!StartsWithHttpMethod(span, false))
+                if (StartsWithHttpMethod(span, false) <= 0)
                     return null;
             }
 

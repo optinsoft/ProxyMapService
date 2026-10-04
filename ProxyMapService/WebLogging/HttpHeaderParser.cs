@@ -1,84 +1,10 @@
-﻿using ProxyMapService.WebLogging.Dtos;
+﻿using ProxyMapService.Proxy.Http;
+using ProxyMapService.WebLogging.Dtos;
 
 namespace ProxyMapService.WebLogging
 {
     public static class HttpHeaderParser
     {
-        private static readonly string[] HttpMethods =
-        {
-            "GET", "POST", "PUT", "DELETE",
-            "HEAD", "OPTIONS", "PATCH", "TRACE", "CONNECT"
-        };
-
-        private static readonly string[] HttpMethodPrefixStrings =
-            HttpMethods.Select(m => m + " ").ToArray();
-
-        private static readonly string[] HttpVersions =
-        {
-            "HTTP/1.0",
-            "HTTP/1.1",
-            "HTTP/2"
-        };
-
-        private static readonly string[] HttpVersionPrefixStrings =
-            HttpVersions.Select(m => m + " ").ToArray();
-
-        private static int StartsWithHttpMethod(ReadOnlySpan<char> lineSpan)
-        {
-            foreach (var method in HttpMethodPrefixStrings)
-            {
-                var methodSpan = method.AsSpan();
-                int compareLength = methodSpan.Length;
-                if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength).SequenceEqual(methodSpan))
-                {
-                    return compareLength;
-                }
-            }
-            return 0;
-        }
-
-        private static int StartsWithHttpVersion(ReadOnlySpan<char> lineSpan)
-        {
-            foreach (var method in HttpVersionPrefixStrings)
-            {
-                var methodSpan = method.AsSpan();
-                int compareLength = methodSpan.Length;
-                if (compareLength <= lineSpan.Length && lineSpan.Slice(0, compareLength).SequenceEqual(methodSpan))
-                {
-                    return compareLength;
-                }
-            }
-            return 0;
-        }
-
-        private static bool IsValidHttpMethod(ReadOnlySpan<char> methodSpan)
-        {
-            return methodSpan.Trim() switch
-            {
-                "GET" => true,
-                "POST" => true,
-                "PUT" => true,
-                "DELETE" => true,
-                "HEAD" => true,
-                "OPTIONS" => true,
-                "PATCH" => true,
-                "TRACE" => true,
-                "CONNECT" => true,
-                _ => false
-            };
-        }
-
-        private static bool IsValidHttpVersion(ReadOnlySpan<char> versionSpan)
-        {
-            return versionSpan.Trim() switch
-            {
-                "HTTP/1.0" => true,
-                "HTTP/1.1" => true,
-                "HTTP/2" => true,
-                _ => false
-            };
-        }
-
         public static HttpRequestDto? ParseRequestRawHeaders(string[]? rawHeaders, string id, bool completed)
         {
             if (rawHeaders == null) return null;
@@ -98,7 +24,7 @@ namespace ProxyMapService.WebLogging
                 {
                     firstLine = false;
                     requestLine = headerLine;
-                    var methodLength = StartsWithHttpMethod(headerLine.AsSpan());
+                    var methodLength = HttpParser.StartsWithHttpMethod(headerLine.AsSpan(), false);
                     if (methodLength > 0)
                     {
                         var method = headerLine.AsSpan(0, methodLength).TrimEnd();
@@ -107,7 +33,7 @@ namespace ProxyMapService.WebLogging
                         if (targetEnd != -1)
                         {
                             var httpProto = target.Slice(targetEnd);
-                            if (IsValidHttpVersion(httpProto))
+                            if (HttpParser.IsValidHttpVersion(httpProto))
                             {
                                 target = target.Slice(0, targetEnd);
                                 httpVerb = method.ToString();
@@ -165,7 +91,7 @@ namespace ProxyMapService.WebLogging
                 {
                     firstLine = false;
                     statusLine = headerLine;
-                    var versionLength = StartsWithHttpVersion(headerLine.AsSpan());
+                    var versionLength = HttpParser.StartsWithHttpVersion(headerLine.AsSpan(), false);
                     if (versionLength > 0)
                     {
                         var version = headerLine.AsSpan(0, versionLength);
