@@ -4,5 +4,6 @@
     {
         public string EnabledSslProtocols { get; set; } = "Tls12,Tls13";
         public bool CheckCertificateRevocation { get; set; } = true;
+        public string ApplicationProtocols { get; set; } = "http/1.1";
     }
 }

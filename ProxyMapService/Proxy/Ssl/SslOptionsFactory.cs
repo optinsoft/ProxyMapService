@@ -30,7 +30,11 @@ namespace ProxyMapService.Proxy.Ssl
                 EnabledSslProtocols = protocols,
                 CertificateRevocationCheckMode = context.SslClientConfig.CheckCertificateRevocation
                     ? X509RevocationMode.Online
-                    : X509RevocationMode.NoCheck
+                    : X509RevocationMode.NoCheck,
+                ApplicationProtocols = context.SslClientConfig.ApplicationProtocols
+                    .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => new SslApplicationProtocol(p.Trim()))
+                    .ToList()
             };
         }
 
