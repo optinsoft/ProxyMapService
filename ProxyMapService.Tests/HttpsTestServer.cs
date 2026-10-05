@@ -24,7 +24,7 @@ namespace ProxyMapService.Tests
         public int RequestCount =>
             Volatile.Read(ref _requestCount);
 
-        public HttpsTestServer()
+        public HttpsTestServer(bool useHttp2)
         {
             var certificate = CreateCertificate();
 
@@ -38,7 +38,7 @@ namespace ProxyMapService.Tests
                             Port,
                             listenOptions =>
                             {
-                                listenOptions.Protocols = HttpProtocols.Http1;
+                                listenOptions.Protocols = useHttp2 ? HttpProtocols.Http1AndHttp2 : HttpProtocols.Http1;
                                 listenOptions.UseHttps(certificate);
                             });
 
