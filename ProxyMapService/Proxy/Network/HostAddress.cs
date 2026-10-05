@@ -86,14 +86,20 @@
             }
         }
 
-        public async Task<System.Net.IPEndPoint> GetIPEndPoint(bool throwIfMoreThanOneIP = false)
+        public async Task<System.Net.IPEndPoint> GetIPEndPoint(bool throwIfMoreThanOneIP = false, bool ipv4First = true)
         {
-            return await GetIPEndPoint(Hostname, Port, throwIfMoreThanOneIP);
+            return await GetIPEndPoint(Hostname, Port, throwIfMoreThanOneIP, ipv4First);
         }
 
-        public static async Task<System.Net.IPEndPoint> GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false)
+        public static async Task<System.Net.IPEndPoint> GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false, bool ipv4First = true)
         {
             var addresses = await System.Net.Dns.GetHostAddressesAsync(hostname);
+            if (ipv4First)
+            {
+                addresses = addresses
+                    .OrderBy(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 0 : 1)
+                    .ToArray();
+            }
             if (addresses.Length == 0)
             {
                 throw new ArgumentException(
