@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using Microsoft.Extensions.Configuration;
+using System.Net;
 using System.Net.Http;
 using Xunit;
 
@@ -9,11 +10,21 @@ namespace ProxyMapService.Tests
         [Fact]
         public async Task Http11_Proxy_Https_MultipleRequests_ShouldWork()
         {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile("appsettings.Development.json", optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            var proxyHost = configuration["Proxy:Host"] ?? "127.0.0.1";
+            var proxyPort = configuration.GetValue<int>("Proxy:Port", 5001);
+
             await using var server = new HttpsTestServer();
 
             await server.StartAsync();
 
-            var proxy = new WebProxy("http://127.0.0.1:5010");
+            var proxy = new WebProxy($"http://{proxyHost}:{proxyPort}");
 
             var handler = new HttpClientHandler
             {
