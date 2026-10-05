@@ -54,7 +54,9 @@ namespace ProxyMapService.Proxy.Handlers
                 };
 
                 context.RequestTunnelState.IsSecure = isIncomingSSL;
+                context.RequestTunnelState.IsHttp2 = false;
                 context.ResponseTunnelState.IsSecure = isOutgoingSSL;
+                context.ResponseTunnelState.IsHttp2 = false;
 
                 using SslStream? incomingSslStream = context.DecryptSSL && isIncomingSSL ? new(context.IncomingStream) : null;
                 using SslStream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL ? new(context.OutgoingStream) : null;
@@ -252,6 +254,7 @@ namespace ProxyMapService.Proxy.Handlers
                     await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.Token);
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
+                    context.ResponseTunnelState.IsHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
                 outgoingReady.SetResult();
             }
@@ -294,7 +297,8 @@ namespace ProxyMapService.Proxy.Handlers
             TunnelState otherTunnelState)
         {
             var buffer = new byte[BufferSize];
-            using var ms = new MemoryStream();
+            using var httpParser = new HttpParser(selfState.Response, 
+                selfState.Response ? context.ResponseHeader == null : context.RequestHeader == null);
 
             CancellationToken token = context.Token;
 
@@ -302,8 +306,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             try
             {
-                int bytesRead, headersEnd, searchHeadersStart = 0;
-                bool readHeaders = selfState.Response ? context.ResponseHeader == null : context.RequestHeader == null;
+                int bytesRead;
                 do
                 {
                     if (readCounter.IsLogReading)
@@ -334,10 +337,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 context.DisposeRequestBodyTracker();
                                 context.DisposeResponseBodyTracker();
                             }
-                            ms.SetLength(0);
-                            ms.Position = 0;
-                            searchHeadersStart = 0;
-                            readHeaders = selfState.Response ? context.ResponseHeader == null : context.RequestHeader == null;
+                            httpParser.Reset();
                         }
                         if (!otherTunnelState.ResetReadHeaders)
                         {
@@ -348,20 +348,19 @@ namespace ProxyMapService.Proxy.Handlers
                             }
                             otherTunnelState.ResetReadHeaders = true;
                         }
-                        if (readHeaders)
+                        if (httpParser.ReadingHeaders)
                         {
                             if (readCounter.IsLogReading)
                             {
                                 LogTunnelReadingHeaders(context.Logger,
                                     selfState.TunnelId, StreamDirectionName.GetName(readCounter.Direction));
                             }
-                            ms.Write(buffer, 0, bytesRead);
-                            if ((headersEnd = HttpParser.FindHeadersEnd(ms, selfState.Response, ref searchHeadersStart)) >= 0 || searchHeadersStart < 0)
+                            httpParser.AppendData(buffer.AsSpan(0, bytesRead), out bool endOfHeaders);
+                            if (endOfHeaders)
                             {
-                                readHeaders = false;
                                 bool headerModified = false;
                                 CacheEntry? requestCacheEntry = null;
-                                var headerAndBody = HttpParser.GetHeaderLinesAndBody(ms, selfState.Response, headersEnd);
+                                var headerAndBody = httpParser.HeaderAndBody;
                                 if (headerAndBody != null)
                                 {
                                     if (readCounter.IsLogReading)
@@ -376,7 +375,7 @@ namespace ProxyMapService.Proxy.Handlers
                                             context.Logger.LogNullHTTPRequestHeader(context.Host);
                                             //Debug.Assert(false, "HTTP Request Header is null");
                                         }
-                                        context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, headersEnd + 4);
+                                        context.ResponseHeader = new HttpResponseHeader(headerAndBody.HeaderLines, httpParser.HeaderLength);
                                         context.ResponseHeadersLogger?.OnHttpHeader(context, context.ResponseHeader);
                                         if (!context.ResponseHeader.BadResponse)
                                         {
@@ -385,8 +384,7 @@ namespace ProxyMapService.Proxy.Handlers
                                             {
                                                 if (context.ResponseCacheFileStream != null)
                                                 {
-                                                    ms.Position = 0;
-                                                    await ms.CopyToAsync(context.ResponseCacheFileStream);
+                                                    await httpParser.CopyHeaderStreamAsync(context.ResponseCacheFileStream);
                                                     await HandleEndOfResponseCacheFileStream(context);
                                                 }
                                             }
@@ -475,11 +473,10 @@ namespace ProxyMapService.Proxy.Handlers
                                     }
                                     else
                                     {
-                                        await destination.WriteAsync(ms.GetBuffer().AsMemory(0, (int)ms.Length), token);
+                                        await httpParser.WriteHeaderStreamAsync(destination, token);
                                     }
                                 }
-                                ms.SetLength(0);
-                                ms.Position = 0;
+                                httpParser.ClearHeaderStream();
                             }
                         }
                         else

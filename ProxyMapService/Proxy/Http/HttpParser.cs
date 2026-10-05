@@ -2,8 +2,88 @@
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class HttpParser
+    public class HttpParser : IDisposable
     {
+        private readonly MemoryStream _memoryStream = new();
+
+        private int _searchHeadersStart = 0;
+        private bool _readingHeaders = false;
+
+        private int _headerLength = 0;
+        private HttpHeaderLinesAndBody? _headerAndBody = null;
+
+        private readonly bool _response;
+        private readonly bool _initialReadHeaders;
+
+        public bool ReadingHeaders { get => _readingHeaders; }
+
+        public int HeaderLength { get => _headerLength; }
+        public HttpHeaderLinesAndBody? HeaderAndBody { get => _headerAndBody; }
+
+        public HttpParser(bool response, bool readHeaders) {
+            _response = response;
+            _initialReadHeaders = readHeaders;
+        }
+
+        public void Reset()
+        {
+            _memoryStream.SetLength(0);
+            _memoryStream.Position = 0;
+            _searchHeadersStart = 0;
+            _readingHeaders = _initialReadHeaders;
+            _headerLength = 0;
+            _headerAndBody = null;
+        }
+
+        public void AppendData(ReadOnlySpan<byte> data, out bool endOfHeaders)
+        {
+            if (_readingHeaders)
+            {
+                _memoryStream.Write(data);
+                int headersEnd;
+                if ((headersEnd = FindHeadersEnd(_memoryStream, _response, ref _searchHeadersStart)) >= 0 || _searchHeadersStart < 0)
+                {
+                    _readingHeaders = false;
+                    _headerLength = headersEnd + 4;
+                    _headerAndBody = GetHeaderLinesAndBody(_memoryStream, _response, headersEnd);
+                    endOfHeaders = true;
+                    return;
+                }
+            }
+            endOfHeaders = false;
+        }
+
+        public async Task CopyHeaderStreamAsync(Stream destination)
+        {
+            _memoryStream.Position = 0;
+            await _memoryStream.CopyToAsync(destination);
+        }
+
+        public async Task WriteHeaderStreamAsync(Stream destination, CancellationToken cancellationToken)
+        {
+            await destination.WriteAsync(_memoryStream.GetBuffer().AsMemory(0, (int)_memoryStream.Length), cancellationToken);
+        }
+
+        public void ClearHeaderStream()
+        {
+            _memoryStream.SetLength(0);
+            _memoryStream.Position = 0;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _memoryStream.Dispose();
+            }
+        }
+
         private static readonly string[] HttpMethods =
         {
             "GET", "POST", "PUT", "DELETE",
