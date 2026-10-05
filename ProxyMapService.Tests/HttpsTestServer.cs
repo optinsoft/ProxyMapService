@@ -11,7 +11,9 @@ namespace ProxyMapService.Tests
 {
     public sealed class HttpsTestServer : IAsyncDisposable
     {
-        public const int Port = 5111;
+        private readonly int _port;
+
+        public int Port { get { return _port; } }
 
         private readonly IHost _host;
 
@@ -24,8 +26,10 @@ namespace ProxyMapService.Tests
         public int RequestCount =>
             Volatile.Read(ref _requestCount);
 
-        public HttpsTestServer(bool useHttp2)
+        public HttpsTestServer(int port, bool useHttp2)
         {
+            _port = port;
+
             var certificate = CreateCertificate();
 
             _host = Host.CreateDefaultBuilder()
