@@ -37,6 +37,7 @@ namespace ProxyMapService.Proxy.Configurations
         public string? OverrideHostName { get; set; }
         public int? OverrideHostPort { get; set; }
         public bool? DecryptSSL { get; set; }
+        public bool? IgnoreCertificateErrors { get; set; }
         public SslMode? SslMode { get; set; }
         public SslMode? UpstreamSslMode { get; set; }
         public string? CertificatePath { 

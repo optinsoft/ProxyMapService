@@ -32,7 +32,8 @@ namespace ProxyMapService.Proxy.Sessions
         public IRoutingLoopDetector RoutingLoopDetector { get; private set; }
         public SessionAPIConfig SessionAPI { get; set; }
         public SessionAction Action { get; set; }
-        public bool DecryptSSL { get;set; }
+        public bool DecryptSSL { get; set; }
+        public bool IgnoreCertificateErrors {  get; set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
         public bool IgnoreHostRules { get; set; }
@@ -224,6 +225,7 @@ namespace ProxyMapService.Proxy.Sessions
                 _ => SessionActionEnum.Proxy
             };
             DecryptSSL = mapping.Listen.DecryptSSL;
+            IgnoreCertificateErrors = mapping.Listen.IgnoreCertificateErrors;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;

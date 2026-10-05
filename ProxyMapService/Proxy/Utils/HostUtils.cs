@@ -38,6 +38,10 @@ namespace ProxyMapService.Proxy.Utils
                 {
                     context.DecryptSSL = hostRule.DecryptSSL.Value;
                 }
+                if (hostRule.IgnoreCertificateErrors != null)
+                {
+                    context.IgnoreCertificateErrors = hostRule.IgnoreCertificateErrors.Value;
+                }
                 if (hostRule.SslMode != null)
                 {
                     if (!httpMode)

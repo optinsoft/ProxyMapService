@@ -245,6 +245,10 @@ namespace ProxyMapService.Proxy.Handlers
                 if (outgoingSslStream != null)
                 {
                     var sslClientOptions = SslOptionsFactory.BuildSslClientOptions(context);
+                    if (context.IgnoreCertificateErrors)
+                    {
+                        sslClientOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+                    }
                     await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.Token);
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
