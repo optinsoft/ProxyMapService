@@ -50,12 +50,21 @@ Console.OutputEncoding = Encoding.UTF8;
 
 builder.Services.AddSignalR();
 
-// Persist Data Protection keys inside the workspace (a mounted volume) so they
-// survive container rebuilds and the "keys may not be persisted" warning goes away.
-var dataProtectionKeysPath = Environment.GetEnvironmentVariable("ASPNET_DATA_PROTECTION_KEYS_PATH")
-    ?? Path.Combine(builder.Environment.ContentRootPath, ".aspnet", "DataProtection-Keys");
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+// In a container the default key location (~/.aspnet) is ephemeral, so persist
+// keys inside the workspace (a mounted volume). On Windows the default
+// registry-based storage is already persistent, so leave it untouched unless
+// ASPNET_DATA_PROTECTION_KEYS_PATH is set explicitly.
+var dataProtectionKeysPath = Environment.GetEnvironmentVariable("ASPNET_DATA_PROTECTION_KEYS_PATH");
+if (dataProtectionKeysPath == null
+    && Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+{
+    dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, ".aspnet", "DataProtection-Keys");
+}
+if (dataProtectionKeysPath != null)
+{
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+}
 
 var monitoringOptions = builder.Configuration
     .GetSection("WebSocketMonitoring")
