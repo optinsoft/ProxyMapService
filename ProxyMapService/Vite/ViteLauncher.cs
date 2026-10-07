@@ -12,7 +12,7 @@ namespace ProxyMapService.Vite
             if (IsPortOpen("localhost", vitePort))
                 return;
 
-            var dashboardDir = Path.GetFullPath(@"..\dashboard");
+            var dashboardDir = Path.GetFullPath(@"../dashboard");
 
             var psi = new ProcessStartInfo
             {
