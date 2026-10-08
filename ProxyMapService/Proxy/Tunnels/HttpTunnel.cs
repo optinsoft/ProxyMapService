@@ -43,88 +43,58 @@ namespace ProxyMapService.Proxy.Tunnels
         #region High-Performance Logging
 
         [LoggerMessage(
-            EventId = 1301,
-            Level = LogLevel.Error,
-            Message = "[RequestTunnel] {ExceptionName}: {ErrorMessage}")]
-        protected static partial void LogRequestTunnelError(ILogger logger, string exceptionName, string errorMessage);
-
-        [LoggerMessage(
-            EventId = 1302,
-            Level = LogLevel.Error,
-            Message = "[ResponseTunnel] {ExceptionName}: {ErrorMessage}")]
-        protected static partial void LogResponseTunnelError(ILogger logger, string exceptionName, string errorMessage);
-
-        [LoggerMessage(
-            EventId = 1303,
+            EventId = 1401,
             Level = LogLevel.Error,
             Message = "[Tunnel] {ExceptionName}: {ErrorMessage}\n{StackTrace}")]
         protected static partial void LogTunnelError(ILogger logger, string exceptionName, string errorMessage, string? stackTrace);
 
         [LoggerMessage(
-            EventId = 1304,
+            EventId = 1402,
             Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: reading from {direction}...")]
         protected static partial void LogTunnelReading(ILogger logger, long tunnelId, string direction);
 
         [LoggerMessage(
-            EventId = 1305,
+            EventId = 1403,
             Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: Reset reading headers")]
         protected static partial void LogTunnelResetReadingHeaders(ILogger logger, long tunnelId);
 
         [LoggerMessage(
-            EventId = 1306,
+            EventId = 1404,
             Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: Resetting other tunnel ({otherTunnelId}) reading headers")]
         protected static partial void LogOtherTunnelResetReadingHeaders(ILogger logger, long tunnelId, long otherTunnelId);
 
         [LoggerMessage(
-            EventId = 1307,
+            EventId = 1405,
             Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: Reading headers from {direction}...")]
         protected static partial void LogTunnelReadingHeaders(ILogger logger, long tunnelId, string direction);
 
         [LoggerMessage(
-            EventId = 1308,
+            EventId = 1406,
             Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: Headers read from {direction}")]
         protected static partial void LogTunnelHeadersRead(ILogger logger, long tunnelId, string direction);
 
         [LoggerMessage(
-            EventId = 1309,
+            EventId = 1407,
             Level = LogLevel.Debug,
             Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
         protected static partial void LogTunnelDebugError(ILogger logger, string exceptionName, string errorMessage);
 
         [LoggerMessage(
-            EventId = 1309,
+            EventId = 1408,
             Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: Body read from {direction}")]
         protected static partial void LogTunnelBodyRead(ILogger logger, long tunnelId, string direction);
 
         [LoggerMessage(
-            EventId = 1310,
+            EventId = 1409,
             Level = LogLevel.Debug,
             Message = "Tunnel {tunnelId}: sending to {direction}...")]
         protected static partial void LogTunnelSending(ILogger logger, long tunnelId, string direction);
-
-        [LoggerMessage(
-            EventId = 1311,
-            Level = LogLevel.Warning,
-            Message = "[RequestTunnel] {ExceptionName}: {ErrorMessage}")]
-        protected static partial void LogRequestTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
-
-        [LoggerMessage(
-            EventId = 1312,
-            Level = LogLevel.Warning,
-            Message = "[ResponseTunnel] {ExceptionName}: {ErrorMessage}")]
-        protected static partial void LogResponseTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
-
-        [LoggerMessage(
-            EventId = 1312,
-            Level = LogLevel.Warning,
-            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
-        protected static partial void LogTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
 
         #endregion
 

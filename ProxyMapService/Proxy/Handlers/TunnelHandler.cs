@@ -102,60 +102,6 @@ namespace ProxyMapService.Proxy.Handlers
         private static partial void LogResponseTunnelError(ILogger logger, string exceptionName, string errorMessage);
 
         [LoggerMessage(
-            EventId = 1303,
-            Level = LogLevel.Error,
-            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}\n{StackTrace}")]
-        private static partial void LogTunnelError(ILogger logger, string exceptionName, string errorMessage, string? stackTrace);
-
-        [LoggerMessage(
-            EventId = 1304,
-            Level = LogLevel.Debug,
-            Message = "Tunnel {tunnelId}: reading from {direction}...")]
-        private static partial void LogTunnelReading(ILogger logger, long tunnelId, string direction);
-
-        [LoggerMessage(
-            EventId = 1305,
-            Level = LogLevel.Debug,
-            Message = "Tunnel {tunnelId}: Reset reading headers")]
-        private static partial void LogTunnelResetReadingHeaders(ILogger logger, long tunnelId);
-
-        [LoggerMessage(
-            EventId = 1306,
-            Level = LogLevel.Debug,
-            Message = "Tunnel {tunnelId}: Resetting other tunnel ({otherTunnelId}) reading headers")]
-        private static partial void LogOtherTunnelResetReadingHeaders(ILogger logger, long tunnelId, long otherTunnelId);
-
-        [LoggerMessage(
-            EventId = 1307,
-            Level = LogLevel.Debug,
-            Message = "Tunnel {tunnelId}: Reading headers from {direction}...")]
-        private static partial void LogTunnelReadingHeaders(ILogger logger, long tunnelId, string direction);
-
-        [LoggerMessage(
-            EventId = 1308,
-            Level = LogLevel.Debug,
-            Message = "Tunnel {tunnelId}: Headers read from {direction}")]
-        private static partial void LogTunnelHeadersRead(ILogger logger, long tunnelId, string direction);
-
-        [LoggerMessage(
-            EventId = 1309,
-            Level = LogLevel.Debug,
-            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
-        private static partial void LogTunnelDebugError(ILogger logger, string exceptionName, string errorMessage);
-
-        [LoggerMessage(
-            EventId = 1309,
-            Level = LogLevel.Debug,
-            Message = "Tunnel {tunnelId}: Body read from {direction}")]
-        private static partial void LogTunnelBodyRead(ILogger logger, long tunnelId, string direction);
-
-        [LoggerMessage(
-            EventId = 1310,
-            Level = LogLevel.Debug,
-            Message = "Tunnel {tunnelId}: sending to {direction}...")]
-        private static partial void LogTunnelSending(ILogger logger, long tunnelId, string direction);
-
-        [LoggerMessage(
             EventId = 1311,
             Level = LogLevel.Warning,
             Message = "[RequestTunnel] {ExceptionName}: {ErrorMessage}")]
@@ -168,7 +114,7 @@ namespace ProxyMapService.Proxy.Handlers
         private static partial void LogResponseTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
 
         [LoggerMessage(
-            EventId = 1312,
+            EventId = 1313,
             Level = LogLevel.Warning,
             Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
         private static partial void LogTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
