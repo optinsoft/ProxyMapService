@@ -37,9 +37,7 @@ namespace ProxyMapService.Proxy.Tunnels
             var buffer = new byte[BufferSize];
             using var httpParser = new HttpParser(false, _context.RequestHeader == null);
 
-            CancellationToken token = _context.Token;
-
-            bool reading = false;
+            CancellationToken token = _context.TunnelToken;
 
             try
             {
@@ -53,9 +51,19 @@ namespace ProxyMapService.Proxy.Tunnels
                             _selfState.TunnelId, 
                             StreamDirectionName.GetName(_readCounter.Direction));
                     }
-                    reading = true;
-                    bytesRead = await _source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
-                    reading = false;
+                    try
+                    {
+                        bytesRead = await _source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
+                    }
+                    catch (IOException ex)
+                    {
+                        if (_readCounter.IsLogReading)
+                        {
+                            LogTunnelDebugError(_context.Logger, ex.GetType().Name, ex.Message);
+                        }
+                        _source.OnDisconnected();
+                        break;
+                    }
                     if (bytesRead > 0)
                     {
                         if (_selfState.ResetReadHeaders)
@@ -160,7 +168,7 @@ namespace ProxyMapService.Proxy.Tunnels
                                             _selfState.TunnelId, 
                                             StreamDirectionName.GetName(_sendCounter.Direction));
                                     }
-                                    await _destinationReady.Task;
+                                    await _destinationReady.Task.WaitAsync(token);
                                     if (headerAndBody != null && headerModified)
                                     {
                                         await SendModifiedHeadersAndBody(_destination, headerAndBody.HeaderLines, headerAndBody.BodyBytes, token);
@@ -190,11 +198,15 @@ namespace ProxyMapService.Proxy.Tunnels
                                     _selfState.TunnelId, 
                                     StreamDirectionName.GetName(_sendCounter.Direction));
                             }
-                            await _destinationReady.Task;
+                            await _destinationReady.Task.WaitAsync(token);
                             await _destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
                         }
                     }
                 } while (bytesRead > 0 && !token.IsCancellationRequested);
+            }
+            catch (OperationCanceledException) when (_context.TunnelToken.IsCancellationRequested)
+            {
+                // Normal tunnel shutdown.
             }
             catch (ObjectDisposedException ex)
             {
@@ -208,10 +220,6 @@ namespace ProxyMapService.Proxy.Tunnels
                 if (_readCounter.IsLogReading)
                 {
                     LogTunnelDebugError(_context.Logger, ex.GetType().Name, ex.Message);
-                }
-                if (reading)
-                {
-                    _source.OnDisconnected();
                 }
             }
             catch (Exception ex)

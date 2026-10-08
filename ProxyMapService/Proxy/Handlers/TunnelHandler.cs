@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Configurations;
+﻿using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Network;
@@ -71,12 +72,36 @@ namespace ProxyMapService.Proxy.Handlers
                 var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
                 var outgoingStream = outgoingSslCountingStream ?? context.OutgoingStream;
 
-                var requestTunnelTask = RunRequestTunnel(context, incomingSslStream,
-                    incomingStream, outgoingStream, incomingReady, outgoingReady);
-                var responseTunnelTask = RunResponseTunnel(context, outgoingSslStream,
-                    incomingStream, outgoingStream, incomingReady, outgoingReady);
+                using var tunnelCts = CancellationTokenSource.CreateLinkedTokenSource(context.Token);
+                context.TunnelToken = tunnelCts.Token;
 
-                await Task.WhenAny(requestTunnelTask, responseTunnelTask);
+                var requestTunnelTask = RunRequestTunnel(
+                    context,
+                    incomingSslStream,
+                    incomingStream,
+                    outgoingStream,
+                    incomingReady,
+                    outgoingReady);
+
+                var responseTunnelTask = RunResponseTunnel(
+                    context,
+                    outgoingSslStream,
+                    incomingStream,
+                    outgoingStream,
+                    incomingReady,
+                    outgoingReady);
+
+                try
+                {
+                    await Task.WhenAny(requestTunnelTask, responseTunnelTask);
+
+                    tunnelCts.Cancel();
+
+                    await Task.WhenAll(requestTunnelTask, responseTunnelTask);
+                }
+                catch (OperationCanceledException) when (context.Token.IsCancellationRequested)
+                {
+                }
             }
 
             return HandleStep.Terminate;
@@ -136,11 +161,15 @@ namespace ProxyMapService.Proxy.Handlers
                         : null;
                     serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
-                    await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
+                    await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.TunnelToken);
                     context.Logger.LogServerTLSHandshakeSucceeded();
                     context.IncomingStream?.TransferHandlersTo(incomingStream);
                 }
                 incomingReady.SetResult();
+            }
+            catch (OperationCanceledException) when (context.TunnelToken.IsCancellationRequested)
+            {
+                // Normal tunnel shutdown.
             }
             catch (ObjectDisposedException ex)
             {
@@ -197,12 +226,16 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         sslClientOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
                     }
-                    await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.Token);
+                    await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.TunnelToken);
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                     context.ResponseTunnelState.IsHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
                 outgoingReady.SetResult();
+            }
+            catch (OperationCanceledException) when (context.TunnelToken.IsCancellationRequested)
+            {
+                // Normal tunnel shutdown.
             }
             catch (ObjectDisposedException ex)
             {

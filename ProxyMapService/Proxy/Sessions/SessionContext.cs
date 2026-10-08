@@ -51,6 +51,7 @@ namespace ProxyMapService.Proxy.Sessions
         public ProxyCounters ProxyCounters { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
+        public CancellationToken TunnelToken { get; set; }
 
         public ReadHeaderStream IncomingHeaderStream { get; private set; }
         public ReadHeaderStream OutgoingHeaderStream { get; private set; }
