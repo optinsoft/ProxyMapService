@@ -23,6 +23,7 @@ namespace ProxyMapService.Proxy.Http
         public HttpParser(bool response, bool readHeaders) {
             _response = response;
             _initialReadHeaders = readHeaders;
+            _readingHeaders = readHeaders;
         }
 
         public void Reset()

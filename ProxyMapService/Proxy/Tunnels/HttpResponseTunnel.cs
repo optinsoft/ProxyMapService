@@ -49,7 +49,10 @@ namespace ProxyMapService.Proxy.Tunnels
                 {
                     if (_readCounter.IsLogReading)
                     {
-                        LogTunnelReading(_context.Logger, _selfState.TunnelId, StreamDirectionName.GetName(_readCounter.Direction));
+                        LogTunnelReading(
+                            _context.Logger, 
+                            _selfState.TunnelId, 
+                            StreamDirectionName.GetName(_readCounter.Direction));
                     }
                     reading = true;
                     bytesRead = await _source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
@@ -80,8 +83,10 @@ namespace ProxyMapService.Proxy.Tunnels
                         {
                             if (_readCounter.IsLogReading)
                             {
-                                LogTunnelReadingHeaders(_context.Logger,
-                                    _selfState.TunnelId, StreamDirectionName.GetName(_readCounter.Direction));
+                                LogTunnelReadingHeaders(
+                                    _context.Logger,
+                                    _selfState.TunnelId, 
+                                    StreamDirectionName.GetName(_readCounter.Direction));
                             }
                             httpParser.AppendData(buffer.AsSpan(0, bytesRead), out bool endOfHeaders);
                             if (endOfHeaders)
@@ -93,8 +98,10 @@ namespace ProxyMapService.Proxy.Tunnels
                                 {
                                     if (_readCounter.IsLogReading)
                                     {
-                                        LogTunnelHeadersRead(_context.Logger,
-                                            _selfState.TunnelId, StreamDirectionName.GetName(_readCounter.Direction));
+                                        LogTunnelHeadersRead(
+                                            _context.Logger,
+                                            _selfState.TunnelId, 
+                                            StreamDirectionName.GetName(_readCounter.Direction));
                                     }
                                     if (_context.RequestHeader == null)
                                     {
@@ -120,8 +127,10 @@ namespace ProxyMapService.Proxy.Tunnels
                                 {
                                     if (_readCounter.IsLogReading)
                                     {
-                                        LogTunnelBodyRead(_context.Logger,
-                                            _selfState.TunnelId, StreamDirectionName.GetName(_readCounter.Direction));
+                                        LogTunnelBodyRead(
+                                            _context.Logger,
+                                            _selfState.TunnelId, 
+                                            StreamDirectionName.GetName(_readCounter.Direction));
                                     }
                                     _context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                                     if (_context.ResponseCacheFileStream != null)
@@ -149,8 +158,10 @@ namespace ProxyMapService.Proxy.Tunnels
                                 {
                                     if (_sendCounter.IsLogSending)
                                     {
-                                        LogTunnelSending(_context.Logger,
-                                            _selfState.TunnelId, StreamDirectionName.GetName(_sendCounter.Direction));
+                                        LogTunnelSending(
+                                            _context.Logger,
+                                            _selfState.TunnelId, 
+                                            StreamDirectionName.GetName(_sendCounter.Direction));
                                     }
                                     await _destinationReady.Task;
                                     if (headerAndBody != null && headerModified)
@@ -169,8 +180,10 @@ namespace ProxyMapService.Proxy.Tunnels
                         {
                             if (_readCounter.IsLogReading)
                             {
-                                LogTunnelBodyRead(_context.Logger,
-                                    _selfState.TunnelId, StreamDirectionName.GetName(_readCounter.Direction));
+                                LogTunnelBodyRead(
+                                    _context.Logger,
+                                    _selfState.TunnelId, 
+                                    StreamDirectionName.GetName(_readCounter.Direction));
                             }
                             _context.ResponseBodyTracker?.TryAppend(buffer.AsSpan(0, bytesRead));
                             if (_context.ResponseCacheFileStream != null)
@@ -189,8 +202,10 @@ namespace ProxyMapService.Proxy.Tunnels
                             }
                             if (_sendCounter.IsLogSending)
                             {
-                                LogTunnelSending(_context.Logger,
-                                    _selfState.TunnelId, StreamDirectionName.GetName(_sendCounter.Direction));
+                                LogTunnelSending(
+                                    _context.Logger,
+                                    _selfState.TunnelId, 
+                                    StreamDirectionName.GetName(_sendCounter.Direction));
                             }
                             await _destinationReady.Task;
                             await _destination.WriteAsync(buffer.AsMemory(0, bytesRead), token);
