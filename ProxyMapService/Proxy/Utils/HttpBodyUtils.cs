@@ -1,5 +1,7 @@
-﻿using ProxyMapService.Proxy.Http;
+﻿using ProxyMapService.Proxy.Handlers;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
+using System.Diagnostics;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
@@ -12,6 +14,11 @@ namespace ProxyMapService.Proxy.Utils
         {
             if (requestHeader != null)
             {
+                if (context.RequestBodyTracker != null)
+                {
+                    context.Logger.LogNotNullRequestBodyTracker(context.Host);
+                    //Debug.Assert(false, "Context RequestBodyTracker is not null");
+                }
                 if (requestHeader.TransferEncodingChunked)
                 {
                     context.RequestBodyTracker = new ChunkedBodyTracker(
@@ -47,6 +54,11 @@ namespace ProxyMapService.Proxy.Utils
         {
             if (responseHeader != null)
             {
+                if (context.ResponseBodyTracker != null)
+                {
+                    context.Logger.LogNotNullResponseBodyTracker(context.Host);
+                    //Debug.Assert(false, "Context ResponseBodyTracker is not null");
+                }
                 if (responseHeader.TransferEncodingChunked)
                 {
                     context.ResponseBodyTracker = new ChunkedBodyTracker(
@@ -75,6 +87,6 @@ namespace ProxyMapService.Proxy.Utils
                     context.ResponseBodyTracker.TryAppend(bodyBytes);
                 }
             }
-        }        
+        }
     }
 }

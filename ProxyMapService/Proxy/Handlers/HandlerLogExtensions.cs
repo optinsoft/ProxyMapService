@@ -383,6 +383,18 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "HTTP Response Header is not null ({hostname}:{port})")]
         private static partial void LogNotNullHTTPResponseHeaderInternal(this ILogger logger, string hostname, int port);
 
+        [LoggerMessage(
+            EventId = 1294,
+            Level = LogLevel.Warning,
+            Message = "Context RequestBodyTracker is not null ({hostname}:{port})")]
+        private static partial void LogNotNullRequestBodyTrackerInternal(this ILogger logger, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1295,
+            Level = LogLevel.Warning,
+            Message = "Context ResponseBodyTracker is not null ({hostname}:{port})")]
+        private static partial void LogNotNullResponseBodyTrackerInternal(this ILogger logger, string hostname, int port);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;
@@ -588,6 +600,16 @@ namespace ProxyMapService.Proxy.Handlers
         public static void LogNotNullHTTPResponseHeader(this ILogger logger, HostAddress host)
         {
             logger.LogNotNullHTTPResponseHeaderInternal(host.Hostname, host.Port);
+        }
+
+        public static void LogNotNullRequestBodyTracker(this ILogger logger, HostAddress host)
+        {
+            logger.LogNotNullRequestBodyTrackerInternal(host.Hostname, host.Port);
+        }
+
+        public static void LogNotNullResponseBodyTracker(this ILogger logger, HostAddress host)
+        {
+            logger.LogNotNullResponseBodyTrackerInternal(host.Hostname, host.Port);
         }
     }
 }
