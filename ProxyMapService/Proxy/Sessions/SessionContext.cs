@@ -246,14 +246,8 @@ namespace ProxyMapService.Proxy.Sessions
             IncomingHeaderStream = new ReadHeaderStream();
             OutgoingHeaderStream = new ReadHeaderStream();
             _host = new HostAddress("", 0);
-            RequestTunnelState = new TunnelState
-            {
-                Response = false
-            };
-            ResponseTunnelState = new TunnelState
-            {
-                Response = true
-            };
+            RequestTunnelState = new TunnelState();
+            ResponseTunnelState = new TunnelState();
             _requestCacheRules = [];
         }
 
