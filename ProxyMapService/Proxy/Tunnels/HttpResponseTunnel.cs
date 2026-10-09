@@ -121,7 +121,7 @@ namespace ProxyMapService.Proxy.Tunnels
                                     if (!_context.ResponseHeader.BadResponse)
                                     {
                                         CreateResponseBodyTracker(_context, _context.ResponseHeader, headerAndBody.BodyBytes, null);
-                                        if (CreateResponseCacheFileStream(_context))
+                                        if (CreateResponseCacheFileStream(_context, _context.RequestHeader))
                                         {
                                             if (_context.ResponseCacheFileStream != null)
                                             {

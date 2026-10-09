@@ -2,7 +2,7 @@
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class BodyTracker(ILogger logger, string? contentType, string? contentEncoding, long contentLength, 
+    public class BodyTracker(ILogger logger, bool response, string? contentType, string? contentEncoding, long contentLength, 
         IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
     {
         private enum State
@@ -11,6 +11,11 @@ namespace ProxyMapService.Proxy.Http
             Completed,
             Failed
         }
+
+#if DEBUG
+        private readonly string _logPrefix = response ? "[response] BodyTracker: " : "[request] BodyTracker: ";
+#endif
+        private readonly string _logErrorPrefix = response ? "[response] BodyTracker error: " : "[request] BodyTracker error: ";
 
         private State _state = contentLength > 0 ? State.ReadData : State.Completed;
 
@@ -25,8 +30,31 @@ namespace ProxyMapService.Proxy.Http
 
         public bool TryAppend(ReadOnlySpan<byte> data)
         {
+#if DEBUG
+            logger.LogDebug(
+                "{prefix}append data length: {length}.",
+                _logPrefix,
+                data.Length
+                );
+#endif
+
+            if (data.Length == 0)
+            {
+                logger.LogWarning(
+                    "{prefix}empty data.",
+                    _logErrorPrefix
+                    );
+                return false;
+            }
+
             if (Completed)
-                return true;
+            {
+                logger.LogWarning(
+                    "{prefix}body already completed.",
+                    _logErrorPrefix
+                    );
+                return false;
+            }
 
             if (Failed)
                 return false;
@@ -36,7 +64,8 @@ namespace ProxyMapService.Proxy.Http
                 _state = State.Failed;
 
                 logger.LogWarning(
-                    "BodyTracker error: body data length exceeded the expected content length ({contentLength} bytes).",
+                    "{prefix}body data length exceeded the expected content length ({contentLength} bytes).",
+                    _logErrorPrefix,
                     contentLength
                     );
 

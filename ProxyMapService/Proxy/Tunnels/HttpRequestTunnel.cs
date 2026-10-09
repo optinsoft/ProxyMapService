@@ -124,7 +124,7 @@ namespace ProxyMapService.Proxy.Tunnels
                                         _context.SessionManager.NotifyIfRequestUrlMatches(_context, _context.RequestHeader, _selfState.IsSecure);
                                         CreateRequestBodyTracker(_context, _context.RequestHeader, headerAndBody.BodyBytes, null);
                                     }
-                                    requestCacheEntry = await GetCacheEntry(_context);
+                                    requestCacheEntry = await GetCacheEntry(_context, _context.RequestHeader);
                                     if (_context.Host.Overwritten)
                                     {
                                         if (headerAndBody.HeaderLines.Length > 0)

@@ -2,23 +2,24 @@
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Sessions;
 using System.Diagnostics;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Utils
 {
     public static class CacheUtils
     {
-        public static async Task<CacheEntry?> GetCacheEntry(SessionContext context)
+        public static async Task<CacheEntry?> GetCacheEntry(SessionContext context, HttpRequestHeader? requestHeader)
         {
             if (context.RequestCacheRules.Count == 0)
                 return null;
 
-            if (context.RequestHeader?.HTTPVerb != "GET")
+            if (requestHeader?.HTTPVerb != "GET")
                 return null;
 
             var hostname = context.Host.Hostname.ToLower();
             var port = context.Host.Port;
 
-            string? requestUrl = context.RequestHeader?.HTTPTargetPath;
+            string? requestUrl = requestHeader?.HTTPTargetPath;
             if (requestUrl == null)
                 return null;
 
@@ -46,34 +47,36 @@ namespace ProxyMapService.Proxy.Utils
             return fileStream;
         }
 
-        public static bool CreateResponseCacheFileStream(SessionContext context)
+        public static bool CreateResponseCacheFileStream(SessionContext context, HttpRequestHeader? requestHeader)
         {
             if (context.RequestCacheRules.Count == 0)
                 return false;
 
-            if (context.RequestHeader?.HTTPVerb != "GET")
+            if (requestHeader?.HTTPVerb != "GET")
                 return false;
 
             var hostname = context.Host.Hostname.ToLower();
             var port = context.Host.Port;
 
-            string? requestUrl = context.RequestHeader.HTTPTargetPath;
+            string? requestUrl = requestHeader.HTTPTargetPath;
             if (requestUrl == null)
                 return false;
 
-            if (context.ResponseHeader?.StatusCode != "200")
+            var responseHeader = context.ResponseHeader;
+
+            if (responseHeader?.StatusCode != "200")
                 return false;
 
-            if (context.ResponseHeader.ContentLength == null || context.ResponseHeader.ContentLength < 0)
+            if (responseHeader.ContentLength == null || responseHeader.ContentLength < 0)
                 return false;
 
-            var cacheRule = CacheRule.FindCacheContentTypeRule(context.ResponseHeader.ContentType, context.RequestCacheRules);
+            var cacheRule = CacheRule.FindCacheContentTypeRule(responseHeader.ContentType, context.RequestCacheRules);
             if (cacheRule == null)
                 return false;
 
             Debug.Assert(context.ResponseCacheEntry == null, "!!! Response cache entry is not null !!!");
             context.ResponseCacheEntry = context.CacheManager.CreateCacheEntry(
-                $"{hostname}:{port}", requestUrl, context.ResponseHeader, cacheRule);
+                $"{hostname}:{port}", requestUrl, responseHeader, cacheRule);
             if (context.ResponseCacheEntry == null)
                 return false;
 

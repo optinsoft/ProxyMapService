@@ -9,7 +9,6 @@ using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.RoutingLoopDetector;
-using System.Diagnostics;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;

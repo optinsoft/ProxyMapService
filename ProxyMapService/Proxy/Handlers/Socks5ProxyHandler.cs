@@ -127,7 +127,7 @@ namespace ProxyMapService.Proxy.Handlers
                                     {
                                         CreateRequestBodyTracker(context, context.RequestHeader, null, null);
                                     }
-                                    var cacheEntry = await GetCacheEntry(context);
+                                    var cacheEntry = await GetCacheEntry(context, context.RequestHeader);
                                     if (cacheEntry != null)
                                     {
                                         using FileStream? cacheFileStream = GetCacheEntryFileStream(cacheEntry);

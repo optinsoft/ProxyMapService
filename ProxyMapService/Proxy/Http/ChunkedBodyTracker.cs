@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class ChunkedBodyTracker(ILogger logger, string? contentType, string? contentEncoding, 
+    public class ChunkedBodyTracker(ILogger logger, bool response, string? contentType, string? contentEncoding, 
         IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
     {
         private enum State
@@ -20,6 +20,11 @@ namespace ProxyMapService.Proxy.Http
         private const int MaxChunkHeaderLength = 256;
         private const int MaxTrailerLength = 8192;
         private const long MaxChunkSize = 2L * 1024 * 1024 * 1024;
+
+#if DEBUG
+        private readonly string _logPrefix = response ? "[response] ChunkedBodyTracker: " : "[request] ChunkedBodyTracker: ";
+#endif
+        private readonly string _logErrorPrefix = response ? "[response] ChunkedBodyTracker error: " : "[request] ChunkedBodyTracker error: ";
 
         private readonly byte[] _lineBuffer = new byte[Math.Max(
             MaxChunkHeaderLength,
@@ -43,8 +48,31 @@ namespace ProxyMapService.Proxy.Http
 
         public bool TryAppend(ReadOnlySpan<byte> data)
         {
+#if DEBUG
+            logger.LogDebug(
+                "{prefix}append data length: {length}.",
+                _logPrefix,
+                data.Length
+                );
+#endif
+
+            if (data.Length == 0)
+            {
+                logger.LogWarning(
+                    "{prefix}empty data.",
+                    _logErrorPrefix
+                    );
+                return false;
+            }
+
             if (Completed)
-                return true;
+            {
+                logger.LogWarning(
+                    "{prefix}body already completed.",
+                    _logErrorPrefix
+                    );
+                return false;
+            }
 
             if (Failed)
                 return false;
@@ -86,7 +114,8 @@ namespace ProxyMapService.Proxy.Http
 
                 logger.LogWarning(
                     ex,
-                    "ChunkedBodyTracker parse error: {Message}",
+                    "{prefix}{Message}",
+                    _logErrorPrefix,
                     ex.Message);
 
                 return false;
