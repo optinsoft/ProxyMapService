@@ -200,7 +200,7 @@ namespace ProxyMapService.Proxy.Handlers
                 //throw;
             }
 
-            var requestTunnel = new HttpRequestTunnel(
+            using var requestTunnel = new HttpRequestTunnel(
                 context, 
                 incomingStream, 
                 outgoingStream, 
@@ -266,7 +266,7 @@ namespace ProxyMapService.Proxy.Handlers
                 //throw;
             }
             
-            var responseTunnel = new  HttpResponseTunnel(
+            using var responseTunnel = new  HttpResponseTunnel(
                 context, 
                 outgoingStream, 
                 incomingStream, 

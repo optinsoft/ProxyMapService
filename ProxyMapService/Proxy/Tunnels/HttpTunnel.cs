@@ -7,7 +7,7 @@ using System.Text;
 
 namespace ProxyMapService.Proxy.Tunnels
 {
-    public partial class HttpTunnel
+    public abstract partial class HttpTunnel : IDisposable
     {
         protected readonly SessionContext _context;
         protected readonly CountingStream _source;
@@ -39,6 +39,79 @@ namespace ProxyMapService.Proxy.Tunnels
             _selfState = selfState;
             _otherTunnelState = otherTunnelState;
         }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+        }
+
+        public async Task RunAsync()
+        {
+            var buffer = new byte[BufferSize];
+
+            var token = _context.TunnelToken;
+
+            try
+            {
+                int bytesRead;
+                do
+                {
+                    if (_readCounter.IsLogReading)
+                    {
+                        LogTunnelReading(
+                            _context.Logger,
+                            _selfState.TunnelId,
+                            StreamDirectionName.GetName(_readCounter.Direction));
+                    }
+                    try
+                    {
+                        bytesRead = await _source.ReadAsync(buffer.AsMemory(0, BufferSize), token);
+                    }
+                    catch (IOException ex)
+                    {
+                        if (_readCounter.IsLogReading)
+                        {
+                            LogTunnelDebugError(_context.Logger, ex.GetType().Name, ex.Message);
+                        }
+                        _source.OnDisconnected();
+                        break;
+                    }
+                    if (bytesRead > 0)
+                    {
+                        await ProcessAsync(buffer.AsMemory(0, bytesRead), token);
+                    }
+                } while (bytesRead > 0 && !token.IsCancellationRequested);
+            }
+            catch (OperationCanceledException) when (_context.TunnelToken.IsCancellationRequested)
+            {
+                // Normal tunnel shutdown.
+            }
+            catch (ObjectDisposedException ex)
+            {
+                if (_readCounter.IsLogReading)
+                {
+                    LogTunnelDebugError(_context.Logger, ex.GetType().Name, ex.Message);
+                }
+            }
+            catch (IOException ex)
+            {
+                if (_readCounter.IsLogReading)
+                {
+                    LogTunnelDebugError(_context.Logger, ex.GetType().Name, ex.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogTunnelError(_context.Logger, ex.GetType().Name, ex.Message, ex.StackTrace);
+            }
+        }
+
+        protected abstract Task ProcessAsync(ReadOnlyMemory<byte> data, CancellationToken token);
 
         #region High-Performance Logging
 
