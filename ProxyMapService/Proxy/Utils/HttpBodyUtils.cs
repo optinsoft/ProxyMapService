@@ -9,88 +9,78 @@ namespace ProxyMapService.Proxy.Utils
 {
     public static class HttpBodyUtils
     {
-        public static void CreateRequestBodyTracker(SessionContext context, HttpRequestHeader? requestHeader, 
-            byte[]? bodyBytes, MemoryStream? accumulateBodyStream)
+        public static IBodyTracker CreateRequestBodyTracker(SessionContext context, HttpRequestHeader requestHeader, 
+            MemoryStream? accumulateBodyStream)
         {
-            if (requestHeader != null)
+            if (context.RequestBodyTracker != null)
             {
-                if (context.RequestBodyTracker != null)
-                {
-                    context.Logger.LogNotNullRequestBodyTracker(context.Host);
-                    //Debug.Assert(false, "Context RequestBodyTracker is not null");
-                }
-                if (requestHeader.TransferEncodingChunked)
-                {
-                    context.RequestBodyTracker = new ChunkedBodyTracker(
-                        context.Logger,
-                        false,
-                        requestHeader.ContentType,
-                        requestHeader.ContentEncoding,
-                        context.RequestBodyLogger,
-                        context,
-                        context.RequestBodyLogger != null || accumulateBodyStream != null,
-                        accumulateBodyStream);
-                }
-                else
-                {
-                    context.RequestBodyTracker = new BodyTracker(
-                        context.Logger,
-                        false,
-                        requestHeader.ContentType,
-                        requestHeader.ContentEncoding,
-                        requestHeader.ContentLength ?? 0,
-                        context.RequestBodyLogger,
-                        context,
-                        context.RequestBodyLogger != null || accumulateBodyStream != null,
-                        accumulateBodyStream);
-                }
-                if (bodyBytes != null)
-                {
-                    context.RequestBodyTracker.TryAppend(bodyBytes);
-                }
+                context.Logger.LogNotNullRequestBodyTracker(context.Host);
+                //Debug.Assert(false, "Context RequestBodyTracker is not null");
             }
+            IBodyTracker tracker;
+            if (requestHeader.TransferEncodingChunked)
+            {
+                tracker = new ChunkedBodyTracker(
+                    context.Logger,
+                    false,
+                    requestHeader.ContentType,
+                    requestHeader.ContentEncoding,
+                    context.RequestBodyLogger,
+                    context,
+                    context.RequestBodyLogger != null || accumulateBodyStream != null,
+                    accumulateBodyStream);
+            }
+            else
+            {
+                tracker = new BodyTracker(
+                    context.Logger,
+                    false,
+                    requestHeader.ContentType,
+                    requestHeader.ContentEncoding,
+                    requestHeader.ContentLength ?? 0,
+                    context.RequestBodyLogger,
+                    context,
+                    context.RequestBodyLogger != null || accumulateBodyStream != null,
+                    accumulateBodyStream);
+            }
+            return tracker;
         }
 
-        public static void CreateResponseBodyTracker(SessionContext context, HttpResponseHeader? responseHeader, 
-            byte[]? bodyBytes, MemoryStream? accumulateBodyStream)
+        public static IBodyTracker CreateResponseBodyTracker(SessionContext context, HttpResponseHeader responseHeader, 
+            MemoryStream? accumulateBodyStream)
         {
-            if (responseHeader != null)
+            if (context.ResponseBodyTracker != null)
             {
-                if (context.ResponseBodyTracker != null)
-                {
-                    context.Logger.LogNotNullResponseBodyTracker(context.Host);
-                    //Debug.Assert(false, "Context ResponseBodyTracker is not null");
-                }
-                if (responseHeader.TransferEncodingChunked)
-                {
-                    context.ResponseBodyTracker = new ChunkedBodyTracker(
-                        context.Logger,
-                        true,
-                        responseHeader.ContentType,
-                        responseHeader.ContentEncoding,
-                        context.ResponseBodyLogger,
-                        context,
-                        context.ResponseBodyLogger != null || accumulateBodyStream != null,
-                        accumulateBodyStream);
-                }
-                else
-                {
-                    context.ResponseBodyTracker = new BodyTracker(
-                        context.Logger,
-                        true,
-                        responseHeader.ContentType,
-                        responseHeader.ContentEncoding,
-                        responseHeader.ContentLength ?? 0,
-                        context.ResponseBodyLogger,
-                        context,
-                        context.ResponseBodyLogger != null || accumulateBodyStream != null,
-                        accumulateBodyStream);
-                }
-                if (bodyBytes != null)
-                {
-                    context.ResponseBodyTracker.TryAppend(bodyBytes);
-                }
+                context.Logger.LogNotNullResponseBodyTracker(context.Host);
+                //Debug.Assert(false, "Context ResponseBodyTracker is not null");
             }
+            IBodyTracker tracker;
+            if (responseHeader.TransferEncodingChunked)
+            {
+                tracker = new ChunkedBodyTracker(
+                    context.Logger,
+                    true,
+                    responseHeader.ContentType,
+                    responseHeader.ContentEncoding,
+                    context.ResponseBodyLogger,
+                    context,
+                    context.ResponseBodyLogger != null || accumulateBodyStream != null,
+                    accumulateBodyStream);
+            }
+            else
+            {
+                tracker = new BodyTracker(
+                    context.Logger,
+                    true,
+                    responseHeader.ContentType,
+                    responseHeader.ContentEncoding,
+                    responseHeader.ContentLength ?? 0,
+                    context.ResponseBodyLogger,
+                    context,
+                    context.ResponseBodyLogger != null || accumulateBodyStream != null,
+                    accumulateBodyStream);
+            }
+            return tracker;
         }
     }
 }

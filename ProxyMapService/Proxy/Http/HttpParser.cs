@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using ZstdSharp.Unsafe;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -10,7 +11,7 @@ namespace ProxyMapService.Proxy.Http
         private bool _readingHeaders = false;
 
         private int _headerLength = 0;
-        private HttpHeaderLinesAndBody? _headerAndBody = null;
+        private HttpHeaderLinesAndTail? _headerAndTail = null;
 
         private readonly bool _response;
         private readonly bool _initialReadHeaders;
@@ -18,7 +19,7 @@ namespace ProxyMapService.Proxy.Http
         public bool ReadingHeaders { get => _readingHeaders; }
 
         public int HeaderLength { get => _headerLength; }
-        public HttpHeaderLinesAndBody? HeaderAndBody { get => _headerAndBody; }
+        public HttpHeaderLinesAndTail? HeaderAndTail { get => _headerAndTail; }
 
         public HttpParser(bool response, bool readHeaders) {
             _response = response;
@@ -33,7 +34,7 @@ namespace ProxyMapService.Proxy.Http
             _searchHeadersStart = 0;
             _readingHeaders = _initialReadHeaders;
             _headerLength = 0;
-            _headerAndBody = null;
+            _headerAndTail = null;
         }
 
         public void AppendData(ReadOnlySpan<byte> data, out bool endOfHeaders)
@@ -45,8 +46,8 @@ namespace ProxyMapService.Proxy.Http
                 if ((headersEnd = FindHeadersEnd(_memoryStream, _response, ref _searchHeadersStart)) >= 0 || _searchHeadersStart < 0)
                 {
                     _readingHeaders = false;
-                    _headerLength = headersEnd + 4;
-                    _headerAndBody = GetHeaderLinesAndBody(_memoryStream, _response, headersEnd);
+                    _headerLength = headersEnd >= 0 ? headersEnd + 4 : 0;
+                    _headerAndTail = GetHeaderLinesAndTail(_memoryStream, _response, headersEnd);
                     endOfHeaders = true;
                     return;
                 }
@@ -88,8 +89,16 @@ namespace ProxyMapService.Proxy.Http
         private static readonly string[] HttpMethods =
         {
             "GET", "POST", "PUT", "DELETE",
-            "HEAD", "OPTIONS", "PATCH", "TRACE", "CONNECT"
+            "HEAD", "OPTIONS", "PATCH", "TRACE", 
+            "CONNECT"
         };
+
+        public enum HttpMethodEnum
+        {
+            Get = 0, Post = 1, Put = 2, Delete = 3, 
+            Head = 4, Options = 5, Patch = 6, Trace = 7,
+            Connect = 8
+        }
 
         private static readonly byte[][] HttpMethodPrefixBytes =
             HttpMethods.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
@@ -102,6 +111,12 @@ namespace ProxyMapService.Proxy.Http
             "HTTP/1.0",
             "HTTP/1.1"
         };
+
+        public enum HttpVersionEnum
+        {
+            Http10 = 0,
+            Http11 = 1
+        }
 
         private static readonly byte[][] HttpVersionPrefixBytes =
             HttpVersions.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
@@ -132,8 +147,34 @@ namespace ProxyMapService.Proxy.Http
             {
                 "HTTP/1.0" => true,
                 "HTTP/1.1" => true,
-                "HTTP/2" => true,
                 _ => false
+            };
+        }
+
+        public static HttpMethodEnum? ParseHttpMethod(ReadOnlySpan<char> methodSpan)
+        {
+            return methodSpan.Trim() switch
+            {
+                "GET" => HttpMethodEnum.Get,
+                "POST" => HttpMethodEnum.Post,
+                "PUT" => HttpMethodEnum.Put,
+                "DELETE" => HttpMethodEnum.Delete,
+                "HEAD" => HttpMethodEnum.Head,
+                "OPTIONS" => HttpMethodEnum.Options,
+                "PATCH" => HttpMethodEnum.Patch,
+                "TRACE" => HttpMethodEnum.Trace,
+                "CONNECT" => HttpMethodEnum.Connect,
+                _ => null
+            };
+        }
+
+        public static HttpVersionEnum? ParseHttpVersion(ReadOnlySpan<char> versionSpan)
+        {
+            return versionSpan.Trim() switch
+            {
+                "HTTP/1.0" => HttpVersionEnum.Http10,
+                "HTTP/1.1" => HttpVersionEnum.Http11,
+                _ => null
             };
         }
 
@@ -290,7 +331,7 @@ namespace ProxyMapService.Proxy.Http
             return GetHeaderBytes(ms, true, headersEnd);
         }
 
-        public static HttpHeaderLinesAndBody? GetHeaderLinesAndBody(MemoryStream ms, bool response, int headersEnd)
+        public static HttpHeaderLinesAndTail? GetHeaderLinesAndTail(MemoryStream ms, bool response, int headersEnd)
         {
             var span = ms.GetBuffer().AsSpan(0, (int)ms.Length);
 
@@ -318,27 +359,29 @@ namespace ProxyMapService.Proxy.Http
             int headerSectionLength = headersEnd + 4; // include \r\n\r\n
 
             var headerSpan = span.Slice(0, headerSectionLength);
-            var body = span.Slice(headerSectionLength);
+            var tail = span.Slice(headerSectionLength);
 
             string header = Encoding.ASCII.GetString(headerSpan);
 
             var lines = header.Split(["\r\n"], StringSplitOptions.None);
 
-            return new HttpHeaderLinesAndBody
+            byte[]? tailBytes = tail.Length > 0 ? tail.ToArray() : null;
+
+            return new HttpHeaderLinesAndTail
             {
                 HeaderLines = lines,
-                BodyBytes = body.ToArray(),
+                TailBytes = tailBytes,
             };
         }
 
-        public static HttpHeaderLinesAndBody? GetRequestHeaderLinesAndBody(MemoryStream ms, int headersEnd)
+        public static HttpHeaderLinesAndTail? GetRequestHeaderLinesAndTail(MemoryStream ms, int headersEnd)
         {
-            return GetHeaderLinesAndBody(ms, false, headersEnd);
+            return GetHeaderLinesAndTail(ms, false, headersEnd);
         }
 
-        public static HttpHeaderLinesAndBody? GetResponseHeaderLinesAndBody(MemoryStream ms, int headersEnd)
+        public static HttpHeaderLinesAndTail? GetResponseHeaderLinesAndTail(MemoryStream ms, int headersEnd)
         {
-            return GetHeaderLinesAndBody(ms, true, headersEnd);
+            return GetHeaderLinesAndTail(ms, true, headersEnd);
         }
     }
 }

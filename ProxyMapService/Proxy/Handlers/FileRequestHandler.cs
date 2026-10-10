@@ -100,7 +100,7 @@ namespace ProxyMapService.Proxy.Handlers
                         await HttpProto.HttpReplyBadRequest(context, incomingStream);
                         return HandleStep.Terminate;
                     }
-                    CreateRequestBodyTracker(context, http, null, bodyStream);
+                    context.RequestBodyTracker = CreateRequestBodyTracker(context, http, bodyStream);
                 }
 
                 if (context.RequestBodyTracker != null)
@@ -142,15 +142,19 @@ namespace ProxyMapService.Proxy.Handlers
                     ms.Write(buffer, 0, bytesRead);
                     if ((headersEnd = HttpParser.FindRequestHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
                     {
-                        var headerAndBody = HttpParser.GetRequestHeaderLinesAndBody(ms, headersEnd);
-                        if (headerAndBody != null)
+                        var headerAndTail = HttpParser.GetRequestHeaderLinesAndTail(ms, headersEnd);
+                        if (headerAndTail != null)
                         {
-                            context.RequestHeader = new HttpRequestHeader(headerAndBody.HeaderLines);
+                            context.RequestHeader = new HttpRequestHeader(headerAndTail.HeaderLines);
                             context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
                             if (!context.RequestHeader.BadRequest)
                             {
                                 context.SessionManager.NotifyIfRequestUrlMatches(context, context.RequestHeader, isSecure);
-                                CreateRequestBodyTracker(context, context.RequestHeader, headerAndBody.BodyBytes, bodyStream);
+                                context.RequestBodyTracker = CreateRequestBodyTracker(context, context.RequestHeader, bodyStream);
+                                if (headerAndTail.TailBytes != null)
+                                {
+                                    context.RequestBodyTracker.TryAppend(headerAndTail.TailBytes);
+                                }
                             }
                         }
                         return;

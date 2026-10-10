@@ -1,8 +1,8 @@
 ﻿namespace ProxyMapService.Proxy.Http
 {
-    public class HttpHeaderLinesAndBody
+    public class HttpHeaderLinesAndTail
     {
         public required string[] HeaderLines;
-        public byte[]? BodyBytes = null;
+        public byte[]? TailBytes = null;
     }
 }
