@@ -1,22 +1,9 @@
-﻿using Microsoft.AspNetCore.Razor.TagHelpers;
-using Newtonsoft.Json.Linq;
-using ProxyMapService.Proxy.Network;
-using System;
-using System.Text;
+﻿using ProxyMapService.Proxy.Network;
 
 namespace ProxyMapService.Proxy.Http
 {
     public class HttpHeaderRewriter
     {
-        private static readonly string[] HttpMethods =
-        {
-            "GET", "POST", "PUT", "DELETE",
-            "HEAD", "OPTIONS", "PATCH", "TRACE", "CONNECT"
-        };
-
-        private static readonly string[] HttpMethodPrefixes =
-            HttpMethods.Select(m => m + " ").ToArray();
-
         private static readonly string[] HttpProtos =
         {
             "http", "https"
@@ -24,20 +11,6 @@ namespace ProxyMapService.Proxy.Http
 
         private static readonly string[] HttpProtoPrefixes =
             HttpProtos.Select(m => m + "://").ToArray();
-
-        private static int StartsWithHttpMethod(ReadOnlySpan<char> line)
-        {
-            foreach (var method in HttpMethodPrefixes)
-            {
-                var methodSpan = method.AsSpan();
-                int compareLength = methodSpan.Length;
-                if (compareLength <= line.Length && line.Slice(0, compareLength).SequenceEqual(methodSpan))
-                {
-                    return compareLength;
-                }
-            }
-            return 0;
-        }
 
         private static int StartsWithHttpProto(ReadOnlySpan<char> target)
         {
@@ -55,7 +28,7 @@ namespace ProxyMapService.Proxy.Http
 
         public static string? OverrideHttpCommandHost(string firstLine, HostAddress host)
         {
-            var methodLength = StartsWithHttpMethod(firstLine.AsSpan());
+            var methodLength = HttpParser.StartsWithHttpMethod(firstLine.AsSpan(), false);
             if (methodLength > 0)
             {
                 var method = firstLine.AsSpan(0, methodLength).TrimEnd();

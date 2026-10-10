@@ -102,7 +102,7 @@ namespace ProxyMapService.Proxy.Tunnels
                     }
                     var header = new HttpRequestHeader(headerAndTail.HeaderLines);
                     _context.RequestHeader = header;
-                    _context.RequestHeadersLogger?.OnHttpHeader(_context, header);
+                    _context.RequestHeadersLogger?.OnHttpRequestHeader(_context, header);
                     if (!header.BadRequest)
                     {
                         _context.SessionManager.NotifyIfRequestUrlMatches(_context, header, _selfState.IsSecure);

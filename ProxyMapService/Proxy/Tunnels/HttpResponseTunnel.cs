@@ -101,7 +101,7 @@ namespace ProxyMapService.Proxy.Tunnels
                     }
                     var header = new HttpResponseHeader(headerAndTail.HeaderLines, parser.HeaderLength);
                     _context.ResponseHeader = header;
-                    _context.ResponseHeadersLogger?.OnHttpHeader(_context, header);
+                    _context.ResponseHeadersLogger?.OnHttpResponseHeader(_context, header, _context.RequestHeader);
                     if (!header.BadResponse)
                     {
                         _context.ResponseBodyTracker = CreateResponseBodyTracker(_context, header, null);

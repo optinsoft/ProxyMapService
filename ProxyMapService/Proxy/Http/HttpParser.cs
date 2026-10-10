@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using ZstdSharp.Unsafe;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -126,7 +125,7 @@ namespace ProxyMapService.Proxy.Http
 
         public static bool IsValidHttpMethod(ReadOnlySpan<char> methodSpan)
         {
-            return methodSpan.Trim() switch
+            return methodSpan switch
             {
                 "GET" => true,
                 "POST" => true,
@@ -143,7 +142,7 @@ namespace ProxyMapService.Proxy.Http
 
         public static bool IsValidHttpVersion(ReadOnlySpan<char> versionSpan)
         {
-            return versionSpan.Trim() switch
+            return versionSpan switch
             {
                 "HTTP/1.0" => true,
                 "HTTP/1.1" => true,
@@ -153,7 +152,7 @@ namespace ProxyMapService.Proxy.Http
 
         public static HttpMethodEnum? ParseHttpMethod(ReadOnlySpan<char> methodSpan)
         {
-            return methodSpan.Trim() switch
+            return methodSpan switch
             {
                 "GET" => HttpMethodEnum.Get,
                 "POST" => HttpMethodEnum.Post,
@@ -170,7 +169,7 @@ namespace ProxyMapService.Proxy.Http
 
         public static HttpVersionEnum? ParseHttpVersion(ReadOnlySpan<char> versionSpan)
         {
-            return versionSpan.Trim() switch
+            return versionSpan switch
             {
                 "HTTP/1.0" => HttpVersionEnum.Http10,
                 "HTTP/1.1" => HttpVersionEnum.Http11,

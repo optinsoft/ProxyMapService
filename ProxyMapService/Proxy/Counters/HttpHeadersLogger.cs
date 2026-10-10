@@ -16,14 +16,31 @@ namespace ProxyMapService.Proxy.Counters
             });
         }
 
-        public void OnHttpHeader(object context, HttpRequestHeader requestHeader)
+        public void OnHttpRequestHeader(object context, HttpRequestHeader requestHeader)
         {
-           OnHttpHeader(context, requestHeader.ContentLength.HasValue && requestHeader.ContentLength.Value == 0, requestHeader.Headers);
+
+            bool completed = requestHeader.HTTPVerb switch
+            {
+                "GET" => true,
+                "DELETE" => true,
+                "HEAD" => true,
+                "OPTIONS" => true,
+                "TRACE" => true,
+                "CONNECT" => true,
+                _ => !requestHeader.HasBody,
+            };
+            OnHttpHeader(context, completed, requestHeader.Headers);
         }
 
-        public void OnHttpHeader(object context, HttpResponseHeader responseHeader)
+        public void OnHttpResponseHeader(object context, HttpResponseHeader responseHeader, HttpRequestHeader? requestHeader)
         {
-            OnHttpHeader(context, responseHeader.ContentLength.HasValue && responseHeader.ContentLength.Value == 0, responseHeader.Headers);
+            bool completed = requestHeader?.HTTPVerb == "HEAD" 
+                || (responseHeader.StatusCode?.Length == 3 && (
+                    responseHeader.StatusCode.StartsWith('1')
+                    || responseHeader.StatusCode == "204"
+                    || responseHeader.StatusCode == "304"))
+                || !responseHeader.HasBody;
+            OnHttpHeader(context, completed, responseHeader.Headers);
         }
 
         public event EventHandler<HttpHeadersEventArgs>? HttpHeadersHandler;

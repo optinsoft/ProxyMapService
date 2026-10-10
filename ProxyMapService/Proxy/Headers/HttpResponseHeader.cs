@@ -33,6 +33,14 @@ namespace ProxyMapService.Proxy.Headers
         public string? LastModified { get; private set; }
         public string[]? Headers { get; private set; }
 
+        public bool HasBody
+        {
+            get
+            {
+                return (TransferEncoding != null) || (ContentLength.HasValue && ContentLength.Value > 0);
+            }
+        }
+
         private static void Parse(HttpResponseHeader self, byte[] array)
         {
             var strings = Encoding.ASCII.GetString(array).Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);

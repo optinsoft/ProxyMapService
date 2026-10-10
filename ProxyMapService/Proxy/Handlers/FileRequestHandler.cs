@@ -146,7 +146,7 @@ namespace ProxyMapService.Proxy.Handlers
                         if (headerAndTail != null)
                         {
                             context.RequestHeader = new HttpRequestHeader(headerAndTail.HeaderLines);
-                            context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
+                            context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.RequestHeader);
                             if (!context.RequestHeader.BadRequest)
                             {
                                 context.SessionManager.NotifyIfRequestUrlMatches(context, context.RequestHeader, isSecure);

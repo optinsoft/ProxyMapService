@@ -32,7 +32,7 @@ namespace ProxyMapService.WebLogging
                         var targetEnd = target.IndexOf(' ');
                         if (targetEnd != -1)
                         {
-                            var httpProto = target.Slice(targetEnd);
+                            var httpProto = target.Slice(targetEnd).Trim();
                             if (HttpParser.IsValidHttpVersion(httpProto))
                             {
                                 target = target.Slice(0, targetEnd);
@@ -99,8 +99,8 @@ namespace ProxyMapService.WebLogging
                         var codeEnd = status.IndexOf(' ');
                         if (codeEnd != -1)
                         {
-                            var statusCode = status.Slice(0, codeEnd);
-                            var statusText = status.Slice(codeEnd + 1);
+                            var statusCode = status.Slice(0, codeEnd).TrimEnd();
+                            var statusText = status.Slice(codeEnd + 1).TrimStart();
                             httpStatusCode = statusCode.ToString();
                             httpStatuseText = statusText.ToString();
                         }

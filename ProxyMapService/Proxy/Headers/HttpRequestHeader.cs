@@ -33,8 +33,16 @@ namespace ProxyMapService.Proxy.Headers
         public string? XMicrosoftAjax {  get; private set; }
         public string? SecWebSocketKey { get; private set; }
         public string[]? Headers { get; private set; }
-
+        
         public bool? IsSSL { get; set; }
+
+        public bool HasBody
+        {
+            get
+            {
+                return (TransferEncoding != null) || (ContentLength.HasValue && ContentLength.Value > 0);
+            }
+        }
 
         public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {

@@ -74,7 +74,7 @@ namespace ProxyMapService.Proxy.Handlers
                     if (context.Http == null)
                     {
                         // CONNECT request
-                        context.RequestHeadersLogger?.OnHttpHeader(context, context.RequestHeader);
+                        context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.RequestHeader);
                     }
 
                     if (!context.RequestHeader.BadRequest)
@@ -117,7 +117,7 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         context.RequestTunnelState.ResetReadHeaders = true;
                         context.ResponseHeader = new HttpResponseHeader(responseHeaderBytes);
-                        context.ResponseHeadersLogger?.OnHttpHeader(context, context.ResponseHeader);
+                        context.ResponseHeadersLogger?.OnHttpResponseHeader(context, context.ResponseHeader, context.RequestHeader);
                         if (!context.ResponseHeader.BadResponse)
                         {
                             context.ResponseBodyTracker = CreateResponseBodyTracker(context, context.ResponseHeader, null);

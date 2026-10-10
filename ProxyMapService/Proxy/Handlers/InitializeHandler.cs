@@ -40,7 +40,7 @@ namespace ProxyMapService.Proxy.Handlers
                                     context.Host = hostAddress;
                                 }
                             }
-                            context.RequestHeadersLogger?.OnHttpHeader(context, context.Http);
+                            context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.Http);
                             if (context.Http.BadRequest)
                             {
                                 context.Logger.LogHttpBadRequest();
