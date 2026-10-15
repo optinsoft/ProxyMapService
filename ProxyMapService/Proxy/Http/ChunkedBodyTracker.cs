@@ -1,11 +1,12 @@
 ﻿using ProxyMapService.Proxy.Counters;
 using System.Globalization;
 using System.Text;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class ChunkedBodyTracker(ILogger logger, bool response, string? contentType, string? contentEncoding, 
-        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
+    public class ChunkedBodyTracker(ILogger logger, bool response, HttpRequestHeader? requestHeader, string? contentType, string? contentEncoding,
+        bool hasBody, IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
     {
         private enum State
         {
@@ -34,7 +35,7 @@ namespace ProxyMapService.Proxy.Http
 
         private int _crlfBytesRead;
 
-        private State _state = State.ReadChunkSize;
+        private State _state = hasBody ? State.ReadChunkSize : State.Completed;
         private long _chunkBytesRemaining;
 
         private long _bodyLength;
@@ -46,7 +47,7 @@ namespace ProxyMapService.Proxy.Http
 
         public long BodyLength => _bodyLength;
 
-        public bool TryAppend(ReadOnlySpan<byte> data)
+        public bool TryAppend(ReadOnlySpan<byte> data, out int consumed)
         {
 #if DEBUG
             logger.LogDebug(
@@ -62,6 +63,7 @@ namespace ProxyMapService.Proxy.Http
                     "{prefix}empty data.",
                     _logErrorPrefix
                     );
+                consumed = 0;
                 return false;
             }
 
@@ -71,41 +73,33 @@ namespace ProxyMapService.Proxy.Http
                     "{prefix}body already completed.",
                     _logErrorPrefix
                     );
+                consumed = 0;
                 return false;
             }
 
             if (Failed)
+            {
+                consumed = 0;
                 return false;
+            }
+
+            int pos = 0;
 
             try
             {
-                int pos = 0;
-
                 while (pos < data.Length && !Completed)
                 {
-                    switch (_state)
+                    pos = _state switch
                     {
-                        case State.ReadChunkSize:
-                            pos = ReadChunkSize(data, pos);
-                            break;
-
-                        case State.ReadChunkData:
-                            pos = ReadChunkData(data, pos);
-                            break;
-
-                        case State.ReadChunkDataCRLF:
-                            pos = ReadChunkDataCRLF(data, pos);
-                            break;
-
-                        case State.ReadTrailers:
-                            pos = ReadTrailers(data, pos);
-                            break;
-
-                        default:
-                            return false;
-                    }
+                        State.ReadChunkSize => ReadChunkSize(data, pos),
+                        State.ReadChunkData => ReadChunkData(data, pos),
+                        State.ReadChunkDataCRLF => ReadChunkDataCRLF(data, pos),
+                        State.ReadTrailers => ReadTrailers(data, pos),
+                        _ => throw new InvalidOperationException()
+                    };
                 }
 
+                consumed = pos;
                 return true;
             }
             catch (Exception ex)
@@ -118,6 +112,7 @@ namespace ProxyMapService.Proxy.Http
                     _logErrorPrefix,
                     ex.Message);
 
+                consumed = pos;
                 return false;
             }
         }
@@ -277,7 +272,7 @@ namespace ProxyMapService.Proxy.Http
                     if (_lineLength == 2)
                     {
                         _state = State.Completed;
-                        bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, accumulateStream ?? _bodyStream);
+                        bodyLogger?.OnCompleted(context, requestHeader, contentType, contentEncoding, _bodyLength, accumulateStream ?? _bodyStream);
                         return pos;
                     }
 

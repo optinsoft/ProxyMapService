@@ -15,16 +15,25 @@ namespace ProxyMapService.Tests
         [Fact]
         public async Task Http11_Proxy_Https_TwoPipelinedGets_InSingleRead_ShouldWork()
         {
-            await using var server = new HttpsTestServer(5112, useHttp2: false);
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile("appsettings.Development.json", optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
+
+            await using var server = new HttpsTestServer(5112, hostname: testHost, useHttp2: false);
             await server.StartAsync();
 
-            var authority = $"localhost:{server.Port}";
+            var authority = $"{testHost}:{server.Port}";
 
             var raw =
                 $"GET /one HTTP/1.1\r\nHost: {authority}\r\n\r\n" +
                 $"GET /two HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\n\r\n";
 
-            var response = await SendPipelinedAsync(authority, Encoding.ASCII.GetBytes(raw));
+            var response = await SendPipelinedAsync(configuration, testHost, authority, Encoding.ASCII.GetBytes(raw));
 
             Assert.Equal(2, CountOccurrences(response, "HTTP/1.1 200"));
             Assert.Contains("Response one", response);
@@ -37,17 +46,26 @@ namespace ProxyMapService.Tests
         [Fact]
         public async Task Http11_Proxy_Https_PostWithBodyThenGet_InSingleRead_ShouldWork()
         {
-            await using var server = new HttpsTestServer(5113, useHttp2: false);
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(AppContext.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: false)
+                .AddJsonFile("appsettings.Development.json", optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
+
+            await using var server = new HttpsTestServer(5113, hostname: testHost, useHttp2: false);
             await server.StartAsync();
 
-            var authority = $"localhost:{server.Port}";
+            var authority = $"{testHost}:{server.Port}";
             const string body = "Hello through ProxyMapService";
 
             var raw =
                 $"POST /echo HTTP/1.1\r\nHost: {authority}\r\nContent-Length: {body.Length}\r\n\r\n{body}" +
                 $"GET /two HTTP/1.1\r\nHost: {authority}\r\nConnection: close\r\n\r\n";
 
-            var response = await SendPipelinedAsync(authority, Encoding.ASCII.GetBytes(raw));
+            var response = await SendPipelinedAsync(configuration, testHost, authority, Encoding.ASCII.GetBytes(raw));
 
             Assert.Equal(2, CountOccurrences(response, "HTTP/1.1 200"));
             Assert.Contains(body, response);
@@ -56,18 +74,12 @@ namespace ProxyMapService.Tests
 
         // ---------------------------------------------------------------
 
-        private static async Task<string> SendPipelinedAsync(string authority, byte[] pipelinedRequests)
+        private static async Task<string> SendPipelinedAsync(IConfigurationRoot configuration, 
+            string hostname, string authority, byte[] pipelinedRequests)
         {
             // The entire packet must fit into the TunnelHandler buffer (BufferSize = 8192),
             // otherwise it is guaranteed to be read in two chunks.
             Assert.True(pipelinedRequests.Length < 8192);
-
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false)
-                .AddJsonFile("appsettings.Development.json", optional: true)
-                .AddEnvironmentVariables()
-                .Build();
 
             var proxyHost = configuration["Proxy:Host"] ?? "127.0.0.1";
             var proxyPort = configuration.GetValue<int>("Proxy:Port", 5001);
@@ -91,7 +103,7 @@ namespace ProxyMapService.Tests
             using var ssl = new SslStream(network, leaveInnerStreamOpen: false);
             await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
             {
-                TargetHost = "localhost",
+                TargetHost = hostname,
                 RemoteCertificateValidationCallback = (_, _, _, _) => true // self-signed
             }, token);
 

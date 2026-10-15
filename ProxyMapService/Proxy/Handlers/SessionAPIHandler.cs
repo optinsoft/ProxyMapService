@@ -22,7 +22,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (http.HTTPTargetPath == null)
             {
                 context.Logger.LogHttpNotFound(http.HTTPTargetPath);
-                await HttpProto.HttpReplyNotFound(context, incomingStream);
+                await HttpProto.HttpReplyNotFound(context, http, incomingStream);
                 return HandleStep.Terminate;
             }
 
@@ -70,30 +70,30 @@ namespace ProxyMapService.Proxy.Handlers
                     catch (JsonException ex)
                     {
                         context.Logger.LogInvalidJsonPayload(ex.Message);
-                        await HttpProto.HttpReplyBadRequest(context, incomingStream, "Invalid JSON payload");
+                        await HttpProto.HttpReplyBadRequest(context, http, incomingStream, "Invalid JSON payload");
                         return HandleStep.Terminate;
                     }
                 }
 
-                await NewSession(context, incomingStream, parameters);
+                await NewSession(context, http, incomingStream, parameters);
                 return HandleStep.Terminate;
             }
 
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
-                await HttpProto.HttpReplyMethodNotAllowed(context, incomingStream);
+                await HttpProto.HttpReplyMethodNotAllowed(context, http, incomingStream);
                 return HandleStep.Terminate;
             }
 
             if (path == "/")
             {
-                await ShowDownloadPage(context, incomingStream);
+                await ShowDownloadPage(context, http, incomingStream);
                 return HandleStep.Terminate;
             }
             if (path == "/session/")
             {
-                await GetSession(context, incomingStream);
+                await GetSession(context, http, incomingStream);
                 return HandleStep.Terminate;
             }
             if (path == "/session/new")
@@ -103,17 +103,17 @@ namespace ProxyMapService.Proxy.Handlers
                         kvp => kvp.Key,
                         kvp => kvp.Value.ToString())
                     : null;
-                await NewSession(context, incomingStream, parameters);
+                await NewSession(context, http, incomingStream, parameters);
                 return HandleStep.Terminate;
             }
             if (path == "/session/reset")
             {
-                await ResetSession(context, incomingStream);
+                await ResetSession(context, http, incomingStream);
                 return HandleStep.Terminate;
             }
             if (path == "/session/certificate")
             {
-                await DownloadCertificate(context, incomingStream);
+                await DownloadCertificate(context, http, incomingStream);
                 return HandleStep.Terminate;
             }
             if (context.SessionAPI.WebSocketsEnabled && path == "/session/ws")
@@ -121,20 +121,20 @@ namespace ProxyMapService.Proxy.Handlers
                 if (string.IsNullOrEmpty(http.SecWebSocketKey))
                 {
                     context.Logger.LogHttpHeaderMissing("Sec-WebSocket-Key");
-                    await HttpProto.HttpReplyBadRequest(context, incomingStream, "Header 'Sec-WebSocket-Key' is missing or invalid.");
+                    await HttpProto.HttpReplyBadRequest(context, http, incomingStream, "Header 'Sec-WebSocket-Key' is missing or invalid.");
                     return HandleStep.Terminate;
                 }
                 context.SessionManager.PopulateContext(context);
-                await HttpProto.HttpReplyWebSocketHandshake(context, incomingStream, http.SecWebSocketKey);
+                await HttpProto.HttpReplyWebSocketHandshake(context, http, incomingStream, http.SecWebSocketKey);
                 return HandleStep.HandleSessionWebSocket;
             }
 
             context.Logger.LogHttpNotFound(http.HTTPTargetPath);
-            await HttpProto.HttpReplyNotFound(context, incomingStream);
+            await HttpProto.HttpReplyNotFound(context, http, incomingStream);
             return HandleStep.Terminate;
         }
 
-        private static async Task GetSession(SessionContext context, Stream incomingStream)
+        private static async Task GetSession(SessionContext context, HttpRequestHeader http, Stream incomingStream)
         {
             context.SessionManager.PopulateContext(context);
             var info = context.SessionManager.CurrentSessionInfo;
@@ -143,10 +143,10 @@ namespace ProxyMapService.Proxy.Handlers
                 info.SessionTime.HasValue ? $"X-Session-Time: {info.SessionTime.Value}" : "X-Session-Time: null",
                 info.ExpiresAt.HasValue ? $"X-Expires-At: {info.ExpiresAt.Value.ToUniversalTime():R}" : "X-Expires-At: null"
             ];
-            await HttpProto.HttpReplyJson(context, incomingStream, info, headers);
+            await HttpProto.HttpReplyJson(context, http, incomingStream, info, headers);
         }
 
-        private static async Task NewSession(SessionContext context, Stream incomingStream, Dictionary<string, string>? parameters)
+        private static async Task NewSession(SessionContext context, HttpRequestHeader http, Stream incomingStream, Dictionary<string, string>? parameters)
         {
             context.SessionManager.ResetSessionId();
             if (parameters != null)
@@ -164,40 +164,40 @@ namespace ProxyMapService.Proxy.Handlers
                 info.SessionTime.HasValue ? $"X-Session-Time: {info.SessionTime.Value}" : "X-Session-Time: null",
                 info.ExpiresAt.HasValue ? $"X-Expires-At: {info.ExpiresAt.Value.ToUniversalTime():R}" : "X-Expires-At: null"
             ];
-            await HttpProto.HttpReplyJson(context, incomingStream, info, headers);
+            await HttpProto.HttpReplyJson(context, http, incomingStream, info, headers);
         }
 
-        private static async Task ResetSession(SessionContext context, Stream incomingStream)
+        private static async Task ResetSession(SessionContext context, HttpRequestHeader http, Stream incomingStream)
         {
             context.SessionManager.ResetSessionId();
             var response = new
             {
                 Success = true,
             };
-            await HttpProto.HttpReplyJson(context, incomingStream, response);
+            await HttpProto.HttpReplyJson(context, http, incomingStream, response);
         }
 
-        private static async Task DownloadCertificate(SessionContext context, Stream incomingStream)
+        private static async Task DownloadCertificate(SessionContext context, HttpRequestHeader http, Stream incomingStream)
         {
             try
             {
                 if (context.CACertificate == null)
                 {
                     context.Logger.LogError("CA Certificate is missing in SessionContext.");
-                    await HttpProto.HttpReplyNotFound(context, incomingStream);
+                    await HttpProto.HttpReplyNotFound(context, http, incomingStream);
                     return;
                 }
                 byte[] certBytes = context.CACertificate.Export(X509ContentType.Cert);
-                await HttpProto.HttpReplyFileBytes(context, incomingStream, "ProxyMapRoot.crt", "application/x-x509-ca-cert", certBytes);
+                await HttpProto.HttpReplyFileBytes(context, http, incomingStream, "ProxyMapRoot.crt", "application/x-x509-ca-cert", certBytes);
             }
             catch (Exception ex)
             {
                 context.Logger.LogError("Error downloading CA certificate: {Message}", ex.Message);
-                await HttpProto.HttpReplyInternalServerError(context, incomingStream, "Error downloading CA certificate");
+                await HttpProto.HttpReplyInternalServerError(context, http, incomingStream, "Error downloading CA certificate");
             }
         }
 
-        private static async Task ShowDownloadPage(SessionContext context, Stream incomingStream)
+        private static async Task ShowDownloadPage(SessionContext context, HttpRequestHeader http, Stream incomingStream)
         {
             string html = @"<!DOCTYPE html>
 <html>
@@ -220,7 +220,7 @@ namespace ProxyMapService.Proxy.Handlers
     </div>
 </body>
 </html>";
-            await HttpProto.HttpReplyHtml(context, incomingStream, html);
+            await HttpProto.HttpReplyHtml(context, http, incomingStream, html);
         }
     }
 }

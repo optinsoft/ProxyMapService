@@ -28,7 +28,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.Logger.LogHttpForwardingRejected();
                 context.ProxyCounters.SessionsCounter?.OnHttpRejected(context);
-                await HttpProto.HttpReplyMethodNotAllowed(context);
+                await HttpProto.HttpReplyMethodNotAllowed(context, context.Http);
                 return HandleStep.Terminate;
             }
 
@@ -37,7 +37,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.Logger.LogNoHost();
                 context.ProxyCounters.SessionsCounter?.OnNoHost(context);
-                await HttpProto.HttpReplyBadRequest(context);
+                await HttpProto.HttpReplyBadRequest(context, context.Http);
                 return HandleStep.Terminate;
             }
 
@@ -62,7 +62,7 @@ namespace ProxyMapService.Proxy.Handlers
                     //SessionActionEnum.Deny
                     context.Logger.LogHostRejected(context.Host.Hostname, context.Host.Port);
                     context.ProxyCounters.SessionsCounter?.OnHostRejected(context);
-                    await HttpProto.HttpReplyForbidden(context);
+                    await HttpProto.HttpReplyForbidden(context, context.Http);
                     return HandleStep.Terminate;
             }
         }

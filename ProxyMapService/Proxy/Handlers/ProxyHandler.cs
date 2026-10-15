@@ -25,7 +25,7 @@ namespace ProxyMapService.Proxy.Handlers
                 context.Logger.LogNoProxyServer();
                 await (context switch
                 {
-                    { Http: not null } => HttpProto.HttpReplyBadGateway(context),
+                    { Http: not null } => HttpProto.HttpReplyBadGateway(context, context.Http),
                     { Socks4: not null } => Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed),
                     { Socks5: not null } => Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure),
                     _ => Task.CompletedTask
@@ -65,7 +65,7 @@ namespace ProxyMapService.Proxy.Handlers
                 context.ProxyCounters.SessionsCounter?.OnProxyFailed(context);
                 await (context switch
                 {
-                    { Http: not null } => HttpProto.HttpReplyBadGateway(context),
+                    { Http: not null } => HttpProto.HttpReplyBadGateway(context, context.Http),
                     { Socks4: not null } => Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed),
                     { Socks5: not null } => Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure),
                     _ => Task.CompletedTask

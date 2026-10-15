@@ -19,9 +19,10 @@ namespace ProxyMapService.Tests
 
             var proxyHost = configuration["Proxy:Host"] ?? "127.0.0.1";
             var proxyPort = configuration.GetValue<int>("Proxy:Port", 5001);
+            var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
             var useHttp2 = configuration.GetValue<bool>("TestServer:UseHttp2", false);
 
-            await using var server = new HttpsTestServer(5111, useHttp2);
+            await using var server = new HttpsTestServer(5111, hostname: testHost, useHttp2);
 
             await server.StartAsync();
 
@@ -42,7 +43,7 @@ namespace ProxyMapService.Tests
             client.DefaultRequestVersion = HttpVersion.Version11;
             client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
 
-            var baseUrl = $"https://localhost:{server.Port}";
+            var baseUrl = $"https://{testHost}:{server.Port}";
 
             // Request #1
             var response1 = await client.GetAsync($"{baseUrl}/one");

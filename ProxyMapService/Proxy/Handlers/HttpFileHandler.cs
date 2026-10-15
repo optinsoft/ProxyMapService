@@ -11,7 +11,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.Http?.HTTPVerb == "CONNECT")
             {
-                await HttpProto.HttpReplyConnectionEstablished(context);
+                await HttpProto.HttpReplyConnectionEstablished(context, context.Http);
             }
             return HandleStep.HandleFileRequest;
         }

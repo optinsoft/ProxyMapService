@@ -9,6 +9,7 @@ using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.RoutingLoopDetector;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
@@ -22,7 +23,8 @@ namespace ProxyMapService.Proxy.Sessions
         private HttpRequestHeader? _requestHeader;
         private HttpResponseHeader? _responseHeader;
         private List<CacheRule> _requestCacheRules;
-        private string? _requestId;
+        private int _lastRequestNum = 0;
+        private int _lastResponseNum = 0;
 
         public System.Net.IPEndPoint InboundEndpoint {  get; private set; }
         public TcpClient IncomingClient { get; private set; }
@@ -89,9 +91,12 @@ namespace ProxyMapService.Proxy.Sessions
             get => _requestHeader;
             set
             {
+                if (_requestHeader == value) return;
                 _requestHeader = value;
                 if (_requestHeader != null)
                 {
+                    _requestHeader.RequestNum = Interlocked.Increment(ref _lastRequestNum);
+                    RequestHeaderHistory.TryAdd(_requestHeader.RequestNum, _requestHeader);
                     _requestCacheRules = CacheRule.FindRules(_requestHeader.HTTPTargetPath, _requestHeader.Accept, CacheRules);
                 }
                 else
@@ -105,7 +110,12 @@ namespace ProxyMapService.Proxy.Sessions
             get => _responseHeader;
             set
             {
+                if (_responseHeader == value) return;
                 _responseHeader = value;
+                if (_responseHeader != null)
+                {
+                    _responseHeader.ResponseNum = Interlocked.Increment(ref _lastResponseNum);
+                }
             }
         }
         public IBodyTracker? RequestBodyTracker { get; set; }
@@ -115,38 +125,14 @@ namespace ProxyMapService.Proxy.Sessions
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }
         public bool CachedReply { get; set; }
 
+        public ConcurrentDictionary<int, HttpRequestHeader> RequestHeaderHistory { get; private set; } = new();
+
         // IHttpLoggersProvider
         public IHttpHeadersLogger? RequestHeadersLogger { get => ProxyCounters.HttpRequestHeadersLogger; }
         public IHttpHeadersLogger? ResponseHeadersLogger { get => ProxyCounters.HttpResponseHeadersLogger; }
         public IHttpCompletionLogger? CompletionLogger { get => ProxyCounters.HttpCompletionLogger; }
         public IHttpBodyLogger? RequestBodyLogger { get => ProxyCounters.HttpRequestBodyLogger; }
         public IHttpBodyLogger? ResponseBodyLogger { get => ProxyCounters.HttpResponseBodyLogger; }
-        public string GetRequestId()
-        {
-            _requestId = Guid.NewGuid().ToString();
-            return _requestId;
-        }
-        public string GetResponseId()
-        {
-            _requestId ??= Guid.NewGuid().ToString();
-            return _requestId;
-        }
-        public string GetRequestBodyId()
-        {
-            _requestId ??= Guid.NewGuid().ToString();
-            return _requestId;
-        }
-        public string GetResponseBodyId()
-        {
-            _requestId ??= Guid.NewGuid().ToString();
-            return _requestId;
-        }
-        public string? GetCompletionId()
-        {
-            var completionId = _requestId;
-            _requestId = null;
-            return completionId;
-        }
         public string? GetInbound()
         {
             return (InboundType switch
@@ -191,11 +177,6 @@ namespace ProxyMapService.Proxy.Sessions
         {
             if (Host.Hostname.Length == 0) return null;
             return $"{Host.Hostname}:{Host.Port}";
-        }
-
-        public string? GetRequestXMicrosoftAjax()
-        {
-            return _requestHeader?.XMicrosoftAjax;
         }
 
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 

@@ -19,105 +19,173 @@ namespace ProxyMapService.Proxy.Handlers
         private static readonly FileRequestHandler Self = new();
         private const int BufferSize = 8192;
 
+        private sealed class RequestReadResult
+        {
+            public bool EndOfStream { get; init; }
+            public byte[] Leftover { get; init; } = [];
+            public bool KeepAlive { get; init; }
+        }
+
         public async Task<HandleStep> Run(SessionContext context)
         {
-            if (context.IncomingStream != null && !context.Token.IsCancellationRequested)
+            if (context.IncomingStream == null || context.Token.IsCancellationRequested)
             {
-                bool isIncomingSSL;
+                return HandleStep.Terminate;
+            }
+            
+            bool isIncomingSSL;
+            try
+            {
+                isIncomingSSL = context.SslMode switch
+                {
+                    SslMode.Yes => true,
+                    SslMode.Auto => await context.IncomingStream.IsTLS(context.Token),
+                    _ => false
+                };
+            }
+            catch (Exception ex) when (ex is IOException or SocketException)
+            {
+                context.Logger.LogExceptionWarning(ex.GetType().Name, ex.Message);
+                return HandleStep.Terminate;
+            }
+
+            using SslStream? incomingSslStream = isIncomingSSL ? new(context.IncomingStream) : null;
+
+            if (incomingSslStream != null)
+            {
+                string subjectName = $"CN=*.{context.Host.OriginalHostname}";
+                X509Certificate2? serverCertificate = context.ServerCertificate;
+                using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null
+                    ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
+                    : null;
+                serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
+                var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
                 try
                 {
-                    isIncomingSSL = context.SslMode switch
-                    {
-                        SslMode.Yes => true,
-                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token),
-                        _ => false
-                    };
+                    await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
                 }
-                catch (Exception ex) when (ex is IOException or SocketException)
+                catch (AuthenticationException ex)
                 {
-                    context.Logger.LogExceptionWarning(ex.GetType().Name, ex.Message);
+                    context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
                     return HandleStep.Terminate;
                 }
+                context.Logger.LogServerTLSHandshakeSucceeded();
+            }
 
-                using SslStream? incomingSslStream = isIncomingSSL ? new(context.IncomingStream) : null;
+            using CountingStream? incomingSslCountingStream =
+                incomingSslStream != null
+                ? new CountingStream(incomingSslStream, context,
+                    context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
+                    context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
+                : null;
+            if (incomingSslCountingStream != null)
+            {
+                context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
+            }
 
-                if (incomingSslStream != null)
+            var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
+
+            CancellationToken token = context.Token;
+
+            var http = context.Http != null && context.Http.HTTPVerb != "CONNECT" ? context.Http : null;
+            bool firstRequestPreParsed = http != null;
+
+            byte[] leftover = [];
+
+            while (!token.IsCancellationRequested)
+            {
+                using MemoryStream bodyStream = new();
+                bool bodyIncomplete = false;
+
+                if (firstRequestPreParsed)
                 {
-                    string subjectName = $"CN=*.{context.Host.OriginalHostname}";
-                    X509Certificate2? serverCertificate = context.ServerCertificate;
-                    using X509Certificate2? tempCertificate = serverCertificate == null && context.CACertificate != null
-                        ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
-                        : null;
-                    serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
-                    var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
-                    try
+                    firstRequestPreParsed = false;
+
+                    if (http!.BadRequest)
                     {
-                        await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.Token);
-                    }
-                    catch (AuthenticationException ex)
-                    {
-                        context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                        context.Logger.LogHttpBadRequest();
+                        await HttpProto.HttpReplyBadRequest(context, http, incomingStream);
                         return HandleStep.Terminate;
                     }
-                    context.Logger.LogServerTLSHandshakeSucceeded();
+                    CreateRequestBodyTracker(context, http, bodyStream);
                 }
-
-                using CountingStream? incomingSslCountingStream =
-                    incomingSslStream != null
-                    ? new CountingStream(incomingSslStream, context,
-                        context.ProxyCounters.IncomingReadSslCounter, context.ProxyCounters.IncomingSendSslCounter,
-                        context.IncomingStream.ReadTunnelId, context.IncomingStream.SendTunnelId)
-                    : null;
-                if (incomingSslCountingStream != null)
+                else
                 {
-                    context.IncomingStream.TransferHandlersTo(incomingSslCountingStream);
-                }
+                    context.RequestHeader = null;
+                    context.DisposeRequestBodyTracker();
 
-                var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
+                    RequestReadResult read;
+                    try
+                    {
+                        read = await ReadHttpRequest(context, incomingStream, isIncomingSSL, bodyStream, leftover);
+                    }
+                    catch (Exception ex) when (ex is IOException or SocketException or ObjectDisposedException)
+                    {
+                        context.Logger.LogExceptionWarning(ex.GetType().Name, ex.Message);
+                        return HandleStep.Terminate;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return HandleStep.Terminate;
+                    }
 
-                using MemoryStream bodyStream = new();
+                    if (read.EndOfStream)
+                    {
+                        return HandleStep.Terminate;
+                    }
 
-                var http = context.Http;
-                if (http == null || http.HTTPVerb == "CONNECT")
-                {
-                    await ReadHttpRequest(context, incomingStream, isIncomingSSL, bodyStream);
                     if (context.RequestHeader != null && !context.RequestHeader.BadRequest)
                     {
                         http = context.RequestHeader;
+                        leftover = read.Leftover;
                     }
                     else
                     {
                         context.Logger.LogHttpBadRequest();
-                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                        await HttpProto.HttpReplyBadRequest(context, context.RequestHeader ?? http, incomingStream);
                         return HandleStep.Terminate;
                     }
-                }
-                else
-                {
-                    if (http.BadRequest)
-                    {
-                        context.Logger.LogHttpBadRequest();
-                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
-                        return HandleStep.Terminate;
-                    }
-                    context.RequestBodyTracker = CreateRequestBodyTracker(context, http, bodyStream);
                 }
 
                 if (context.RequestBodyTracker != null)
                 {
-                    await ReadHttpRequestBody(context, incomingStream, context.RequestBodyTracker, bodyStream);
+                    try
+                    {
+                        leftover = await ReadHttpRequestBody(context, incomingStream, context.RequestBodyTracker, leftover);
+                    }
+                    catch (Exception ex) when (ex is IOException or SocketException or ObjectDisposedException)
+                    {
+                        context.Logger.LogExceptionWarning(ex.GetType().Name, ex.Message);
+                        return HandleStep.Terminate;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return HandleStep.Terminate;
+                    }
+
                     if (context.RequestBodyTracker.Failed)
                     {
                         context.Logger.LogHttpBadRequest();
-                        await HttpProto.HttpReplyBadRequest(context, incomingStream);
+                        await HttpProto.HttpReplyBadRequest(context, http, incomingStream);
                         return HandleStep.Terminate;
+                    }
+
+                    if (!context.RequestBodyTracker.Completed)
+                    {
+                        // Peer closed the connection in the middle of the body: answer, but do not reuse.
+                        bodyIncomplete = true;
                     }
                 }
 
                 bodyStream.Position = 0;
 
-                return await HandleRequest(context, incomingStream, http, bodyStream);                
+                await HandleRequest(context, incomingStream, http!, bodyStream);
+                if (bodyIncomplete || !http!.KeepAlive)
+                {
+                    return HandleStep.Terminate;
+                }
             }
+
             return HandleStep.Terminate;
         }
 
@@ -126,44 +194,78 @@ namespace ProxyMapService.Proxy.Handlers
             return Self;
         }
 
-        private static async Task ReadHttpRequest(SessionContext context, Stream incomingStream, bool isSecure, MemoryStream bodyStream)
+        private static async Task<RequestReadResult> ReadHttpRequest(SessionContext context, Stream incomingStream, 
+            bool isSecure, MemoryStream bodyStream, byte[] initial)
         {
             var buffer = new byte[BufferSize];
             using var ms = new MemoryStream();
 
             CancellationToken token = context.Token;
 
-            int bytesRead, headersEnd, searchStart = 0;
+            int searchStart = 0;
+            byte[] leftover = [];
+
+            bool TryParseHeader()
+            {
+                int headersEnd = HttpParser.FindRequestHeadersEnd(ms, ref searchStart);
+                if (headersEnd < 0 && searchStart >= 0)
+                {
+                    return false;
+                }
+
+                var headerAndTail = HttpParser.GetRequestHeaderLinesAndTail(ms, headersEnd);
+                if (headerAndTail != null)
+                {
+                    context.RequestHeader = new HttpRequestHeader(headerAndTail.HeaderLines);
+                    context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.RequestHeader);
+                    if (!context.RequestHeader.BadRequest)
+                    {
+                        context.SessionManager.NotifyIfRequestUrlMatches(context, context.RequestHeader, isSecure);
+                        var tracker = CreateRequestBodyTracker(context, context.RequestHeader, bodyStream);
+                        if (headerAndTail.TailBytes != null)
+                        {
+                            if (tracker.Completed)
+                            {
+                                leftover = headerAndTail.TailBytes;
+                            }
+                            else if (tracker.TryAppend(headerAndTail.TailBytes, out var consumed))
+                            {
+                                leftover = headerAndTail.TailBytes.AsMemory()[consumed..].ToArray();
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+
+            if (initial.Length > 0)
+            {
+                ms.Write(initial, 0, initial.Length);
+                if (TryParseHeader())
+                {
+                    return new RequestReadResult { Leftover = leftover };
+                }
+            }
+
+            int bytesRead;
             do
             {
                 bytesRead = await incomingStream.ReadAsync(buffer.AsMemory(0, BufferSize), token);
                 if (bytesRead > 0)
                 {
                     ms.Write(buffer, 0, bytesRead);
-                    if ((headersEnd = HttpParser.FindRequestHeadersEnd(ms, ref searchStart)) >= 0 || searchStart < 0)
+                    if (TryParseHeader())
                     {
-                        var headerAndTail = HttpParser.GetRequestHeaderLinesAndTail(ms, headersEnd);
-                        if (headerAndTail != null)
-                        {
-                            context.RequestHeader = new HttpRequestHeader(headerAndTail.HeaderLines);
-                            context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.RequestHeader);
-                            if (!context.RequestHeader.BadRequest)
-                            {
-                                context.SessionManager.NotifyIfRequestUrlMatches(context, context.RequestHeader, isSecure);
-                                context.RequestBodyTracker = CreateRequestBodyTracker(context, context.RequestHeader, bodyStream);
-                                if (headerAndTail.TailBytes != null)
-                                {
-                                    context.RequestBodyTracker.TryAppend(headerAndTail.TailBytes);
-                                }
-                            }
-                        }
-                        return;
+                        return new RequestReadResult { Leftover = leftover };
                     }
                 }
             } while (bytesRead > 0 && !token.IsCancellationRequested);
+
+            return new RequestReadResult { EndOfStream = ms.Length == 0 };
         }
 
-        private static async Task<bool> ReadHttpRequestBody(SessionContext context, Stream incomingStream, IBodyTracker bodyTracker, MemoryStream bodyStream)
+        private static async Task<byte[]> ReadHttpRequestBody(SessionContext context, Stream incomingStream, 
+            IBodyTracker bodyTracker, byte[] leftover)
         {
             var buffer = new byte[BufferSize];
 
@@ -179,27 +281,28 @@ namespace ProxyMapService.Proxy.Handlers
                 bytesRead = await incomingStream.ReadAsync(buffer.AsMemory(0, BufferSize), token);
                 if (bytesRead > 0)
                 {
-                    if (!bodyTracker.TryAppend(buffer.AsSpan(0, bytesRead)))
+                    if (!bodyTracker.TryAppend(buffer.AsSpan(0, bytesRead), out var consumed))
                     {
                         break;
                     }
+                    if (consumed < bytesRead)
+                    {
+                        leftover = buffer.AsSpan(consumed, bytesRead - consumed).ToArray();
+                    }
                 }
             } while (bytesRead > 0 && !token.IsCancellationRequested);
-            if (bodyTracker.Completed)
-            {
-                return true;
-            }
-            return false;
+
+            return leftover;
         }
 
-        protected virtual async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, 
+        protected virtual async Task HandleRequest(SessionContext context, Stream incomingStream, 
             HttpRequestHeader http, MemoryStream bodyStream)
         {
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
-                await HttpProto.HttpReplyMethodNotAllowed(context, incomingStream);
-                return HandleStep.Terminate;
+                await HttpProto.HttpReplyMethodNotAllowed(context, http, incomingStream);
+                return;
             }
 
             await using var fileStream = OpenFileFromHttpPath(context.RootDir, http.HTTPTargetPath, ["index.html", "index.htm"]);
@@ -207,15 +310,13 @@ namespace ProxyMapService.Proxy.Handlers
             if (fileStream == null)
             {
                 context.Logger.LogHttpFileNotFound(http.HTTPTargetPath);
-                await HttpProto.HttpReplyNotFound(context, incomingStream);
-                return HandleStep.Terminate;
+                await HttpProto.HttpReplyNotFound(context, http, incomingStream);
+                return;
             }
 
-            await HttpProto.HttpReplyFileStream(context, incomingStream, fileStream);
+            await HttpProto.HttpReplyFileStream(context, http, incomingStream, fileStream);
 
             context.Logger.LogResponseFromFile(fileStream.Name);
-
-            return HandleStep.Terminate;
         }
 
         private static FileStream? OpenFileFromHttpPath(string? rootDir, string? relativePath, List<string> indexFiles)

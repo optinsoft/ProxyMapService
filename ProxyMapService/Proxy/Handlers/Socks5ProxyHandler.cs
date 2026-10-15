@@ -114,7 +114,7 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             if (context.Http.HTTPVerb == "CONNECT")
                             {
-                                await HttpProto.HttpReplyConnectionEstablished(context);
+                                await HttpProto.HttpReplyConnectionEstablished(context, context.Http);
                             }
                             else
                             {
@@ -125,7 +125,7 @@ namespace ProxyMapService.Proxy.Handlers
                                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
                                     if (!context.RequestHeader.BadRequest)
                                     {
-                                        context.RequestBodyTracker = CreateRequestBodyTracker(context, context.RequestHeader, null);
+                                        CreateRequestBodyTracker(context, context.RequestHeader, null);
                                     }
                                     var cacheEntry = await GetCacheEntry(context, context.RequestHeader);
                                     if (cacheEntry != null)
@@ -135,7 +135,7 @@ namespace ProxyMapService.Proxy.Handlers
                                         {
                                             context.RequestTunnelState.ResetReadHeaders = true;
                                             context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                                            await HttpProto.HttpReplyCacheFileStream(context, cacheEntry, cacheFileStream);
+                                            await HttpProto.HttpReplyCacheFileStream(context, context.RequestHeader, cacheEntry, cacheFileStream);
                                             context.Logger.LogResponseFromCache(cacheFileStream.Name);
                                         }
                                         else
@@ -161,7 +161,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Http != null)
             {
-                await HttpProto.HttpReplyBadGateway(context);
+                await HttpProto.HttpReplyBadGateway(context, context.Http);
             }
             if (context.Socks4 != null)
             {

@@ -394,6 +394,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Context ResponseBodyTracker is not null ({hostname}:{port})")]
         private static partial void LogNotNullResponseBodyTrackerInternal(this ILogger logger, string hostname, int port);
 
+        [LoggerMessage(
+            EventId = 1296,
+            Level = LogLevel.Warning,
+            Message = "Tail is not null")]
+        public static partial void LogTailIsNotNull(this ILogger logger);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

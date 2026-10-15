@@ -5,6 +5,6 @@
         bool Completed { get; }
         bool Failed { get; }
         long BodyLength { get; }
-        bool TryAppend(ReadOnlySpan<byte> data);
+        bool TryAppend(ReadOnlySpan<byte> data, out int consumed);
     }
 }

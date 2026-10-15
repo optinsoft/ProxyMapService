@@ -30,10 +30,10 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     case SocketError.TimedOut:
                     case SocketError.TryAgain:
-                        await HttpProto.HttpReplyGatewayTimeout(context, $"SocketError {ex.SocketErrorCode}");
+                        await HttpProto.HttpReplyGatewayTimeout(context, context.Http, $"SocketError {ex.SocketErrorCode}");
                         break;
                     default:
-                        await HttpProto.HttpReplyBadGateway(context, $"SocketError {ex.SocketErrorCode}");
+                        await HttpProto.HttpReplyBadGateway(context, context.Http, $"SocketError {ex.SocketErrorCode}");
                         break;
                 }
                 return HandleStep.Terminate;
@@ -42,7 +42,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.Logger.LogHostError(ex.Message, context.Host.Hostname);
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
-                await HttpProto.HttpReplyBadGateway(context);
+                await HttpProto.HttpReplyBadGateway(context, context.Http);
                 return HandleStep.Terminate;
             }
 
@@ -50,7 +50,7 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.Logger.LogRoutingLoopPrevented(context.OutgoingEndPoint);
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
-                await HttpProto.HttpReplyBadGateway(context);
+                await HttpProto.HttpReplyBadGateway(context, context.Http);
                 return HandleStep.Terminate;
             }
 
@@ -65,10 +65,10 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     case SocketError.TimedOut:
                     case SocketError.TryAgain:
-                        await HttpProto.HttpReplyGatewayTimeout(context, $"SocketError {ex.SocketErrorCode}");
+                        await HttpProto.HttpReplyGatewayTimeout(context, context.Http, $"SocketError {ex.SocketErrorCode}");
                         break;
                     default:
-                        await HttpProto.HttpReplyBadGateway(context, $"SocketError {ex.SocketErrorCode}");
+                        await HttpProto.HttpReplyBadGateway(context, context.Http, $"SocketError {ex.SocketErrorCode}");
                         break;
                 }
                 throw;
@@ -76,7 +76,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception)
             {
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
-                await HttpProto.HttpReplyBadGateway(context);
+                await HttpProto.HttpReplyBadGateway(context, context.Http);
                 throw;
             }
 
@@ -92,7 +92,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Http?.HTTPVerb == "CONNECT")
             {
-                await HttpProto.HttpReplyConnectionEstablished(context);
+                await HttpProto.HttpReplyConnectionEstablished(context, context.Http);
             }
             else
             {
@@ -100,10 +100,10 @@ namespace ProxyMapService.Proxy.Handlers
                 var httpRequestBytes = context.Http?.GetBytes(false, null, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
+                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context.Http?.RequestId);
                     if (!context.RequestHeader.BadRequest)
                     {
-                        context.RequestBodyTracker = CreateRequestBodyTracker(context, context.RequestHeader, null);
+                        CreateRequestBodyTracker(context, context.RequestHeader, null);
                     }
                     var cacheEntry = await GetCacheEntry(context, context.RequestHeader);
                     if (cacheEntry != null)
@@ -113,7 +113,7 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             context.RequestTunnelState.ResetReadHeaders = true;
                             context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-                            await HttpProto.HttpReplyCacheFileStream(context, cacheEntry, cacheFileStream);
+                            await HttpProto.HttpReplyCacheFileStream(context, context.Http, cacheEntry, cacheFileStream);
                             context.Logger.LogResponseFromCache(cacheFileStream.Name);
                             return HandleStep.Tunnel;
                         }

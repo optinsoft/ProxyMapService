@@ -6,13 +6,15 @@ namespace ProxyMapService.Proxy.Headers
 {
     public class HttpRequestHeader
     {
-        public HttpRequestHeader(byte[] array)
+        public HttpRequestHeader(byte[] array, string? requestId = null)
         {
+            RequestId = requestId ?? Guid.NewGuid().ToString();
             Parse(this, array);
         }
 
-        public HttpRequestHeader(string[] strings)
+        public HttpRequestHeader(string[] strings, string? requestId = null)
         {
+            RequestId = requestId ?? Guid.NewGuid().ToString();
             Parse(this, strings);
         }
 
@@ -32,18 +34,13 @@ namespace ProxyMapService.Proxy.Headers
         public string? Accept { get; private set; }
         public string? XMicrosoftAjax {  get; private set; }
         public string? SecWebSocketKey { get; private set; }
+        public string? Connection { get; private set; }
+        public bool KeepAlive { get; private set; }
         public string[]? Headers { get; private set; }
+
+        public int RequestNum { get; set; } = 0;
+        public string RequestId { get; set; }
         
-        public bool? IsSSL { get; set; }
-
-        public bool HasBody
-        {
-            get
-            {
-                return (TransferEncoding != null) || (ContentLength.HasValue && ContentLength.Value > 0);
-            }
-        }
-
         public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {
             return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
@@ -75,6 +72,8 @@ namespace ProxyMapService.Proxy.Headers
                 self.Accept = GetFirstHeaderValue(strings, "accept:");
                 self.XMicrosoftAjax = GetFirstHeaderValue(strings, "x-microsoftajax:");
                 self.SecWebSocketKey = GetFirstHeaderValue(strings, "sec-websocket-key:");
+                self.Connection = GetFirstHeaderValue(strings, "connection:");
+                self.KeepAlive = GetKeepAlive(self.HTTPProtocol, strings);
                 self.Headers = strings;
             }
             catch (UriFormatException)
@@ -240,6 +239,35 @@ namespace ProxyMapService.Proxy.Headers
                 .FirstOrDefault(s => s.StartsWith(key, StringComparison.OrdinalIgnoreCase))
                 ?.Substring(key.Length)
                 .TrimStart();
+        }
+
+        private static bool GetKeepAlive(string? protocol, IEnumerable<string> strings)
+        {
+            bool keepAlive = string.Equals(protocol, "HTTP/1.1", StringComparison.OrdinalIgnoreCase);
+
+            foreach (var line in strings.Skip(1))
+            {
+                const string headerKey = "connection:";
+                if (!line.StartsWith(headerKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                var tokens = line[headerKey.Length..]
+                    .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                foreach (var token in tokens)
+                {
+                    if (token.Equals("close", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+                    if (token.Equals("keep-alive", StringComparison.OrdinalIgnoreCase))
+                    {
+                        keepAlive = true;
+                    }
+                }
+            }
+
+            return keepAlive;
         }
     }
 }

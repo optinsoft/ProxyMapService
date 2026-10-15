@@ -45,7 +45,7 @@ namespace ProxyMapService.Proxy.Handlers
                             {
                                 context.Logger.LogHttpBadRequest();
                                 context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
-                                await HttpProto.HttpReplyBadRequest(context);
+                                await HttpProto.HttpReplyBadRequest(context, context.Http);
                                 return HandleStep.Terminate;
                             }
                             return HandleStep.HttpInitialized;

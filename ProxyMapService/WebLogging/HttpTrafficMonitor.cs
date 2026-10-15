@@ -15,12 +15,9 @@ namespace ProxyMapService.WebLogging
             if (sender is not IHttpLoggersProvider loggersProvider) return;
             if (e.BodyLength == 0) return;
 
-            var id = e.Response ? loggersProvider.GetResponseBodyId() : loggersProvider.GetRequestBodyId();
-            var requestXMicrosoftAjax = loggersProvider.GetRequestXMicrosoftAjax();
-
             var bodyDto = HttpBodyParser.ParseBody(
-                id, e.Response, e.Completed, e.BodyLength, 
-                e.ContentType, e.ContentEncoding, requestXMicrosoftAjax,
+                e.HeaderId, e.Response, e.Completed, e.BodyLength, 
+                e.ContentType, e.ContentEncoding, e.RequestXMicrosoftAjax,
                 e.BodyBytes ?? []);
 
             if (e.Response)
@@ -33,18 +30,15 @@ namespace ProxyMapService.WebLogging
             }
         }
 
-        void IHttpTrafficMonitor.LogHttpCompleted(object? sender, EventArgs e)
+        void IHttpTrafficMonitor.LogHttpCompleted(object? sender, HttpCompletedEventArgs e)
         {
             if (!loggingSwitch.IsHttpCapture) return;
 
             if (sender is not IHttpLoggersProvider loggersProvider) return;
 
-            var id = loggersProvider.GetCompletionId();
-            if (id == null) return;
-
             var completionDto = new HttpCompletionDto
             {
-                Id = id,
+                Id = e.HeaderId,
             };
             websocketLogService.QueueMessage(new HttpCompletionEntry(completionDto));
         }
@@ -63,8 +57,7 @@ namespace ProxyMapService.WebLogging
 
             if (e.Response)
             {
-                var id = loggersProvider.GetResponseId();
-                if (HttpHeaderParser.ParseResponseRawHeaders(headers, id, completed) is HttpResponseDto responseDto)
+                if (HttpHeaderParser.ParseResponseRawHeaders(headers, e.HeaderId, completed) is HttpResponseDto responseDto)
                 {
                     responseDto.Inbound = inbound;
                     responseDto.Route = route;
@@ -74,8 +67,7 @@ namespace ProxyMapService.WebLogging
             }
             else
             {
-                var id = loggersProvider.GetRequestId();
-                if (HttpHeaderParser.ParseRequestRawHeaders(headers, id, completed) is HttpRequestDto requestDto)
+                if (HttpHeaderParser.ParseRequestRawHeaders(headers, e.HeaderId, completed) is HttpRequestDto requestDto)
                 {
                     requestDto.Inbound = inbound;
                     requestDto.Route = route;

@@ -4,6 +4,7 @@ using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Tunnels
 {
@@ -171,21 +172,11 @@ namespace ProxyMapService.Proxy.Tunnels
 
         #endregion
 
-        protected static async Task SendModifiedHeadersAndBody(Stream destination, string[] headerLines, byte[]? bodyBytes, CancellationToken token)
-        {
-            string modifiedHeaders = string.Join("\r\n", headerLines);
-            byte[] modifiedHeaderBytes = Encoding.ASCII.GetBytes(modifiedHeaders);
-            await destination.WriteAsync(modifiedHeaderBytes.AsMemory(0, modifiedHeaderBytes.Length), token);
-            if (bodyBytes?.Length > 0)
-            {
-                await destination.WriteAsync(bodyBytes.AsMemory(0, bodyBytes.Length), token);
-            }
-        }
-
-        protected static async Task ReplyCacheFile(CacheEntry cacheEntry, FileStream cacheFileStream, CountingStream incomingStream, SessionContext context)
+        protected static async Task ReplyCacheFile(CacheEntry cacheEntry, FileStream cacheFileStream, CountingStream incomingStream, 
+            SessionContext context, HttpRequestHeader? requestHeader)
         {
             context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-            await HttpProto.HttpReplyCacheFileStream(context, incomingStream, cacheEntry, cacheFileStream);
+            await HttpProto.HttpReplyCacheFileStream(context, requestHeader, incomingStream, cacheEntry, cacheFileStream);
             context.Logger.LogResponseFromCache(cacheFileStream.Name);
         }
     }

@@ -33,13 +33,8 @@ namespace ProxyMapService.Proxy.Headers
         public string? LastModified { get; private set; }
         public string[]? Headers { get; private set; }
 
-        public bool HasBody
-        {
-            get
-            {
-                return (TransferEncoding != null) || (ContentLength.HasValue && ContentLength.Value > 0);
-            }
-        }
+        public int ResponseNum { get; set; } = 0;
+        public string ResponseId { get; set; } = Guid.NewGuid().ToString();
 
         private static void Parse(HttpResponseHeader self, byte[] array)
         {

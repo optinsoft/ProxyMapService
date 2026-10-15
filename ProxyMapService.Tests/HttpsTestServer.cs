@@ -26,11 +26,11 @@ namespace ProxyMapService.Tests
         public int RequestCount =>
             Volatile.Read(ref _requestCount);
 
-        public HttpsTestServer(int port, bool useHttp2)
+        public HttpsTestServer(int port, string hostname, bool useHttp2)
         {
             _port = port;
 
-            var certificate = CreateCertificate();
+            var certificate = CreateCertificate(hostname);
 
             _host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
@@ -127,12 +127,12 @@ namespace ProxyMapService.Tests
             return ValueTask.CompletedTask;
         }
 
-        private static X509Certificate2 CreateCertificate()
+        private static X509Certificate2 CreateCertificate(string hostname)
         {
             using var rsa = RSA.Create(2048);
 
             var request = new CertificateRequest(
-                "CN=localhost",
+                $"CN={hostname}",
                 rsa,
                 HashAlgorithmName.SHA256,
                 RSASignaturePadding.Pkcs1);
@@ -151,7 +151,7 @@ namespace ProxyMapService.Tests
 
             var san = new SubjectAlternativeNameBuilder();
 
-            san.AddDnsName("localhost");
+            san.AddDnsName(hostname);
             san.AddIpAddress(IPAddress.Loopback);
 
             request.CertificateExtensions.Add(san.Build());

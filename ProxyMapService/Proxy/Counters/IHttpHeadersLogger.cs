@@ -5,8 +5,8 @@ namespace ProxyMapService.Proxy.Counters
 {
     public interface IHttpHeadersLogger
     {
-        void OnHttpHeader(object context, bool completed, string[]? headers);
-        void OnHttpRequestHeader(object context, HttpRequestHeader requestHeader);
-        void OnHttpResponseHeader(object context, HttpResponseHeader responseHeader, HttpRequestHeader? requestHeader);
+        void OnHttpRequestHeader(object context, HttpRequestHeader? requestHeader);
+        void OnHttpResponseHeader(object context, HttpResponseHeader? responseHeader, HttpRequestHeader? requestHeader);
+        void OnHttpResponseHeader(object context, HttpRequestHeader? requestHeader, bool completed, string[]? headers);
     }
 }

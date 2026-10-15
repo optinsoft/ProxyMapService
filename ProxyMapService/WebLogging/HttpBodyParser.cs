@@ -11,12 +11,12 @@ namespace ProxyMapService.WebLogging
     public static class HttpBodyParser
     {
         public static HttpBodyDto ParseBody(string id, bool response, bool completed, long bodyLength, 
-            string? contentType, string? contentEncoding, string? requesXMicrosoftAjax,
+            string? contentType, string? contentEncoding, string? requestXMicrosoftAjax,
             ReadOnlySpan<byte> bodySpan)
         {
             bodySpan = TryDecompress(bodySpan, contentEncoding, out var decompressedBytes);
 
-            var kind = GetContentKind(response, contentType, requesXMicrosoftAjax, HttpBodyContentKind.Binary);
+            var kind = GetContentKind(response, contentType, requestXMicrosoftAjax, HttpBodyContentKind.Binary);
 
             var dto = new HttpBodyDto
             {
@@ -45,7 +45,7 @@ namespace ProxyMapService.WebLogging
                 case HttpBodyContentKind.MultipartFormData:
                     try
                     {
-                        ParseMultipart(response, requesXMicrosoftAjax, dto, bodySpan);
+                        ParseMultipart(response, requestXMicrosoftAjax, dto, bodySpan);
                     }
                     catch
                     {

@@ -1,9 +1,8 @@
-﻿using ProxyMapService.Proxy.Cache;
-using ProxyMapService.Proxy.Counters;
-using ProxyMapService.Proxy.Handlers;
+﻿using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using System.Diagnostics;
+using System.Text;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
@@ -12,7 +11,7 @@ namespace ProxyMapService.Proxy.Tunnels
 {
     public class HttpResponseTunnel : HttpTunnel
     {
-        private readonly HttpParser _httpParser;
+        private readonly HttpParser _parser;
 
         public HttpResponseTunnel(
             SessionContext context,
@@ -33,107 +32,201 @@ namespace ProxyMapService.Proxy.Tunnels
             selfState,
             otherTunnelState)
         {
-            _httpParser = new HttpParser(true, _context.ResponseHeader == null);
+            _parser = new HttpParser(true, _context.ResponseHeader == null);
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _httpParser.Dispose();
+                _parser.Dispose();
             }
             base.Dispose(disposing);
         }
 
         protected override async Task ProcessAsync(ReadOnlyMemory<byte> data, CancellationToken token)
         {
-            var parser = _httpParser;
-            if (_selfState.ResetReadHeaders)
+            while (data.Length > 0)
             {
-                _selfState.ResetReadHeaders = false;
-                if (_readCounter.IsLogReading)
+                if (_selfState.ResetReadHeaders)
                 {
-                    LogTunnelResetReadingHeaders(_context.Logger, _selfState.TunnelId);
-                }
-                _context.ResponseCacheEntry = null;
-                _context.DisposeResponseCacheFileStream();
-                parser.Reset();
-            }
-            if (!_otherTunnelState.ResetReadHeaders)
-            {
-                if (_readCounter.IsLogReading)
-                {
-                    LogOtherTunnelResetReadingHeaders(_context.Logger,
-                        _selfState.TunnelId, _otherTunnelState.TunnelId);
-                }
-                _otherTunnelState.ResetReadHeaders = true;
-            }
-            if (parser.ReadingHeaders)
-            {
-                if (_readCounter.IsLogReading)
-                {
-                    LogTunnelReadingHeaders(
-                        _context.Logger,
-                        _selfState.TunnelId,
-                        StreamDirectionName.GetName(_readCounter.Direction));
-                }
-                parser.AppendData(data.Span, out bool endOfHeaders);
-                if (!endOfHeaders)
-                {
-                    return;
-                }
-                bool headerModified = false;
-                CacheEntry? requestCacheEntry = null;
-                var headerAndTail = parser.HeaderAndTail;
-                if (headerAndTail != null)
-                {
+                    _selfState.ResetReadHeaders = false;
                     if (_readCounter.IsLogReading)
                     {
-                        LogTunnelHeadersRead(
-                            _context.Logger,
-                            _selfState.TunnelId,
-                            StreamDirectionName.GetName(_readCounter.Direction));
+                        LogTunnelResetReadingHeaders(_context.Logger, _selfState.TunnelId);
                     }
-                    if (_context.RequestHeader == null)
-                    {
-                        _context.Logger.LogNullHTTPRequestHeader(_context.Host);
-                        //Debug.Assert(false, "HTTP Request Header is null");
-                    }
-                    var header = new HttpResponseHeader(headerAndTail.HeaderLines, parser.HeaderLength);
-                    _context.ResponseHeader = header;
-                    _context.ResponseHeadersLogger?.OnHttpResponseHeader(_context, header, _context.RequestHeader);
-                    if (!header.BadResponse)
-                    {
-                        _context.ResponseBodyTracker = CreateResponseBodyTracker(_context, header, null);
-                        if (headerAndTail.TailBytes != null)
-                        {
-                            _context.ResponseBodyTracker.TryAppend(headerAndTail.TailBytes);
-                        }
-                        if (CreateResponseCacheFileStream(_context, _context.RequestHeader))
-                        {
-                            if (_context.ResponseCacheFileStream != null)
-                            {
-                                await parser.CopyHeaderStreamAsync(_context.ResponseCacheFileStream);
-                                await HandleEndOfResponseCacheFileStream(_context);
-                            }
-                        }
-                    }
+                    _context.ResponseHeader = null;
+                    _context.DisposeResponseBodyTracker();
+                    _context.ResponseCacheEntry = null;
+                    _context.DisposeResponseCacheFileStream();
+                    _parser.Reset();
+                }
+                if (_parser.ReadingHeaders)
+                {
+                    data = await ProcessReadHeaderAsync(data, token);
                 }
                 else
                 {
-                    if (_readCounter.IsLogReading)
+                    data = await ProcessReadBodyAsync(data, _context.ResponseBodyTracker, token);
+                }
+                if (_context.ResponseBodyTracker?.Completed == true)
+                {
+                    _selfState.ResetReadHeaders = true;
+                }
+            }
+        }
+
+        protected async Task<ReadOnlyMemory<byte>> ProcessReadHeaderAsync(ReadOnlyMemory<byte> data, CancellationToken token)
+        {
+            if (_readCounter.IsLogReading)
+            {
+                LogTunnelReadingHeaders(
+                    _context.Logger,
+                    _selfState.TunnelId,
+                    StreamDirectionName.GetName(_readCounter.Direction));
+            }
+            _parser.AppendData(data.Span, out bool endOfHeaders);
+            if (!endOfHeaders)
+            {
+                return data[data.Length..];
+            }
+
+            var headerAndTail = _parser.GetHeaderLinesAndTail();
+            if (headerAndTail == null)
+            {
+                if (_sendCounter.IsLogSending)
+                {
+                    LogTunnelSending(
+                        _context.Logger,
+                        _selfState.TunnelId,
+                        StreamDirectionName.GetName(_sendCounter.Direction));
+                }
+                await _destinationReady.Task.WaitAsync(token);
+                await _destination.WriteAsync(_parser.BufferedBytes, token);
+                return data[data.Length..];
+            }
+
+            _parser.ClearHeaderStream();
+
+            if (_readCounter.IsLogReading)
+            {
+                LogTunnelHeadersRead(
+                    _context.Logger,
+                    _selfState.TunnelId,
+                    StreamDirectionName.GetName(_readCounter.Direction));
+            }
+
+            var responseHeader = new HttpResponseHeader(headerAndTail.HeaderLines, _parser.HeaderLength);
+            _context.ResponseHeader = responseHeader;
+            _context.RequestHeaderHistory.TryGetValue(responseHeader.ResponseNum, out var requestHeader);
+            if (requestHeader != null)
+            {
+                responseHeader.ResponseId = requestHeader.RequestId;
+            }
+            _context.ResponseHeadersLogger?.OnHttpResponseHeader(_context, responseHeader, requestHeader);
+
+            if (responseHeader.BadResponse)
+            {
+                if (_sendCounter.IsLogSending)
+                {
+                    LogTunnelSending(
+                        _context.Logger,
+                        _selfState.TunnelId,
+                        StreamDirectionName.GetName(_sendCounter.Direction));
+                }
+                await _destinationReady.Task.WaitAsync(token);
+                await _destination.WriteAsync(_parser.BufferedBytes, token);
+                return data[data.Length..];
+            }
+
+            var tracker = CreateResponseBodyTracker(_context, responseHeader, requestHeader);
+
+            CreateResponseCacheFileStream(_context, requestHeader);
+
+            bool sendLogged = false;
+
+            string header = string.Join("\r\n", headerAndTail.HeaderLines);
+            byte[] headerBytes = Encoding.ASCII.GetBytes(header);
+
+            if (_context.ResponseCacheFileStream != null)
+            {
+                await _context.ResponseCacheFileStream.WriteAsync(headerBytes, CancellationToken.None);
+                await HandleEndOfResponseCacheFileStream(_context);
+            }
+
+            if (_sendCounter.IsLogSending && !sendLogged)
+            {
+                sendLogged = true;
+                LogTunnelSending(
+                    _context.Logger,
+                    _selfState.TunnelId,
+                    StreamDirectionName.GetName(_sendCounter.Direction));
+            }
+            await _destinationReady.Task.WaitAsync(token);
+            await _destination.WriteAsync(headerBytes.AsMemory(0, headerBytes.Length), token);
+
+            if (headerAndTail.TailBytes == null)
+            {
+                return data[data.Length..];
+            }
+
+            if (tracker.Completed == true)
+            {
+                return headerAndTail.TailBytes;
+            }
+
+            if (tracker.TryAppend(headerAndTail.TailBytes, out var consumed) == true)
+            {
+                if (consumed > 0)
+                {
+                    var body = headerAndTail.TailBytes[..consumed];
+                    if (_context.ResponseCacheFileStream != null)
                     {
-                        LogTunnelBodyRead(
+                        await _context.ResponseCacheFileStream.WriteAsync(body, CancellationToken.None);
+                        await HandleEndOfResponseCacheFileStream(_context);
+                    }
+                    if (_sendCounter.IsLogSending && !sendLogged)
+                    {
+                        LogTunnelSending(
                             _context.Logger,
                             _selfState.TunnelId,
-                            StreamDirectionName.GetName(_readCounter.Direction));
+                            StreamDirectionName.GetName(_sendCounter.Direction));
                     }
-                    _context.ResponseBodyTracker?.TryAppend(data.Span);
+                    await _destinationReady.Task.WaitAsync(token);
+                    await _destination.WriteAsync(body, token);
+                }
+                return headerAndTail.TailBytes.AsMemory()[consumed..];
+            }
+
+            return headerAndTail.TailBytes;
+        }
+
+        protected async Task<ReadOnlyMemory<byte>> ProcessReadBodyAsync(ReadOnlyMemory<byte> data, IBodyTracker? tracker, CancellationToken token)
+        {
+            if (tracker?.Completed == true)
+            {
+                _selfState.ResetReadHeaders = true;
+                return data;
+            }
+
+            if (_readCounter.IsLogReading)
+            {
+                LogTunnelBodyRead(
+                    _context.Logger,
+                    _selfState.TunnelId,
+                    StreamDirectionName.GetName(_readCounter.Direction));
+            }
+
+            if (tracker?.TryAppend(data.Span, out var consumed) == true)
+            {
+                if (consumed > 0)
+                {
+                    var body = data[..consumed];
                     if (_context.ResponseCacheFileStream != null)
                     {
                         if (_context.ResponseCacheEntry != null)
                         {
-                            await _context.ResponseCacheFileStream.WriteAsync(data);
+                            await _context.ResponseCacheFileStream.WriteAsync(body);
                             await HandleEndOfResponseCacheFileStream(_context);
                         }
                         else
@@ -143,15 +236,6 @@ namespace ProxyMapService.Proxy.Tunnels
                             _context.DisposeResponseCacheFileStream();
                         }
                     }
-                }
-                using var cacheFileStream = requestCacheEntry != null ? GetCacheEntryFileStream(requestCacheEntry) : null;
-                if (requestCacheEntry != null && cacheFileStream != null)
-                {
-                    _selfState.ResetReadHeaders = true;
-                    await ReplyCacheFile(requestCacheEntry, cacheFileStream, _source, _context);
-                }
-                else
-                {
                     if (_sendCounter.IsLogSending)
                     {
                         LogTunnelSending(
@@ -160,51 +244,38 @@ namespace ProxyMapService.Proxy.Tunnels
                             StreamDirectionName.GetName(_sendCounter.Direction));
                     }
                     await _destinationReady.Task.WaitAsync(token);
-                    if (headerAndTail != null && headerModified)
-                    {
-                        await SendModifiedHeadersAndBody(_destination, headerAndTail.HeaderLines, headerAndTail.TailBytes, token);
-                    }
-                    else
-                    {
-                        await parser.WriteHeaderStreamAsync(_destination, token);
-                    }
+                    await _destination.WriteAsync(body, token);
                 }
-                parser.ClearHeaderStream();
+                return data[consumed..];
             }
-            else
+
+
+            if (_context.ResponseCacheFileStream != null)
             {
-                if (_readCounter.IsLogReading)
+                if (_context.ResponseCacheEntry != null)
                 {
-                    LogTunnelBodyRead(
-                        _context.Logger,
-                        _selfState.TunnelId,
-                        StreamDirectionName.GetName(_readCounter.Direction));
+                    await _context.ResponseCacheFileStream.WriteAsync(data);
+                    await HandleEndOfResponseCacheFileStream(_context);
                 }
-                _context.ResponseBodyTracker?.TryAppend(data.Span);
-                if (_context.ResponseCacheFileStream != null)
+                else
                 {
-                    if (_context.ResponseCacheEntry != null)
-                    {
-                        await _context.ResponseCacheFileStream.WriteAsync(data);
-                        await HandleEndOfResponseCacheFileStream(_context);
-                    }
-                    else
-                    {
-                        //context.Logger.LogDebug("Response cache entry is null (2)");
-                        Debug.Assert(false, "Response cache entry is null (2)");
-                        _context.DisposeResponseCacheFileStream();
-                    }
+                    //context.Logger.LogDebug("Response cache entry is null (2)");
+                    Debug.Assert(false, "Response cache entry is null (2)");
+                    _context.DisposeResponseCacheFileStream();
                 }
-                if (_sendCounter.IsLogSending)
-                {
-                    LogTunnelSending(
-                        _context.Logger,
-                        _selfState.TunnelId,
-                        StreamDirectionName.GetName(_sendCounter.Direction));
-                }
-                await _destinationReady.Task.WaitAsync(token);
-                await _destination.WriteAsync(data, token);
             }
+
+            if (_sendCounter.IsLogSending)
+            {
+                LogTunnelSending(
+                    _context.Logger,
+                    _selfState.TunnelId,
+                    StreamDirectionName.GetName(_sendCounter.Direction));
+            }
+
+            await _destinationReady.Task.WaitAsync(token);
+            await _destination.WriteAsync(data, token);
+            return data[data.Length..];
         }
     }
 }

@@ -1,9 +1,10 @@
 ﻿using ProxyMapService.Proxy.Counters;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class BodyTracker(ILogger logger, bool response, string? contentType, string? contentEncoding, long contentLength, 
-        IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
+    public class BodyTracker(ILogger logger, bool response, HttpRequestHeader? requestHeader, string? contentType, string? contentEncoding, long contentLength, 
+        bool hasBody, IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
     {
         private enum State
         {
@@ -17,7 +18,7 @@ namespace ProxyMapService.Proxy.Http
 #endif
         private readonly string _logErrorPrefix = response ? "[response] BodyTracker error: " : "[request] BodyTracker error: ";
 
-        private State _state = contentLength > 0 ? State.ReadData : State.Completed;
+        private State _state = hasBody ? State.ReadData : State.Completed;
 
         private long _bodyLength;
         private MemoryStream? _bodyStream = shouldAccumulate && accumulateStream == null ? new() : null;
@@ -28,7 +29,7 @@ namespace ProxyMapService.Proxy.Http
 
         public long BodyLength => _bodyLength;
 
-        public bool TryAppend(ReadOnlySpan<byte> data)
+        public bool TryAppend(ReadOnlySpan<byte> data, out int consumed)
         {
 #if DEBUG
             logger.LogDebug(
@@ -44,6 +45,7 @@ namespace ProxyMapService.Proxy.Http
                     "{prefix}empty data.",
                     _logErrorPrefix
                     );
+                consumed = 0;
                 return false;
             }
 
@@ -53,36 +55,34 @@ namespace ProxyMapService.Proxy.Http
                     "{prefix}body already completed.",
                     _logErrorPrefix
                     );
+                consumed = 0;
                 return false;
             }
 
             if (Failed)
-                return false;
-
-            if (_bodyLength + data.Length > contentLength)
             {
-                _state = State.Failed;
-
-                logger.LogWarning(
-                    "{prefix}body data length exceeded the expected content length ({contentLength} bytes).",
-                    _logErrorPrefix,
-                    contentLength
-                    );
-
+                consumed = 0;
                 return false;
             }
 
-            _bodyLength += data.Length;
-            if (shouldAccumulate)
+            consumed = (int)Math.Min(contentLength - _bodyLength, data.Length);
+
+            if (consumed > 0)
             {
-                accumulateStream?.Write(data);
-                _bodyStream?.Write(data);
+                var part = data[..consumed];
+
+                _bodyLength += consumed;
+                if (shouldAccumulate)
+                {
+                    accumulateStream?.Write(part);
+                    _bodyStream?.Write(part);
+                }
             }
 
             if (_bodyLength >= contentLength)
             {
                 _state = State.Completed;
-                bodyLogger?.OnCompleted(context, contentType, contentEncoding, _bodyLength, accumulateStream ?? _bodyStream);
+                bodyLogger?.OnCompleted(context, requestHeader, contentType, contentEncoding, _bodyLength, accumulateStream ?? _bodyStream);
             }
 
             return true;

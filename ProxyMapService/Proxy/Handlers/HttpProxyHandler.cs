@@ -70,7 +70,7 @@ namespace ProxyMapService.Proxy.Handlers
                 var httpRequestBytes = http.GetBytes(true, proxyAuthorization, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes);
+                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, http.RequestId);
                     if (context.Http == null)
                     {
                         // CONNECT request
@@ -79,7 +79,7 @@ namespace ProxyMapService.Proxy.Handlers
 
                     if (!context.RequestHeader.BadRequest)
                     {
-                        context.RequestBodyTracker = CreateRequestBodyTracker(context, context.RequestHeader, null);
+                        CreateRequestBodyTracker(context, context.RequestHeader, null);
                     }
 
                     var cacheEntry = await GetCacheEntry(context, context.RequestHeader);
@@ -98,7 +98,7 @@ namespace ProxyMapService.Proxy.Handlers
                             {
                                 await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.Succeeded);
                             }
-                            await HttpProto.HttpReplyCacheFileStream(context, cacheEntry, cacheFileStream);
+                            await HttpProto.HttpReplyCacheFileStream(context, context.RequestHeader, cacheEntry, cacheFileStream);
                             context.Logger.LogResponseFromCache(cacheFileStream.Name);
                             return HandleStep.Tunnel;
                         }
@@ -120,7 +120,7 @@ namespace ProxyMapService.Proxy.Handlers
                         context.ResponseHeadersLogger?.OnHttpResponseHeader(context, context.ResponseHeader, context.RequestHeader);
                         if (!context.ResponseHeader.BadResponse)
                         {
-                            context.ResponseBodyTracker = CreateResponseBodyTracker(context, context.ResponseHeader, null);
+                            CreateResponseBodyTracker(context, context.ResponseHeader, context.RequestHeader);
                             if (CreateResponseCacheFileStream(context, context.RequestHeader))
                             {
                                 if (context.ResponseCacheFileStream != null)
@@ -188,7 +188,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Http != null)
             {
-                await HttpProto.HttpReplyBadGateway(context);
+                await HttpProto.HttpReplyBadGateway(context, context.Http);
             }
             if (context.Socks4 != null)
             {

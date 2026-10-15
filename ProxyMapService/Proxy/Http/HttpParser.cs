@@ -10,19 +10,21 @@ namespace ProxyMapService.Proxy.Http
         private bool _readingHeaders = false;
 
         private int _headerLength = 0;
-        private HttpHeaderLinesAndTail? _headerAndTail = null;
 
         private readonly bool _response;
-        private readonly bool _initialReadHeaders;
 
-        public bool ReadingHeaders { get => _readingHeaders; }
+        public bool ReadingHeaders => _readingHeaders;
 
-        public int HeaderLength { get => _headerLength; }
-        public HttpHeaderLinesAndTail? HeaderAndTail { get => _headerAndTail; }
+        public int HeaderLength => _headerLength;
+
+        public ReadOnlyMemory<byte> HeaderBytes =>
+            _memoryStream.GetBuffer().AsMemory(0, Math.Min(_headerLength, (int)_memoryStream.Length));
+
+        public ReadOnlyMemory<byte> BufferedBytes =>
+            _memoryStream.GetBuffer().AsMemory(0, (int)_memoryStream.Length);
 
         public HttpParser(bool response, bool readHeaders) {
             _response = response;
-            _initialReadHeaders = readHeaders;
             _readingHeaders = readHeaders;
         }
 
@@ -31,9 +33,8 @@ namespace ProxyMapService.Proxy.Http
             _memoryStream.SetLength(0);
             _memoryStream.Position = 0;
             _searchHeadersStart = 0;
-            _readingHeaders = _initialReadHeaders;
+            _readingHeaders = true;
             _headerLength = 0;
-            _headerAndTail = null;
         }
 
         public void AppendData(ReadOnlySpan<byte> data, out bool endOfHeaders)
@@ -46,7 +47,6 @@ namespace ProxyMapService.Proxy.Http
                 {
                     _readingHeaders = false;
                     _headerLength = headersEnd >= 0 ? headersEnd + 4 : 0;
-                    _headerAndTail = GetHeaderLinesAndTail(_memoryStream, _response, headersEnd);
                     endOfHeaders = true;
                     return;
                 }
@@ -54,21 +54,15 @@ namespace ProxyMapService.Proxy.Http
             endOfHeaders = false;
         }
 
-        public async Task CopyHeaderStreamAsync(Stream destination)
-        {
-            _memoryStream.Position = 0;
-            await _memoryStream.CopyToAsync(destination);
-        }
-
-        public async Task WriteHeaderStreamAsync(Stream destination, CancellationToken cancellationToken)
-        {
-            await destination.WriteAsync(_memoryStream.GetBuffer().AsMemory(0, (int)_memoryStream.Length), cancellationToken);
-        }
-
         public void ClearHeaderStream()
         {
             _memoryStream.SetLength(0);
             _memoryStream.Position = 0;
+        }
+
+        public HttpHeaderLinesAndTail? GetHeaderLinesAndTail()
+        {
+            return _headerLength >= 4 ? GetHeaderLinesAndTail(_memoryStream, _response, _headerLength - 4) : null;
         }
 
         public void Dispose()

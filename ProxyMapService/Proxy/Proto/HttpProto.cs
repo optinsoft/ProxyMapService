@@ -3,31 +3,34 @@ using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
 using System.Text.Json;
+using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Proto
 {
     public class HttpProto
     {
-        public static async Task HttpReplyConnectionEstablished(SessionContext context, Stream? incomingStream)
+        public static async Task HttpReplyConnectionEstablished(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream)
         {
             if (incomingStream == null) return;
             string[] headers = [
                 "HTTP/1.1 200 Connection established",
                 $"Date: {DateTime.UtcNow:R}"
             ];
-            context.ResponseHeadersLogger?.OnHttpHeader(context, true, headers);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, true, headers);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, context.Token);
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
-        public static async Task HttpReplyConnectionEstablished(SessionContext context)
+        public static async Task HttpReplyConnectionEstablished(SessionContext context, HttpRequestHeader? requestHeader)
         {
-            await HttpReplyConnectionEstablished(context, context.IncomingStream);
+            await HttpReplyConnectionEstablished(context, requestHeader, context.IncomingStream);
         }
 
-        public static async Task HttpReplyError(SessionContext context, Stream? incomingStream, string httpStatusLine, List<string>? customHeaders, string? errorMessage)
+        public static async Task HttpReplyError(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string httpStatusLine, List<string>? customHeaders, string? errorMessage)
         {
             if (incomingStream == null) return;
             List<string> headers = [
@@ -45,151 +48,173 @@ namespace ProxyMapService.Proxy.Proto
                 headers.Add($"Content-Type: {contentType}");
             }
             headers.Add($"Content-Length: {contentBytes.Length}");
-            context.ResponseHeadersLogger?.OnHttpHeader(context, contentBytes.Length <= 0, [.. headers]);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, contentBytes.Length <= 0, [.. headers]);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(headerBytes, context.Token);
             if (contentBytes.Length > 0)
             {
-                context.ResponseBodyLogger?.OnCompleted(context, contentType, contentBytes.Length, contentBytes);
+                context.ResponseBodyLogger?.OnCompleted(context, requestHeader, contentType, contentBytes.Length, contentBytes);
                 await incomingStream.WriteAsync(contentBytes, context.Token);
             }
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
-        public static async Task HttpReplyError(SessionContext context, Stream? incomingStream, string httpStatusLine, List<string>? customHeaders)
+        public static async Task HttpReplyError(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string httpStatusLine, List<string>? customHeaders)
         {
-            await HttpReplyError(context, incomingStream, httpStatusLine, customHeaders, null);
+            await HttpReplyError(context, requestHeader, incomingStream, httpStatusLine, customHeaders, null);
         }
 
-        public static async Task HttpReplyError(SessionContext context, Stream? incomingStream, string httpStatusLine, string? errorMessage)
+        public static async Task HttpReplyError(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string httpStatusLine, string? errorMessage)
         {
-            await HttpReplyError(context, incomingStream, httpStatusLine, null, errorMessage);
+            await HttpReplyError(context, requestHeader, incomingStream, httpStatusLine, null, errorMessage);
         }
 
-        public static async Task HttpReplyError(SessionContext context, Stream? incomingStream, string httpStatusLine)
+        public static async Task HttpReplyError(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string httpStatusLine)
         {
-            await HttpReplyError(context, incomingStream, httpStatusLine, null, null);
+            await HttpReplyError(context, requestHeader, incomingStream, httpStatusLine, null, null);
         }
 
-        public static async Task HttpReplyError(SessionContext context, string httpStatusLine, string? errorMessage = null)
+        public static async Task HttpReplyError(SessionContext context, HttpRequestHeader? requestHeader, 
+            string httpStatusLine, string? errorMessage = null)
         {
-            await HttpReplyError(context, context.IncomingStream, httpStatusLine, null, errorMessage);
+            await HttpReplyError(context, requestHeader, context.IncomingStream, httpStatusLine, null, errorMessage);
         }
 
-        public static async Task HttpReplyInternalServerError(SessionContext context, Stream? incomingStream, string? errorMessage)
+        public static async Task HttpReplyInternalServerError(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string? errorMessage)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 500 Internal Server Error", null, errorMessage);
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 500 Internal Server Error", null, errorMessage);
         }
 
-        public static async Task HttpReplyInternalServerError(SessionContext context, string? errorMessage)
+        public static async Task HttpReplyInternalServerError(SessionContext context, HttpRequestHeader? requestHeader, 
+            string? errorMessage)
         {
-            await HttpReplyInternalServerError(context, context.IncomingStream, errorMessage);
+            await HttpReplyInternalServerError(context, requestHeader, context.IncomingStream, errorMessage);
         }
 
-        public static async Task HttpReplyNotImplemented(SessionContext context, Stream? incomingStream, string? errorMessage)
+        public static async Task HttpReplyNotImplemented(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string? errorMessage)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 501 Not Implemented", null, errorMessage);
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 501 Not Implemented", null, errorMessage);
         }
 
-        public static async Task HttpReplyNotImplemented(SessionContext context, string? errorMessage)
+        public static async Task HttpReplyNotImplemented(SessionContext context, HttpRequestHeader? requestHeader, 
+            string? errorMessage)
         {
-            await HttpReplyNotImplemented(context, context.IncomingStream, errorMessage);
+            await HttpReplyNotImplemented(context, requestHeader, context.IncomingStream, errorMessage);
         }
 
-        public static async Task HttpReplyBadGateway(SessionContext context, Stream? incomingStream, string? errorMessage)
+        public static async Task HttpReplyBadGateway(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string? errorMessage)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 502 Bad Gateway", null, errorMessage);
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 502 Bad Gateway", null, errorMessage);
         }
 
-        public static async Task HttpReplyBadGateway(SessionContext context, string? errorMessage = null)
+        public static async Task HttpReplyBadGateway(SessionContext context, HttpRequestHeader? requestHeader, 
+            string? errorMessage = null)
         {
-            await HttpReplyBadGateway(context, context.IncomingStream, errorMessage);
+            await HttpReplyBadGateway(context, requestHeader, context.IncomingStream, errorMessage);
         }
 
-        public static async Task HttpReplyServiceUnavailable(SessionContext context, Stream? incomingStream, string? errorMessage)
+        public static async Task HttpReplyServiceUnavailable(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string? errorMessage)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 503 Service Unavailable", null, errorMessage);
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 503 Service Unavailable", null, errorMessage);
         }
 
-        public static async Task HttpReplyServiceUnavailable(SessionContext context, string? errorMessage)
+        public static async Task HttpReplyServiceUnavailable(SessionContext context, HttpRequestHeader? requestHeader, 
+            string? errorMessage)
         {
-            await HttpReplyServiceUnavailable(context, context.IncomingStream, errorMessage);
+            await HttpReplyServiceUnavailable(context, requestHeader, context.IncomingStream, errorMessage);
         }
 
-        public static async Task HttpReplyGatewayTimeout(SessionContext context, Stream? incomingStream, string? errorMessage)
+        public static async Task HttpReplyGatewayTimeout(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string? errorMessage)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 504 Gateway Timeout", null, errorMessage);
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 504 Gateway Timeout", null, errorMessage);
         }
 
-        public static async Task HttpReplyGatewayTimeout(SessionContext context, string? errorMessage)
+        public static async Task HttpReplyGatewayTimeout(SessionContext context, HttpRequestHeader? requestHeader, 
+            string? errorMessage)
         {
-            await HttpReplyGatewayTimeout(context, context.IncomingStream, errorMessage);
+            await HttpReplyGatewayTimeout(context, requestHeader, context.IncomingStream, errorMessage);
         }
 
-        public static async Task HttpReplyProxyAuthenticationRequired(SessionContext context, Stream? incomingStream)
+        public static async Task HttpReplyProxyAuthenticationRequired(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 407 Proxy Authentication Required", 
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 407 Proxy Authentication Required", 
                 ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""]);
         }
 
-        public static async Task HttpReplyProxyAuthenticationRequired(SessionContext context)
+        public static async Task HttpReplyProxyAuthenticationRequired(SessionContext context, HttpRequestHeader? requestHeader)
         {
-            await HttpReplyProxyAuthenticationRequired(context, context.IncomingStream);
+            await HttpReplyProxyAuthenticationRequired(context, requestHeader, context.IncomingStream);
         }
 
-        public static async Task HttpReplyProxyUnauthorized(SessionContext context, Stream? incomingStream)
+        public static async Task HttpReplyProxyUnauthorized(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 401 Unauthorized", 
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 401 Unauthorized", 
                 ["Proxy-Authenticate: Basic realm=\"Pass Through Proxy\""]);
         }
 
-        public static async Task HttpReplyProxyUnauthorized(SessionContext context)
+        public static async Task HttpReplyProxyUnauthorized(SessionContext context, HttpRequestHeader? requestHeader)
         {
-            await HttpReplyProxyUnauthorized(context, context.IncomingStream);
+            await HttpReplyProxyUnauthorized(context, requestHeader, context.IncomingStream);
         }
 
-        public static async Task HttpReplyBadRequest(SessionContext context, Stream? incomingStream, string? errorMessage = null)
+        public static async Task HttpReplyBadRequest(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string? errorMessage = null)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 400 Bad Request", errorMessage);
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 400 Bad Request", errorMessage);
         }
 
-        public static async Task HttpReplyBadRequest(SessionContext context, string? errorMessage = null)
+        public static async Task HttpReplyBadRequest(SessionContext context, HttpRequestHeader? requestHeader, 
+            string? errorMessage = null)
         {
-            await HttpReplyBadRequest(context, context.IncomingStream, errorMessage);
+            await HttpReplyBadRequest(context, requestHeader, context.IncomingStream, errorMessage);
         }
 
-        public static async Task HttpReplyForbidden(SessionContext context, Stream? incomingStream)
+        public static async Task HttpReplyForbidden(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 403 Forbidden");
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 403 Forbidden");
         }
 
-        public static async Task HttpReplyForbidden(SessionContext context)
+        public static async Task HttpReplyForbidden(SessionContext context, HttpRequestHeader? requestHeader)
         {
-            await HttpReplyForbidden(context, context.IncomingStream);
+            await HttpReplyForbidden(context, requestHeader, context.IncomingStream);
         }
 
-        public static async Task HttpReplyNotFound(SessionContext context, Stream? incomingStream)
+        public static async Task HttpReplyNotFound(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 404 Not Found");
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 404 Not Found");
         }
 
-        public static async Task HttpReplyNotFound(SessionContext context)
+        public static async Task HttpReplyNotFound(SessionContext context, HttpRequestHeader? requestHeader)
         {
-            await HttpReplyNotFound(context, context.IncomingStream);
+            await HttpReplyNotFound(context, requestHeader, context.IncomingStream);
         }
 
-        public static async Task HttpReplyMethodNotAllowed(SessionContext context, Stream? incomingStream)
+        public static async Task HttpReplyMethodNotAllowed(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream)
         {
-            await HttpReplyError(context, incomingStream, "HTTP/1.1 405 Method Not Allowed");
+            await HttpReplyError(context, requestHeader, incomingStream, "HTTP/1.1 405 Method Not Allowed");
         }
         
-        public static async Task HttpReplyMethodNotAllowed(SessionContext context)
+        public static async Task HttpReplyMethodNotAllowed(SessionContext context, HttpRequestHeader? requestHeader)
         {
-            await HttpReplyMethodNotAllowed(context, context.IncomingStream);
+            await HttpReplyMethodNotAllowed(context, requestHeader, context.IncomingStream);
         }
 
-        public static async Task HttpReplyText(SessionContext context, Stream? incomingStream, string text)
+        public static async Task HttpReplyText(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string text)
         {
             if (incomingStream == null) return;
 
@@ -205,7 +230,7 @@ namespace ProxyMapService.Proxy.Proto
                 $"Content-Type: {contentType}"
             ];
 
-            context.ResponseHeadersLogger?.OnHttpHeader(context, textBytes.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, textBytes.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -214,19 +239,21 @@ namespace ProxyMapService.Proxy.Proto
 
             if (textBytes.Length > 0)
             {
-                context.ResponseBodyLogger?.OnCompleted(context, contentType, textBytes.Length, textBytes);
+                context.ResponseBodyLogger?.OnCompleted(context, requestHeader, contentType, textBytes.Length, textBytes);
                 await incomingStream.WriteAsync(textBytes, context.Token);
             }
 
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
-        public static async Task HttpReplyText(SessionContext context, string text)
+        public static async Task HttpReplyText(SessionContext context, HttpRequestHeader? requestHeader, 
+            string text)
         {
-            await HttpReplyText(context, context.IncomingStream, text);
+            await HttpReplyText(context, requestHeader, context.IncomingStream, text);
         }
 
-        public static async Task HttpReplyHtml(SessionContext context, Stream? incomingStream, string html)
+        public static async Task HttpReplyHtml(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string html)
         {
             if (incomingStream == null) return;
 
@@ -242,7 +269,7 @@ namespace ProxyMapService.Proxy.Proto
                 $"Content-Type: {contentType}"
             ];
 
-            context.ResponseHeadersLogger?.OnHttpHeader(context, htmlBytes.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, htmlBytes.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -251,20 +278,21 @@ namespace ProxyMapService.Proxy.Proto
 
             if (htmlBytes.Length > 0)
             {
-                context.ResponseBodyLogger?.OnCompleted(context, contentType, htmlBytes.Length, htmlBytes);
+                context.ResponseBodyLogger?.OnCompleted(context, requestHeader, contentType, htmlBytes.Length, htmlBytes);
                 await incomingStream.WriteAsync(htmlBytes, context.Token);
             }
 
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
-        public static async Task HttpReplyHtml(SessionContext context, string html)
+        public static async Task HttpReplyHtml(SessionContext context, HttpRequestHeader? requestHeader, 
+            string html)
         {
-            await HttpReplyHtml(context, context.IncomingStream, html);
+            await HttpReplyHtml(context, requestHeader, context.IncomingStream, html);
         }
 
-        public static async Task HttpReplyJson(SessionContext context, Stream? incomingStream, object data, string[]? customHeaders, 
-            JsonSerializerOptions serializerOptions)
+        public static async Task HttpReplyJson(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, object data, string[]? customHeaders, JsonSerializerOptions serializerOptions)
         {
             if (incomingStream == null) return;
 
@@ -281,7 +309,7 @@ namespace ProxyMapService.Proxy.Proto
                 .. (customHeaders ?? [])
             ];
 
-            context.ResponseHeadersLogger?.OnHttpHeader(context, jsonBytes.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, jsonBytes.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -290,11 +318,11 @@ namespace ProxyMapService.Proxy.Proto
 
             if (jsonBytes.Length > 0)
             {
-                context.ResponseBodyLogger?.OnCompleted(context, contentType, jsonBytes.Length, jsonBytes);
+                context.ResponseBodyLogger?.OnCompleted(context, requestHeader, contentType, jsonBytes.Length, jsonBytes);
                 await incomingStream.WriteAsync(jsonBytes, context.Token);
             }
 
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
         private static readonly JsonSerializerOptions SnakeCaseOptions = new()
@@ -303,38 +331,44 @@ namespace ProxyMapService.Proxy.Proto
             WriteIndented = false
         };
 
-        public static async Task HttpReplyJson(SessionContext context, Stream? incomingStream, object data)
+        public static async Task HttpReplyJson(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, object data)
         {
-            await HttpReplyJson(context, incomingStream, data, null, SnakeCaseOptions);
+            await HttpReplyJson(context, requestHeader, incomingStream, data, null, SnakeCaseOptions);
         }
 
-        public static async Task HttpReplyJson(SessionContext context, object data, JsonSerializerOptions serializerOptions)
+        public static async Task HttpReplyJson(SessionContext context, HttpRequestHeader? requestHeader, 
+            object data, JsonSerializerOptions serializerOptions)
         {
-            await HttpReplyJson(context, context.IncomingStream, data, null, serializerOptions);
+            await HttpReplyJson(context, requestHeader, context.IncomingStream, data, null, serializerOptions);
         }
 
-        public static async Task HttpReplyJson(SessionContext context, object data)
+        public static async Task HttpReplyJson(SessionContext context, HttpRequestHeader? requestHeader, 
+            object data)
         {
-            await HttpReplyJson(context, context.IncomingStream, data, null, SnakeCaseOptions);
+            await HttpReplyJson(context, requestHeader, context.IncomingStream, data, null, SnakeCaseOptions);
         }
 
-        public static async Task HttpReplyJson(SessionContext context, Stream? incomingStream, object data, string[]? customHeaders)
+        public static async Task HttpReplyJson(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, object data, string[]? customHeaders)
         {
-            await HttpReplyJson(context, incomingStream, data, customHeaders, SnakeCaseOptions);
+            await HttpReplyJson(context, requestHeader, incomingStream, data, customHeaders, SnakeCaseOptions);
         }
 
-        public static async Task HttpReplyJson(SessionContext context, object data, string[]? customHeaders, 
-            JsonSerializerOptions serializerOptions)
+        public static async Task HttpReplyJson(SessionContext context, HttpRequestHeader? requestHeader, 
+            object data, string[]? customHeaders, JsonSerializerOptions serializerOptions)
         {
-            await HttpReplyJson(context, context.IncomingStream, data, customHeaders, serializerOptions);
+            await HttpReplyJson(context, requestHeader, context.IncomingStream, data, customHeaders, serializerOptions);
         }
 
-        public static async Task HttpReplyJson(SessionContext context, object data, string[]? customHeaders)
+        public static async Task HttpReplyJson(SessionContext context, HttpRequestHeader? requestHeader, 
+            object data, string[]? customHeaders)
         {
-            await HttpReplyJson(context, context.IncomingStream, data, customHeaders, SnakeCaseOptions);
+            await HttpReplyJson(context, requestHeader, context.IncomingStream, data, customHeaders, SnakeCaseOptions);
         }
 
-        public static async Task HttpReplyFileBytes(SessionContext context, Stream? incomingStream, string Filename, string contentType, byte[] bytes)
+        public static async Task HttpReplyFileBytes(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string Filename, string contentType, byte[] bytes)
         {
             if (incomingStream == null) return;
 
@@ -347,7 +381,7 @@ namespace ProxyMapService.Proxy.Proto
                 $"Content-Disposition: attachment; filename=\"{Filename}\""
             ];
 
-            context.ResponseHeadersLogger?.OnHttpHeader(context, bytes.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, bytes.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -359,10 +393,11 @@ namespace ProxyMapService.Proxy.Proto
                 await incomingStream.WriteAsync(bytes, context.Token);
             }
 
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
-        public static async Task HttpReplyFileStream(SessionContext context, Stream? incomingStream, FileStream fileStream)
+        public static async Task HttpReplyFileStream(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, FileStream fileStream)
         {
             if (incomingStream == null) return;
 
@@ -377,7 +412,7 @@ namespace ProxyMapService.Proxy.Proto
                 $"Content-Type: {contentType}"
             ];
 
-            context.ResponseHeadersLogger?.OnHttpHeader(context, fileInfo.Length <= 0, headers);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, fileInfo.Length <= 0, headers);
 
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var headerBytes = Encoding.ASCII.GetBytes(headerText);
@@ -393,7 +428,7 @@ namespace ProxyMapService.Proxy.Proto
                     using MemoryStream bodyStream = new();
                     fileStream.CopyTo(bodyStream);
                     bodyStream.Position = 0;
-                    bodyLogger.OnCompleted(context, contentType, bodyLength, bodyStream);
+                    bodyLogger.OnCompleted(context, requestHeader, contentType, bodyLength, bodyStream);
                     bodyStream.Position = 0;
                     await bodyStream.CopyToAsync(incomingStream, context.Token);
                 }
@@ -403,16 +438,17 @@ namespace ProxyMapService.Proxy.Proto
                 }
             }
 
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
-        public static async Task HttpReplyFileStream(SessionContext context, FileStream fileStream)
+        public static async Task HttpReplyFileStream(SessionContext context, HttpRequestHeader? requestHeader, 
+            FileStream fileStream)
         {
-            await HttpReplyFileStream(context, context.IncomingStream, fileStream);
+            await HttpReplyFileStream(context, requestHeader, context.IncomingStream, fileStream);
         }
 
-        public static async Task HttpReplyCacheFileStream(SessionContext context, CountingStream? incomingStream,
-            CacheEntry cacheEntry, FileStream fileStream)
+        public static async Task HttpReplyCacheFileStream(SessionContext context, HttpRequestHeader? requestHeader, 
+            CountingStream? incomingStream, CacheEntry cacheEntry, FileStream fileStream)
         {
             if (incomingStream == null) return;
             var oldCached = context.CachedReply;
@@ -429,7 +465,7 @@ namespace ProxyMapService.Proxy.Proto
                     string headerString = Encoding.UTF8.GetString(headerBuffer);
                     string[] headers = headerString.Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries);
 
-                    context.ResponseHeadersLogger?.OnHttpHeader(context, fileStream.Length <= fileStream.Position, headers);
+                    context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, fileStream.Length <= fileStream.Position, headers);
 
                     await incomingStream.WriteAsync(headerBuffer.AsMemory(0, headerLength), context.Token);
                 }
@@ -443,7 +479,7 @@ namespace ProxyMapService.Proxy.Proto
                         using MemoryStream bodyStream = new();
                         fileStream.CopyTo(bodyStream);
                         bodyStream.Position = 0;
-                        bodyLogger.OnCompleted(context, cacheEntry.ContentType, bodyLength, bodyStream);
+                        bodyLogger.OnCompleted(context, requestHeader, cacheEntry.ContentType, bodyLength, bodyStream);
                         bodyStream.Position = 0;
                         await bodyStream.CopyToAsync(incomingStream, context.Token);
                     }
@@ -453,7 +489,7 @@ namespace ProxyMapService.Proxy.Proto
                     }
                 }
 
-                context.CompletionLogger?.OnHttpCompleted(context);
+                context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
             }
             finally
             {
@@ -461,12 +497,14 @@ namespace ProxyMapService.Proxy.Proto
             }
         }
 
-        public static async Task HttpReplyCacheFileStream(SessionContext context, CacheEntry cacheEntry, FileStream fileStream)
+        public static async Task HttpReplyCacheFileStream(SessionContext context, HttpRequestHeader? requestHeader, 
+            CacheEntry cacheEntry, FileStream fileStream)
         {
-            await HttpReplyCacheFileStream(context, context.IncomingStream, cacheEntry, fileStream);
+            await HttpReplyCacheFileStream(context, requestHeader, context.IncomingStream, cacheEntry, fileStream);
         }
 
-        public static async Task HttpReplyWebSocketHandshake(SessionContext context, Stream? incomingStream, string webSocketKey)
+        public static async Task HttpReplyWebSocketHandshake(SessionContext context, HttpRequestHeader? requestHeader, 
+            Stream? incomingStream, string webSocketKey)
         {
             if (incomingStream == null) return;
 
@@ -482,17 +520,18 @@ namespace ProxyMapService.Proxy.Proto
                 $"Sec-WebSocket-Accept: {acceptKey}"
             ];
 
-            context.ResponseHeadersLogger?.OnHttpHeader(context, true, headers);
+            context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, true, headers);
             var headerText = string.Join("\r\n", [.. headers, "\r\n"]);
             var bytes = Encoding.ASCII.GetBytes(headerText);
             await incomingStream.WriteAsync(bytes, context.Token);
 
-            context.CompletionLogger?.OnHttpCompleted(context);
+            context.CompletionLogger?.OnHttpCompleted(context, requestHeader);
         }
 
-        public static async Task HttpReplyWebSocketHandshake(SessionContext context, string webSocketKey)
+        public static async Task HttpReplyWebSocketHandshake(SessionContext context, HttpRequestHeader? requestHeader, 
+            string webSocketKey)
         {
-            await HttpReplyWebSocketHandshake(context, context.IncomingStream, webSocketKey);
+            await HttpReplyWebSocketHandshake(context, requestHeader, context.IncomingStream, webSocketKey);
         }
 
         public static async Task SendHttpRequest(Stream? outgoingStream, byte[] requestBytes, CancellationToken token)

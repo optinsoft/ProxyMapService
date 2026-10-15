@@ -1,13 +1,19 @@
-﻿namespace ProxyMapService.Proxy.Counters
+﻿using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
+
+namespace ProxyMapService.Proxy.Counters
 {
     public class HttpCompletionLogger(IHttpLoggingSwitch? loggingSwitch) : IHttpCompletionLogger
     {
-        public void OnHttpCompleted(object context)
+        public void OnHttpCompleted(object context, HttpRequestHeader? requestHeader)
         {
             if (loggingSwitch?.IsHttpCapture == false) return;
-            HttpCompletionHandler?.Invoke(context, new EventArgs());
+            if (requestHeader == null) return;
+            HttpCompletionHandler?.Invoke(context, new()
+            {
+                HeaderId = requestHeader.RequestId
+            });
         }
 
-        public event EventHandler<EventArgs>? HttpCompletionHandler;
+        public event EventHandler<HttpCompletedEventArgs>? HttpCompletionHandler;
     }
 }

@@ -1,7 +1,6 @@
 ﻿using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
-using System.Diagnostics;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
@@ -9,8 +8,8 @@ namespace ProxyMapService.Proxy.Utils
 {
     public static class HttpBodyUtils
     {
-        public static IBodyTracker CreateRequestBodyTracker(SessionContext context, HttpRequestHeader requestHeader, 
-            MemoryStream? accumulateBodyStream)
+        public static IBodyTracker CreateRequestBodyTracker(SessionContext context, 
+            HttpRequestHeader requestHeader, MemoryStream? accumulateBodyStream)
         {
             if (context.RequestBodyTracker != null)
             {
@@ -23,8 +22,10 @@ namespace ProxyMapService.Proxy.Utils
                 tracker = new ChunkedBodyTracker(
                     context.Logger,
                     false,
+                    requestHeader,
                     requestHeader.ContentType,
                     requestHeader.ContentEncoding,
+                    RequestHasBody(requestHeader),
                     context.RequestBodyLogger,
                     context,
                     context.RequestBodyLogger != null || accumulateBodyStream != null,
@@ -35,19 +36,22 @@ namespace ProxyMapService.Proxy.Utils
                 tracker = new BodyTracker(
                     context.Logger,
                     false,
+                    requestHeader,
                     requestHeader.ContentType,
                     requestHeader.ContentEncoding,
                     requestHeader.ContentLength ?? 0,
+                    RequestHasBody(requestHeader),
                     context.RequestBodyLogger,
                     context,
                     context.RequestBodyLogger != null || accumulateBodyStream != null,
                     accumulateBodyStream);
             }
+            context.RequestBodyTracker = tracker;
             return tracker;
         }
 
-        public static IBodyTracker CreateResponseBodyTracker(SessionContext context, HttpResponseHeader responseHeader, 
-            MemoryStream? accumulateBodyStream)
+        public static IBodyTracker CreateResponseBodyTracker(SessionContext context, 
+            HttpResponseHeader responseHeader, HttpRequestHeader? requestHeader)
         {
             if (context.ResponseBodyTracker != null)
             {
@@ -60,27 +64,72 @@ namespace ProxyMapService.Proxy.Utils
                 tracker = new ChunkedBodyTracker(
                     context.Logger,
                     true,
+                    requestHeader,
                     responseHeader.ContentType,
                     responseHeader.ContentEncoding,
-                    context.ResponseBodyLogger,
+                    ResponseHasBody(responseHeader, requestHeader?.HTTPVerb),
+                    context.ResponseBodyLogger, 
                     context,
-                    context.ResponseBodyLogger != null || accumulateBodyStream != null,
-                    accumulateBodyStream);
+                    context.ResponseBodyLogger != null,
+                    null);
             }
             else
             {
                 tracker = new BodyTracker(
                     context.Logger,
                     true,
+                    requestHeader,
                     responseHeader.ContentType,
                     responseHeader.ContentEncoding,
                     responseHeader.ContentLength ?? 0,
+                    ResponseHasBody(responseHeader, requestHeader?.HTTPVerb),
                     context.ResponseBodyLogger,
                     context,
-                    context.ResponseBodyLogger != null || accumulateBodyStream != null,
-                    accumulateBodyStream);
+                    context.ResponseBodyLogger != null,
+                    null);
             }
+            context.ResponseBodyTracker = tracker;
             return tracker;
+        }
+
+        public static bool RequestHasBody(HttpRequestHeader requestHeader)
+        {
+            switch (requestHeader.HTTPVerb)
+            {
+                case "GET":
+                    return false;
+                case "DELETE":
+                    return false;
+                case "HEAD":
+                    return false;
+                case "OPTIONS":
+                    return false;
+                case "TRACE":
+                    return false;
+                case "CONNECT":
+                    return false;
+            };
+            return (requestHeader.TransferEncoding != null) 
+                || (requestHeader.ContentLength.HasValue && requestHeader.ContentLength.Value > 0);
+        }
+
+        public static bool ResponseHasBody(HttpResponseHeader responseHeader, string? requestMethod)
+        {
+            if (requestMethod == "HEAD")
+            { 
+                return false;
+            }
+            if (responseHeader.StatusCode?.Length == 3)
+            {
+                if (responseHeader.StatusCode.StartsWith('1')
+                    || responseHeader.StatusCode == "204"
+                    || responseHeader.StatusCode == "304")
+                {
+                    return false;
+                }
+            }
+            return (responseHeader.TransferEncoding != null) 
+                || (responseHeader.ContentLength.HasValue && responseHeader.ContentLength.Value > 0);
         }
     }
 }
