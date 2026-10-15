@@ -170,6 +170,8 @@ namespace ProxyMapService.Proxy.Handlers
             catch (OperationCanceledException) when (context.TunnelToken.IsCancellationRequested)
             {
                 // Normal tunnel shutdown.
+                incomingReady.TrySetCanceled();
+                return;
             }
             catch (ObjectDisposedException ex)
             {
@@ -188,6 +190,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (AuthenticationException ex)
             {
                 context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                incomingReady.TrySetCanceled();
                 return;
                 //incomingReady.SetException(ex);
                 //throw;
@@ -195,6 +198,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception ex)
             {
                 LogRequestTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                incomingReady.TrySetCanceled();
                 return;
                 //incomingReady.SetException(ex);
                 //throw;
@@ -236,6 +240,8 @@ namespace ProxyMapService.Proxy.Handlers
             catch (OperationCanceledException) when (context.TunnelToken.IsCancellationRequested)
             {
                 // Normal tunnel shutdown.
+                outgoingReady.TrySetCanceled();
+                return;
             }
             catch (ObjectDisposedException ex)
             {
@@ -254,6 +260,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (AuthenticationException ex)
             {
                 context.Logger.LogClientTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message, context.Host);
+                outgoingReady.TrySetCanceled();
                 return;
                 //incomingReady.SetException(ex);
                 //throw;
@@ -261,6 +268,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (Exception ex)
             {
                 LogResponseTunnelError(context.Logger, ex.GetType().Name, ex.Message);
+                outgoingReady.TrySetCanceled();
                 return;
                 //outgoingReady.SetException(ex);
                 //throw;
