@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using Microsoft.Extensions.Logging;
+using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
@@ -12,6 +13,14 @@ namespace ProxyMapService.Proxy.Tunnels
     public class HttpRequestTunnel : HttpTunnel
     {
         private readonly HttpParser _parser;
+
+        private bool _protocolDetected;
+
+        private bool _isHttp2 = false;
+        private int _bytesInPrefaceBuffer = 0;
+        private byte[]? _rolledBackBytes = null;
+
+        private static readonly byte[] Http2Preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8.ToArray();
 
         public HttpRequestTunnel(
             SessionContext context,
@@ -33,6 +42,7 @@ namespace ProxyMapService.Proxy.Tunnels
             otherTunnelState)
         {
             _parser = new HttpParser(false, _context.RequestHeader == null);
+            _protocolDetected = context.Http != null && context.Http.HTTPVerb != "CONNECT";
         }
 
         protected override void Dispose(bool disposing)
@@ -46,6 +56,33 @@ namespace ProxyMapService.Proxy.Tunnels
 
         protected override async Task ProcessAsync(ReadOnlyMemory<byte> data, CancellationToken token)
         {
+            if (!_protocolDetected)
+            {
+                var prefaceResult = TryDetectHttp2(ref data);
+                if (prefaceResult == PrefaceResult.WaitingForMoreData)
+                {
+                    return;
+                }
+
+                _isHttp2 = (prefaceResult == PrefaceResult.IsHttp2);
+                _protocolDetected = true;
+
+                if (_rolledBackBytes != null)
+                {
+                    var combined = new byte[_rolledBackBytes.Length + data.Length];
+                    _rolledBackBytes.CopyTo(combined, 0);
+                    data.CopyTo(combined.AsMemory(_rolledBackBytes.Length));
+
+                    data = combined;
+                    _rolledBackBytes = null;
+                }
+
+                if (_isHttp2)
+                {
+                    _context.Logger.LogDetectedClientHTTP2(_context.IncomingEndPoint);
+                }
+            }
+
             while (data.Length > 0)
             {
                 if (_selfState.ResetReadHeaders)
@@ -255,6 +292,46 @@ namespace ProxyMapService.Proxy.Tunnels
             await _destinationReady.Task.WaitAsync(token);
             await _destination.WriteAsync(data, token);
             return data[data.Length..];
+        }
+
+        private enum PrefaceResult { WaitingForMoreData, IsHttp1, IsHttp2 }
+
+        private PrefaceResult TryDetectHttp2(ref ReadOnlyMemory<byte> data)
+        {
+            int availableToCompare = Math.Min(data.Length, Http2Preface.Length - _bytesInPrefaceBuffer);
+
+            if (availableToCompare > 0)
+            {
+                var incomingSpan = data.Span.Slice(0, availableToCompare);
+                var expectedSpan = Http2Preface.AsSpan(_bytesInPrefaceBuffer, availableToCompare);
+
+                if (!incomingSpan.SequenceEqual(expectedSpan))
+                {
+                    if (_bytesInPrefaceBuffer > 0)
+                    {
+                        _rolledBackBytes = new byte[_bytesInPrefaceBuffer];
+                        Http2Preface.AsSpan(0, _bytesInPrefaceBuffer).CopyTo(_rolledBackBytes);
+                    }
+
+                    return PrefaceResult.IsHttp1;
+                }
+
+                data = data.Slice(availableToCompare);
+                _bytesInPrefaceBuffer += availableToCompare;
+            }
+
+            if (_bytesInPrefaceBuffer == Http2Preface.Length)
+            {
+                if (_bytesInPrefaceBuffer > 0)
+                {
+                    _rolledBackBytes = new byte[_bytesInPrefaceBuffer];
+                    Http2Preface.AsSpan(0, _bytesInPrefaceBuffer).CopyTo(_rolledBackBytes);
+                }
+
+                return PrefaceResult.IsHttp2;
+            }
+
+            return PrefaceResult.WaitingForMoreData;
         }
     }
 }

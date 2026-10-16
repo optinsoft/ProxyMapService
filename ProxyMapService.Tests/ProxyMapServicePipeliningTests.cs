@@ -23,8 +23,9 @@ namespace ProxyMapService.Tests
                 .Build();
 
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
+            var useHttp2 = configuration.GetValue<bool>("TestServer:UseHttp2", false);
 
-            await using var server = new HttpsTestServer(5112, hostname: testHost, useHttp2: false);
+            await using var server = new HttpsTestServer(5112, hostname: testHost, useHttp2: useHttp2);
             await server.StartAsync();
 
             var authority = $"{testHost}:{server.Port}";
@@ -54,8 +55,9 @@ namespace ProxyMapService.Tests
                 .Build();
 
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
+            var useHttp2 = configuration.GetValue<bool>("TestServer:UseHttp2", false);
 
-            await using var server = new HttpsTestServer(5113, hostname: testHost, useHttp2: false);
+            await using var server = new HttpsTestServer(5113, hostname: testHost, useHttp2: useHttp2);
             await server.StartAsync();
 
             var authority = $"{testHost}:{server.Port}";

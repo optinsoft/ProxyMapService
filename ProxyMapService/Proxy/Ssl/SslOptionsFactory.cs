@@ -49,7 +49,11 @@ namespace ProxyMapService.Proxy.Ssl
                 ServerCertificate = serverCertificate,
                 CertificateRevocationCheckMode = context.SslServerConfig.CheckCertificateRevocation
                     ? X509RevocationMode.Online
-                    : X509RevocationMode.NoCheck
+                    : X509RevocationMode.NoCheck,
+                ApplicationProtocols = context.SslServerConfig.ApplicationProtocols
+                    .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => new SslApplicationProtocol(p.Trim()))
+                    .ToList()
             };
         }
 

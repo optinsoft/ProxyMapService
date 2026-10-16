@@ -22,7 +22,7 @@ namespace ProxyMapService.Tests
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
             var useHttp2 = configuration.GetValue<bool>("TestServer:UseHttp2", false);
 
-            await using var server = new HttpsTestServer(5111, hostname: testHost, useHttp2);
+            await using var server = new HttpsTestServer(5111, hostname: testHost, useHttp2: useHttp2);
 
             await server.StartAsync();
 

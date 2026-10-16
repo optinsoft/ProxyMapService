@@ -1,10 +1,12 @@
-﻿using ProxyMapService.Proxy.Configurations;
+﻿using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
+using System;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -18,6 +20,8 @@ namespace ProxyMapService.Proxy.Handlers
     {
         private static readonly FileRequestHandler Self = new();
         private const int BufferSize = 8192;
+
+        private static readonly byte[] Http2Preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8.ToArray();
 
         private sealed class RequestReadResult
         {
@@ -66,10 +70,10 @@ namespace ProxyMapService.Proxy.Handlers
                 }
                 catch (AuthenticationException ex)
                 {
-                    context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                    context.Logger.LogServerTLSHandshakeFailed(context.IncomingEndPoint, ex.InnerException?.Message ?? ex.Message);
                     return HandleStep.Terminate;
                 }
-                context.Logger.LogServerTLSHandshakeSucceeded();
+                context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint);
             }
 
             using CountingStream? incomingSslCountingStream =
@@ -92,6 +96,9 @@ namespace ProxyMapService.Proxy.Handlers
 
             byte[] leftover = [];
 
+            bool protocolDetected = http != null;
+            bool isHttp2 = false;
+
             while (!token.IsCancellationRequested)
             {
                 using MemoryStream bodyStream = new();
@@ -113,6 +120,18 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.RequestHeader = null;
                     context.DisposeRequestBodyTracker();
+
+                    if (!protocolDetected)
+                    {
+                        (isHttp2, leftover) = await DetectHttp2Async(context, incomingStream, leftover);
+
+                        protocolDetected = true;
+
+                        if (isHttp2)
+                        {
+                            context.Logger.LogDetectedClientHTTP2(context.IncomingEndPoint);
+                        }
+                    }
 
                     RequestReadResult read;
                     try
@@ -293,6 +312,44 @@ namespace ProxyMapService.Proxy.Handlers
             } while (bytesRead > 0 && !token.IsCancellationRequested);
 
             return leftover;
+        }
+
+        private static async Task<(bool IsHttp2, byte[] NewLeftover)> DetectHttp2Async(SessionContext context, 
+            Stream incomingStream, byte[] leftover)
+        {
+            CancellationToken token = context.Token;
+
+            while (leftover.Length < Http2Preface.Length)
+            {
+                for (int i = 0; i < leftover.Length; i++)
+                {
+                    if (leftover[i] != Http2Preface[i])
+                    {
+                        return (false, leftover);
+                    }
+                }
+
+                byte[] buffer = new byte[Http2Preface.Length - leftover.Length];
+                int readBytes = await incomingStream.ReadAsync(buffer, token);
+                if (readBytes == 0)
+                {
+                    throw new EndOfStreamException("Connection closed while detecting protocol.");
+                }
+
+                int oldLength = leftover.Length;
+                Array.Resize(ref leftover, oldLength + readBytes);
+                buffer.CopyTo(leftover, oldLength);
+            }
+
+            for (int i = 0; i < Http2Preface.Length; i++)
+            {
+                if (leftover[i] != Http2Preface[i])
+                {
+                    return (false, leftover);
+                }
+            }
+
+            return (true, leftover);
         }
 
         protected virtual async Task HandleRequest(SessionContext context, Stream incomingStream, 

@@ -13,79 +13,79 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1201,
             Level = LogLevel.Information,
-            Message = "Client connected from {remoteEndPoint}")]
+            Message = "Client connected from {remoteEndPoint}.")]
         public static partial void LogClientConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1202,
             Level = LogLevel.Information,
-            Message = "Connected to server {remoteEndPoint} (direct connection)")]
+            Message = "Connected to server {remoteEndPoint} (direct connection).")]
         private static partial void LogBypassServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1202,
             Level = LogLevel.Information,
-            Message = "Connected to server {hostname}:{port} ({remoteEndPoint}) (direct connection)")]
+            Message = "Connected to server {hostname}:{port} ({remoteEndPoint}) (direct connection).")]
         private static partial void LogBypassServerConnectedInternal2(this ILogger logger, string hostname, int port, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1203,
             Level = LogLevel.Information,
-            Message = "Connected to http proxy server {remoteEndPoint}")]
+            Message = "Connected to http proxy server {remoteEndPoint}.")]
         private static partial void LogHttpProxyServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1203,
             Level = LogLevel.Information,
-            Message = "Connected to http proxy server {hostname}:{port} ({remoteEndPoint})")]
+            Message = "Connected to http proxy server {hostname}:{port} ({remoteEndPoint}).")]
         private static partial void LogHttpProxyServerConnectedInternal2(this ILogger logger, string hostname, int port, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1204,
             Level = LogLevel.Information,
-            Message = "Connected to socks4 proxy server {remoteEndPoint}")]
+            Message = "Connected to socks4 proxy server {remoteEndPoint}.")]
         private static partial void LogSocks4ProxyServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1204,
             Level = LogLevel.Information,
-            Message = "Connected to socks4 proxy server {hostname}:{port} ({remoteEndPoint})")]
+            Message = "Connected to socks4 proxy server {hostname}:{port} ({remoteEndPoint}).")]
         private static partial void LogSocks4ProxyServerConnectedInternal2(this ILogger logger, string hostname, int port, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1205,
             Level = LogLevel.Information,
-            Message = "Connected to socks5 proxy server {remoteEndPoint}")]
+            Message = "Connected to socks5 proxy server {remoteEndPoint}.")]
         private static partial void LogSocks5ProxyServerConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1205,
             Level = LogLevel.Information,
-            Message = "Connected to socks5 proxy server {hostname}:{port} ({remoteEndPoint})")]
+            Message = "Connected to socks5 proxy server {hostname}:{port} ({remoteEndPoint}).")]
         private static partial void LogSocks5ProxyServerConnectedInternal2(this ILogger logger, string hostname, int port, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1206,
             Level = LogLevel.Information,
-            Message = "Connected to server {hostname}:{port}")]
+            Message = "Connected to server {hostname}:{port}.")]
         private static partial void LogServerConnectedInternal(this ILogger logger, string hostname, int port);
 
         [LoggerMessage(
             EventId = 1207,
             Level = LogLevel.Information,
-            Message = "Connected to server {hostname}:{port} via http proxy {proxyHost}:{proxyPort}")]
+            Message = "Connected to server {hostname}:{port} via http proxy {proxyHost}:{proxyPort}.")]
         private static partial void LogServerConnectedViaHttpProxy(this ILogger logger, string hostname, int port, string proxyHost, int proxyPort);
 
         [LoggerMessage(
             EventId = 1208,
             Level = LogLevel.Information,
-            Message = "Connected to server {hostname}:{port} via socks4 proxy {proxyHost}:{proxyPort}")]
+            Message = "Connected to server {hostname}:{port} via socks4 proxy {proxyHost}:{proxyPort}.")]
         private static partial void LogServerConnectedViaSocks4Proxy(this ILogger logger, string hostname, int port, string proxyHost, int proxyPort);
 
         [LoggerMessage(
             EventId = 1209,
             Level = LogLevel.Information,
-            Message = "Connected to server {hostname}:{port} via socks5 proxy {proxyHost}:{proxyPort}")]
+            Message = "Connected to server {hostname}:{port} via socks5 proxy {proxyHost}:{proxyPort}.")]
         private static partial void LogServerConnectedViaSocks5Proxy(this ILogger logger, string hostname, int port, string proxyHost, int proxyPort);
 
         [LoggerMessage(
@@ -163,19 +163,19 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1221,
             Level = LogLevel.Information,
-            Message = "Client disconnected. Address: {remoteEndPoint}")]
+            Message = "Client {remoteEndPoint} disconnected.")]
         public static partial void LogClientDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1222,
             Level = LogLevel.Information,
-            Message = "Server disconnected. Address: {remoteEndPoint}")]
+            Message = "Server {remoteEndPoint} disconnected.")]
         public static partial void LogBypassServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1223,
             Level = LogLevel.Information,
-            Message = "Proxy server disconnected. Address: {remoteEndPoint}")]
+            Message = "Proxy server {remoteEndPoint} disconnected.")]
         public static partial void LogProxyServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
@@ -205,8 +205,8 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1252,
             Level = LogLevel.Information,
-            Message = "TLS handshake with client completed successfully.")]
-        public static partial void LogServerTLSHandshakeSucceeded(this ILogger logger);
+            Message = "TLS handshake with client {remoteEndPoint} completed successfully.")]
+        private static partial void LogServerTLSHandshakeSucceededInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
             EventId = 1253,
@@ -217,8 +217,8 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1254,
             Level = LogLevel.Warning,
-            Message = "TLS handshake with client failed. {message}")]
-        public static partial void LogServerTLSHandshakeFailed(this ILogger logger, string message);
+            Message = "TLS handshake with client {remoteEndPoint} failed. {message}")]
+        public static partial void LogServerTLSHandshakeFailed(this ILogger logger, System.Net.EndPoint? remoteEndPoint, string message);
 
         [LoggerMessage(
             EventId = 1261,
@@ -349,7 +349,7 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1288,
             Level = LogLevel.Warning,
-            Message = "No proxy server")]
+            Message = "No proxy server.")]
         public static partial void LogNoProxyServer(this ILogger logger);
 
         [LoggerMessage(
@@ -361,44 +361,50 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1290,
             Level = LogLevel.Warning,
-            Message = "Missing or empty {headerName} header")]
+            Message = "Missing or empty {headerName} header.")]
         public static partial void LogHttpHeaderMissing(this ILogger logger, string headerName);
 
         [LoggerMessage(
             EventId = 1291,
             Level = LogLevel.Warning,
-            Message = "Routing loop prevented: connection to {outgoingEndPoint}")]
+            Message = "Routing loop prevented: connection to {outgoingEndPoint}.")]
         public static partial void LogRoutingLoopPrevented(this ILogger logger, System.Net.IPEndPoint outgoingEndPoint);
 
         [LoggerMessage(
             EventId = 1292,
             Level = LogLevel.Warning,
-            Message = "HTTP Request Header is null ({hostname}:{port})")]
+            Message = "HTTP Request Header is null ({hostname}:{port}).")]
         private static partial void LogNullHTTPRequestHeaderInternal(this ILogger logger, string hostname, int port);
 
         [LoggerMessage(
             EventId = 1293,
             Level = LogLevel.Warning,
-            Message = "HTTP Response Header is not null ({hostname}:{port})")]
+            Message = "HTTP Response Header is not null ({hostname}:{port}).")]
         private static partial void LogNotNullHTTPResponseHeaderInternal(this ILogger logger, string hostname, int port);
 
         [LoggerMessage(
             EventId = 1294,
             Level = LogLevel.Warning,
-            Message = "Context RequestBodyTracker is not null ({hostname}:{port})")]
+            Message = "Context RequestBodyTracker is not null ({hostname}:{port}).")]
         private static partial void LogNotNullRequestBodyTrackerInternal(this ILogger logger, string hostname, int port);
 
         [LoggerMessage(
             EventId = 1295,
             Level = LogLevel.Warning,
-            Message = "Context ResponseBodyTracker is not null ({hostname}:{port})")]
+            Message = "Context ResponseBodyTracker is not null ({hostname}:{port}).")]
         private static partial void LogNotNullResponseBodyTrackerInternal(this ILogger logger, string hostname, int port);
 
         [LoggerMessage(
             EventId = 1296,
             Level = LogLevel.Warning,
-            Message = "Tail is not null")]
+            Message = "Tail is not null.")]
         public static partial void LogTailIsNotNull(this ILogger logger);
+
+        [LoggerMessage(
+            EventId = 1297,
+            Level = LogLevel.Information,
+            Message = "Detected HTTP/2 protocol from client {remoteEndPoint}.")]
+        public static partial void LogDetectedClientHTTP2(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
@@ -590,6 +596,11 @@ namespace ProxyMapService.Proxy.Handlers
                 protocolName = Encoding.UTF8.GetString(negotiatedProtocol.Protocol.Span);
             }
             logger.LogClientTLSHandshakeSucceededInternal(host.Hostname, host.Port, protocolName);
+        }
+
+        public static void LogServerTLSHandshakeSucceeded(this ILogger logger, System.Net.EndPoint? remoteEndPoint)
+        {
+            logger.LogServerTLSHandshakeSucceededInternal(remoteEndPoint);
         }
 
         public static void LogClientTLSHandshakeFailed(this ILogger logger, string message, HostAddress host)

@@ -10,6 +10,7 @@ namespace ProxyMapService.Proxy.Configurations
         public string EnabledSslProtocols { get; set; } = "Tls12,Tls13";
         public bool ClientCertificateRequired { get; set; } = false;
         public bool CheckCertificateRevocation { get; set; } = true;
+        public string ApplicationProtocols { get; set; } = "http/1.1";
         public SslCertificateConfig ServerCertificate { get => _serverCertificate; }
         public SslCertificateConfig CACertificate { get => _caCertificate; }
 

@@ -162,8 +162,9 @@ namespace ProxyMapService.Proxy.Handlers
                     serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
                     await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.TunnelToken);
-                    context.Logger.LogServerTLSHandshakeSucceeded();
+                    context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint);
                     context.IncomingStream?.TransferHandlersTo(incomingStream);
+                    context.RequestTunnelState.IsHttp2 = (incomingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
                 incomingReady.SetResult();
             }
@@ -189,7 +190,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (AuthenticationException ex)
             {
-                context.Logger.LogServerTLSHandshakeFailed(ex.InnerException?.Message ?? ex.Message);
+                context.Logger.LogServerTLSHandshakeFailed(context.IncomingEndPoint, ex.InnerException?.Message ?? ex.Message);
                 incomingReady.TrySetCanceled();
                 return;
                 //incomingReady.SetException(ex);

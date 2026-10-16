@@ -1,11 +1,12 @@
-﻿using System.Net;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Hosting;
+using System.Net;
+using System.Security.Authentication;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ProxyMapService.Tests
 {
@@ -44,6 +45,12 @@ namespace ProxyMapService.Tests
                             {
                                 listenOptions.Protocols = useHttp2 ? HttpProtocols.Http1AndHttp2 : HttpProtocols.Http1;
                                 listenOptions.UseHttps(certificate);
+                                /*
+                                listenOptions.UseHttps(httpsOptions => {
+                                    httpsOptions.ServerCertificate = certificate;
+                                    httpsOptions.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+                                });
+                                */
                             });
 
                         options.Limits.KeepAliveTimeout =
@@ -148,7 +155,17 @@ namespace ProxyMapService.Tests
                 new X509KeyUsageExtension(
                     X509KeyUsageFlags.DigitalSignature,
                     true));
+            /*
+            request.CertificateExtensions.Add(
+                new X509KeyUsageExtension(
+                    X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment,
+                    true));
 
+            request.CertificateExtensions.Add(
+                new X509EnhancedKeyUsageExtension(
+                    new OidCollection { new Oid("1.3.6.1.5.5.7.3.1") },
+                    true));
+            */
             var san = new SubjectAlternativeNameBuilder();
 
             san.AddDnsName(hostname);
