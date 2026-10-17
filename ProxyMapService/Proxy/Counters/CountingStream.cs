@@ -9,7 +9,9 @@ namespace ProxyMapService.Proxy.Counters
     {
         private bool _readCountPaused = false;
         private bool _sendCountPaused = false;
-        private bool? _isTls = null;
+        //private bool? _isTls = null;
+        private byte[]? _tlsRecord;
+        private bool _tlsPeeked;
 
         public long ReadTunnelId { get; set; } = readTunnelId;
         public long SendTunnelId { get; set; } = sendTunnelId;
@@ -98,7 +100,7 @@ namespace ProxyMapService.Proxy.Counters
             if (disposing) stream.Dispose();
             base.Dispose(disposing);
         }
-
+        /*
         public async Task<bool> IsTLS(CancellationToken cancellationToken = default)
         {
             if (_isTls != null)
@@ -150,6 +152,54 @@ namespace ProxyMapService.Proxy.Counters
             }
 
             return _isTls.Value;
+        }
+        */
+        public async Task<byte[]?> PeekTlsRecordAsync(TimeSpan timeout, CancellationToken ct = default)
+        {
+            if (_tlsPeeked) return _tlsRecord;
+            _tlsRecord = await PeekCoreAsync(timeout, ct);
+            _tlsPeeked = true;
+            return _tlsRecord;
+        }
+
+        public async Task<bool> IsTLS(CancellationToken ct = default)
+            => await PeekTlsRecordAsync(TimeSpan.FromMilliseconds(500), ct) != null;
+
+        private async Task<byte[]?> PeekCoreAsync(TimeSpan timeout, CancellationToken ct)
+        {
+            if (stream is not NetworkStream ns) return null;
+            var socket = ns.Socket;
+
+            var first = new byte[1];
+            int n = await socket.ReceiveAsync(first, SocketFlags.Peek, ct);
+            if (n == 0 || first[0] != 0x16) return null;
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(timeout);
+            try
+            {
+                var hdr = new byte[5];
+                await PeekExactAsync(socket, hdr, cts.Token);
+                if (hdr[1] != 0x03) return null;
+                var rec = new byte[5 + ((hdr[3] << 8) | hdr[4])];
+                await PeekExactAsync(socket, rec, cts.Token);
+                return rec;
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return null;
+            }
+        }
+
+        private static async Task PeekExactAsync(Socket s, byte[] buf, CancellationToken ct)
+        {
+            while (true)
+            {
+                int n = await s.ReceiveAsync(buf, SocketFlags.Peek, ct);
+                if (n == 0) throw new IOException("Connection closed during peek");
+                if (n >= buf.Length) return;
+                await Task.Delay(2, ct);
+            }
         }
     }
 }

@@ -9,7 +9,9 @@ using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.RoutingLoopDetector;
+using ProxyMapService.Proxy.Tls;
 using System.Collections.Concurrent;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
@@ -62,6 +64,12 @@ namespace ProxyMapService.Proxy.Sessions
 
         public System.Net.EndPoint? IncomingEndPoint { get; set; }
         public System.Net.IPEndPoint? OutgoingEndPoint {  get; set; }
+
+        public bool IncomingHttp2 { get; set; }
+        public bool OutgoingHttp2 { get; set; }
+
+        public ClientHelloInfo? ClientHello {  get; set; }
+        public SslApplicationProtocol NegotiatedAlpn { get; set; } = new();
 
         public ProxyType? InboundType { get; set; }
 

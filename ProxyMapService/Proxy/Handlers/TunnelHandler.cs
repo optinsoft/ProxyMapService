@@ -5,6 +5,7 @@ using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
+using ProxyMapService.Proxy.Tls;
 using ProxyMapService.Proxy.Tunnels;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -21,21 +22,27 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.IncomingStream != null && context.OutgoingStream != null && !context.Token.IsCancellationRequested)
             {
-                bool isIncomingSSL;
+                byte[]? tlsRecord;
                 try
                 {
-                    isIncomingSSL = context.SslMode switch
-                    {
-                        SslMode.Yes => true,
-                        SslMode.Auto => await context.IncomingStream.IsTLS(context.Token),
-                        _ => false
-                    };
+                    tlsRecord = context.SslMode == SslMode.No
+                       ? null
+                        : await context.IncomingStream.PeekTlsRecordAsync(TimeSpan.FromMilliseconds(500), context.Token);
                 }
                 catch (Exception ex) when (ex is IOException or SocketException)
                 {
                     LogTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
                     return HandleStep.Terminate;
                 }
+
+                context.ClientHello = tlsRecord != null ? TlsClientHelloParser.ParseClientHello(tlsRecord) : null;
+
+                bool isIncomingSSL = context.SslMode switch
+                {
+                    SslMode.Yes => true,
+                    SslMode.Auto => tlsRecord != null,
+                    _ => false
+                };
 
                 bool isOutgoingSSL = context.UpstreamSslMode switch
                 {
@@ -46,9 +53,7 @@ namespace ProxyMapService.Proxy.Handlers
                 };
 
                 context.RequestTunnelState.IsSecure = isIncomingSSL;
-                context.RequestTunnelState.IsHttp2 = false;
                 context.ResponseTunnelState.IsSecure = isOutgoingSSL;
-                context.ResponseTunnelState.IsHttp2 = false;
 
                 using SslStream? incomingSslStream = context.DecryptSSL && isIncomingSSL ? new(context.IncomingStream) : null;
                 using SslStream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL ? new(context.OutgoingStream) : null;
@@ -160,11 +165,22 @@ namespace ProxyMapService.Proxy.Handlers
                         ? SslOptionsFactory.CreateSignedCertificate(subjectName, context.Host.OriginalHostname, context.CACertificate)
                         : null;
                     serverCertificate ??= tempCertificate ?? throw new NullServerCertificateException();
+
+                    await outgoingReady.Task.WaitAsync(context.TunnelToken);
+
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
+                    if (sslServerOptions.ApplicationProtocols?.Count > 1)
+                    {
+                        if (context.NegotiatedAlpn.Protocol.Length > 0)
+                            sslServerOptions.ApplicationProtocols = new() { context.NegotiatedAlpn };
+                        else
+                            sslServerOptions.ApplicationProtocols = null;
+                    }
+
                     await incomingSslStream.AuthenticateAsServerAsync(sslServerOptions, context.TunnelToken);
-                    context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint);
+                    context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint, incomingSslStream.NegotiatedApplicationProtocol);
                     context.IncomingStream?.TransferHandlersTo(incomingStream);
-                    context.RequestTunnelState.IsHttp2 = (incomingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
+                    context.IncomingHttp2 = (incomingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
                 incomingReady.SetResult();
             }
@@ -231,10 +247,23 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         sslClientOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
                     }
+                    if (sslClientOptions.ApplicationProtocols?.Count > 1)
+                    {
+                        var hello = context.ClientHello;
+                        if (hello != null)
+                        {
+                            var common = hello.Alpn is { Count: > 0 }
+                                ? sslClientOptions.ApplicationProtocols.Where(hello.Alpn.Contains).ToList()
+                                : new List<SslApplicationProtocol>();
+
+                            sslClientOptions.ApplicationProtocols = common.Count > 0 ? common : null;
+                        }
+                    }
                     await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.TunnelToken);
+                    context.NegotiatedAlpn = outgoingSslStream.NegotiatedApplicationProtocol;
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
-                    context.ResponseTunnelState.IsHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
+                    context.OutgoingHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
                 outgoingReady.SetResult();
             }

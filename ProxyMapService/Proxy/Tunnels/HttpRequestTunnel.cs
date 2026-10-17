@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using ProxyMapService.Proxy.Counters;
+﻿using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
@@ -16,7 +15,6 @@ namespace ProxyMapService.Proxy.Tunnels
 
         private bool _protocolDetected;
 
-        private bool _isHttp2 = false;
         private int _bytesInPrefaceBuffer = 0;
         private byte[]? _rolledBackBytes = null;
 
@@ -42,7 +40,7 @@ namespace ProxyMapService.Proxy.Tunnels
             otherTunnelState)
         {
             _parser = new HttpParser(false, _context.RequestHeader == null);
-            _protocolDetected = context.Http != null && context.Http.HTTPVerb != "CONNECT";
+            _protocolDetected = context.IncomingHttp2 || (context.Http != null && context.Http.HTTPVerb != "CONNECT");
         }
 
         protected override void Dispose(bool disposing)
@@ -64,7 +62,7 @@ namespace ProxyMapService.Proxy.Tunnels
                     return;
                 }
 
-                _isHttp2 = (prefaceResult == PrefaceResult.IsHttp2);
+                _context.IncomingHttp2 = (prefaceResult == PrefaceResult.IsHttp2);
                 _protocolDetected = true;
 
                 if (_rolledBackBytes != null)
@@ -77,7 +75,7 @@ namespace ProxyMapService.Proxy.Tunnels
                     _rolledBackBytes = null;
                 }
 
-                if (_isHttp2)
+                if (_context.IncomingHttp2)
                 {
                     _context.Logger.LogDetectedClientHTTP2(_context.IncomingEndPoint);
                 }

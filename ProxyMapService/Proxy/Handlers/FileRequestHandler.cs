@@ -73,7 +73,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.Logger.LogServerTLSHandshakeFailed(context.IncomingEndPoint, ex.InnerException?.Message ?? ex.Message);
                     return HandleStep.Terminate;
                 }
-                context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint);
+                context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint, incomingSslStream.NegotiatedApplicationProtocol);
             }
 
             using CountingStream? incomingSslCountingStream =
@@ -95,9 +95,8 @@ namespace ProxyMapService.Proxy.Handlers
             bool firstRequestPreParsed = http != null;
 
             byte[] leftover = [];
-
-            bool protocolDetected = http != null;
-            bool isHttp2 = false;
+            context.IncomingHttp2 = (incomingSslStream?.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
+            bool protocolDetected = context.IncomingHttp2 || http != null;
 
             while (!token.IsCancellationRequested)
             {
@@ -123,11 +122,11 @@ namespace ProxyMapService.Proxy.Handlers
 
                     if (!protocolDetected)
                     {
-                        (isHttp2, leftover) = await DetectHttp2Async(context, incomingStream, leftover);
+                        (context.IncomingHttp2, leftover) = await DetectHttp2Async(context, incomingStream, leftover);
 
                         protocolDetected = true;
 
-                        if (isHttp2)
+                        if (context.IncomingHttp2)
                         {
                             context.Logger.LogDetectedClientHTTP2(context.IncomingEndPoint);
                         }
