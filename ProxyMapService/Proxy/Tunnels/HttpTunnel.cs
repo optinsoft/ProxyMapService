@@ -1,6 +1,7 @@
 ﻿using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
@@ -178,6 +179,31 @@ namespace ProxyMapService.Proxy.Tunnels
             context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
             await HttpProto.HttpReplyCacheFileStream(context, requestHeader, incomingStream, cacheEntry, cacheFileStream);
             context.Logger.LogResponseFromCache(cacheFileStream.Name);
+        }
+
+        protected virtual async Task SendHeaderAsync(string[] lines, CancellationToken token)
+        {
+            string header = string.Join("\r\n", lines);
+            byte[] headerBytes = Encoding.ASCII.GetBytes(header);
+            await SendRawAsync(headerBytes.AsMemory(0, headerBytes.Length), token);
+        }
+
+        protected virtual async Task SendBodyAsync(ReadOnlyMemory<byte> bytes, CancellationToken token)
+        {
+            await SendRawAsync(bytes, token);
+        }
+
+        protected virtual async Task SendRawAsync(ReadOnlyMemory<byte> bytes, CancellationToken token)
+        {
+            if (_sendCounter.IsLogSending)
+            {
+                LogTunnelSending(
+                    _context.Logger,
+                    _selfState.TunnelId,
+                    StreamDirectionName.GetName(_sendCounter.Direction));
+            }
+            await _destinationReady.Task.WaitAsync(token);
+            await _destination.WriteAsync(bytes, token);
         }
     }
 }

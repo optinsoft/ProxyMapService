@@ -94,15 +94,7 @@ namespace ProxyMapService.Proxy.Tunnels
             var headerAndTail = _parser.GetHeaderLinesAndTail();
             if (headerAndTail == null)
             {
-                if (_sendCounter.IsLogSending)
-                {
-                    LogTunnelSending(
-                        _context.Logger,
-                        _selfState.TunnelId,
-                        StreamDirectionName.GetName(_sendCounter.Direction));
-                }
-                await _destinationReady.Task.WaitAsync(token);
-                await _destination.WriteAsync(_parser.BufferedBytes, token);
+                await SendRawAsync(_parser.BufferedBytes, token);
                 return data[data.Length..];
             }
 
@@ -127,15 +119,7 @@ namespace ProxyMapService.Proxy.Tunnels
 
             if (responseHeader.BadResponse)
             {
-                if (_sendCounter.IsLogSending)
-                {
-                    LogTunnelSending(
-                        _context.Logger,
-                        _selfState.TunnelId,
-                        StreamDirectionName.GetName(_sendCounter.Direction));
-                }
-                await _destinationReady.Task.WaitAsync(token);
-                await _destination.WriteAsync(_parser.BufferedBytes, token);
+                await SendRawAsync(_parser.BufferedBytes, token);
                 return data[data.Length..];
             }
 
@@ -143,27 +127,7 @@ namespace ProxyMapService.Proxy.Tunnels
 
             CreateResponseCacheFileStream(_context, requestHeader);
 
-            bool sendLogged = false;
-
-            string header = string.Join("\r\n", headerAndTail.HeaderLines);
-            byte[] headerBytes = Encoding.ASCII.GetBytes(header);
-
-            if (_context.ResponseCacheFileStream != null)
-            {
-                await _context.ResponseCacheFileStream.WriteAsync(headerBytes, CancellationToken.None);
-                await HandleEndOfResponseCacheFileStream(_context);
-            }
-
-            if (_sendCounter.IsLogSending && !sendLogged)
-            {
-                sendLogged = true;
-                LogTunnelSending(
-                    _context.Logger,
-                    _selfState.TunnelId,
-                    StreamDirectionName.GetName(_sendCounter.Direction));
-            }
-            await _destinationReady.Task.WaitAsync(token);
-            await _destination.WriteAsync(headerBytes.AsMemory(0, headerBytes.Length), token);
+            await SendHeaderAsync(headerAndTail.HeaderLines, token);
 
             if (headerAndTail.TailBytes == null)
             {
@@ -185,15 +149,7 @@ namespace ProxyMapService.Proxy.Tunnels
                         await _context.ResponseCacheFileStream.WriteAsync(body, CancellationToken.None);
                         await HandleEndOfResponseCacheFileStream(_context);
                     }
-                    if (_sendCounter.IsLogSending && !sendLogged)
-                    {
-                        LogTunnelSending(
-                            _context.Logger,
-                            _selfState.TunnelId,
-                            StreamDirectionName.GetName(_sendCounter.Direction));
-                    }
-                    await _destinationReady.Task.WaitAsync(token);
-                    await _destination.WriteAsync(body, token);
+                    await SendBodyAsync(body, token);
                 }
                 return headerAndTail.TailBytes.AsMemory()[consumed..];
             }
@@ -236,15 +192,7 @@ namespace ProxyMapService.Proxy.Tunnels
                             _context.DisposeResponseCacheFileStream();
                         }
                     }
-                    if (_sendCounter.IsLogSending)
-                    {
-                        LogTunnelSending(
-                            _context.Logger,
-                            _selfState.TunnelId,
-                            StreamDirectionName.GetName(_sendCounter.Direction));
-                    }
-                    await _destinationReady.Task.WaitAsync(token);
-                    await _destination.WriteAsync(body, token);
+                    await SendBodyAsync(body, token);
                 }
                 return data[consumed..];
             }
@@ -265,17 +213,22 @@ namespace ProxyMapService.Proxy.Tunnels
                 }
             }
 
-            if (_sendCounter.IsLogSending)
+            await SendRawAsync(data, token);
+            return data[data.Length..];
+        }
+
+        protected override async Task SendHeaderAsync(string[] lines, CancellationToken token)
+        {
+            string header = string.Join("\r\n", lines);
+            byte[] headerBytes = Encoding.ASCII.GetBytes(header);
+
+            if (_context.ResponseCacheFileStream != null)
             {
-                LogTunnelSending(
-                    _context.Logger,
-                    _selfState.TunnelId,
-                    StreamDirectionName.GetName(_sendCounter.Direction));
+                await _context.ResponseCacheFileStream.WriteAsync(headerBytes, CancellationToken.None);
+                await HandleEndOfResponseCacheFileStream(_context);
             }
 
-            await _destinationReady.Task.WaitAsync(token);
-            await _destination.WriteAsync(data, token);
-            return data[data.Length..];
+            await SendRawAsync(headerBytes.AsMemory(0, headerBytes.Length), token);
         }
     }
 }
