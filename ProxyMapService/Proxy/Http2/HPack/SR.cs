@@ -11,6 +11,7 @@
         public static string net_http_hpack_huffman_decode_failed => "Huffman decoding failed.";
         public static string net_http_hpack_incomplete_header_block => "Incomplete header block.";
         public static string net_http_hpack_bad_integer => "Invalid HPACK integer.";
+        public static string net_http_request_invalid_char_encoding => "Request headers must contain only ASCII characters.";
 
         public static string Format(string format, params object?[] args)
         {

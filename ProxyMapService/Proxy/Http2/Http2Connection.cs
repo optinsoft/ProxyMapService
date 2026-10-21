@@ -15,10 +15,16 @@ namespace ProxyMapService.Proxy.Http2
     public readonly record struct H2Header(string Name, string Value);
     public readonly record struct H2Frame(byte Type, byte Flags, int StreamId, byte[] Payload);
 
-    /// <summary>Wrapper over the HPACK decoder (copied from dotnet/runtime). Must only be called from the reading tunnel.</summary>
+    /// <summary>Wrapper over the HPACK decoder (copied from dotnet/runtime).</summary>
     public interface IHpackDecoder
     {
         List<H2Header> Decode(ReadOnlySpan<byte> block);
+    }
+
+    /// <summary>Wrapper over the HPACK encoder (copied from dotnet/runtime).</summary>
+    public interface IHpackEncoder
+    {
+        byte[] Encode(IReadOnlyList<H2Header> headers);
     }
 
     /// <summary>Accumulates bytes and yields whole frames.</summary>
@@ -59,47 +65,7 @@ namespace ProxyMapService.Proxy.Http2
             return true;
         }
     }
-
-    /// <summary>Minimal HPACK encoder: no dynamic table and no Huffman (this is valid).</summary>
-    public static class HpackEncoder
-    {
-        public static byte[] Encode(IReadOnlyList<H2Header> headers)
-        {
-            var w = new ArrayBufferWriter<byte>(256);
-            foreach (var (name, value) in headers)
-            {
-                bool sensitive = name is "authorization" or "cookie" or "proxy-authorization" or "set-cookie";
-                Put(w, sensitive ? (byte)0x10 : (byte)0x00); // literal never-indexed / without indexing, new name
-                PutString(w, name);
-                PutString(w, value);
-            }
-            return w.WrittenSpan.ToArray();
-        }
-
-        private static void Put(ArrayBufferWriter<byte> w, byte b)
-        {
-            w.GetSpan(1)[0] = b;
-            w.Advance(1);
-        }
-
-        private static void PutString(ArrayBufferWriter<byte> w, string s)
-        {
-            var bytes = Encoding.Latin1.GetBytes(s);
-            PutInt(w, bytes.Length, 7, 0x00); // H = 0
-            w.Write(bytes);
-        }
-
-        private static void PutInt(ArrayBufferWriter<byte> w, int value, int prefixBits, byte flags)
-        {
-            int max = (1 << prefixBits) - 1;
-            if (value < max) { Put(w, (byte)(flags | value)); return; }
-            Put(w, (byte)(flags | max));
-            value -= max;
-            while (value >= 128) { Put(w, (byte)((value & 0x7F) | 0x80)); value >>= 7; }
-            Put(w, (byte)value);
-        }
-    }
-
+    
     /// <summary>
     /// Client side of a single HTTP/2 connection to the upstream. One active request at a time
     /// (the client speaks HTTP/1.1, so pipelining is serialized). The sole frame writer.
@@ -109,6 +75,7 @@ namespace ProxyMapService.Proxy.Http2
         private const int OurStreamWindow = 1 << 20;
 
         private readonly Stream _stream;
+        private readonly IHpackEncoder _encoder;
         private readonly SemaphoreSlim _writeLock = new(1, 1);
         private readonly object _sync = new();
         private TaskCompletionSource _signal = NewTcs();
@@ -121,7 +88,11 @@ namespace ProxyMapService.Proxy.Http2
         private int _activeStream;
         private bool _requestEnded, _responseEnded, _goAway;
 
-        public Http2Connection(Stream stream) => _stream = stream;
+        public Http2Connection(Stream stream, IHpackEncoder? encoder = null)
+        {
+            _stream = stream;
+            _encoder = encoder ?? new HpackEncoderAdapter();
+        }
 
         public int ActiveStream { get { lock (_sync) return _activeStream; } }
         public string? ActiveMethod { get; private set; }
@@ -227,7 +198,7 @@ namespace ProxyMapService.Proxy.Http2
                 await wait.WaitAsync(ct);
             }
 
-            await WriteHeaderBlockAsync(id, HpackEncoder.Encode(headers), endStream, ct);
+            await WriteHeaderBlockAsync(id, _encoder.Encode(headers), endStream, ct);
             if (endStream) MarkRequestEnded();
             return id;
         }
@@ -249,7 +220,7 @@ namespace ProxyMapService.Proxy.Http2
         }
 
         public Task SendTrailersAsync(int streamId, IReadOnlyList<H2Header> trailers, CancellationToken ct)
-            => WriteHeaderBlockAsync(streamId, HpackEncoder.Encode(trailers), true, ct);
+            => WriteHeaderBlockAsync(streamId, _encoder.Encode(trailers), true, ct);
 
         private async Task<int> AcquireWindowAsync(int streamId, int want, CancellationToken ct)
         {
