@@ -39,14 +39,6 @@ namespace ProxyMapService.Proxy.Http
         {
             _payload.Clear();
 
-#if DEBUG
-            logger.LogDebug(
-                "{prefix}append data length: {length}.",
-                _logPrefix,
-                data.Length
-                );
-#endif
-
             if (data.Length == 0)
             {
                 logger.LogWarning(
