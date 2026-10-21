@@ -2,6 +2,7 @@
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
+using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
@@ -181,6 +182,13 @@ namespace ProxyMapService.Proxy.Handlers
                     context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint, incomingSslStream.NegotiatedApplicationProtocol);
                     context.IncomingStream?.TransferHandlersTo(incomingStream);
                     context.IncomingHttp2 = (incomingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
+                    context.TranslateH1ToH2 = context.H1ToH2TranslationEnabled && context.OutgoingHttp2 && !context.IncomingHttp2;
+                    if (context.TranslateH1ToH2)
+                    {
+                        context.Logger.LogHttp1to2Translation(context.IncomingEndPoint, context.Host);
+                        context.OutgoingHttp2Connection = new Http2Connection(outgoingStream);
+                        await context.OutgoingHttp2Connection.StartAsync(context.TunnelToken);
+                    }
                 }
                 incomingReady.SetResult();
             }
@@ -221,15 +229,26 @@ namespace ProxyMapService.Proxy.Handlers
                 //throw;
             }
 
-            using var requestTunnel = new HttpRequestTunnel(
-                context, 
-                incomingStream, 
-                outgoingStream, 
-                outgoingReady,
-                context.ProxyCounters.IncomingReadCounter, 
-                context.ProxyCounters.OutgoingSendCounter,
-                context.RequestTunnelState, 
-                context.ResponseTunnelState);
+            using var requestTunnel = context.OutgoingHttp2Connection != null
+                ? new H1ToH2RequestTunnel(
+                    context, 
+                    incomingStream, 
+                    outgoingStream, 
+                    outgoingReady,
+                    context.ProxyCounters.IncomingReadCounter, 
+                    context.ProxyCounters.OutgoingSendCounter,
+                    context.RequestTunnelState, 
+                    context.ResponseTunnelState,
+                    context.OutgoingHttp2Connection)
+                : new HttpRequestTunnel(
+                    context,
+                    incomingStream,
+                    outgoingStream,
+                    outgoingReady,
+                    context.ProxyCounters.IncomingReadCounter,
+                    context.ProxyCounters.OutgoingSendCounter,
+                    context.RequestTunnelState,
+                    context.ResponseTunnelState);
 
             await requestTunnel.RunAsync();
         }
@@ -266,6 +285,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.OutgoingHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
                 outgoingReady.SetResult();
+                await incomingReady.Task.WaitAsync(context.TunnelToken);
             }
             catch (OperationCanceledException) when (context.TunnelToken.IsCancellationRequested)
             {
@@ -304,15 +324,27 @@ namespace ProxyMapService.Proxy.Handlers
                 //throw;
             }
             
-            using var responseTunnel = new  HttpResponseTunnel(
-                context, 
-                outgoingStream, 
-                incomingStream, 
-                incomingReady,
-                context.ProxyCounters.OutgoingReadCounter, 
-                context.ProxyCounters.IncomingSendCounter,
-                context.ResponseTunnelState, 
-                context.RequestTunnelState);
+            using var responseTunnel = context.OutgoingHttp2Connection != null
+                ? new  H2ToH1ResponseTunnel(
+                    context, 
+                    outgoingStream, 
+                    incomingStream, 
+                    incomingReady,
+                    context.ProxyCounters.OutgoingReadCounter, 
+                    context.ProxyCounters.IncomingSendCounter,
+                    context.ResponseTunnelState, 
+                    context.RequestTunnelState,
+                    context.OutgoingHttp2Connection,
+                    new HpackDecoderAdapter())
+                : new HttpResponseTunnel(
+                    context,
+                    outgoingStream,
+                    incomingStream,
+                    incomingReady,
+                    context.ProxyCounters.OutgoingReadCounter,
+                    context.ProxyCounters.IncomingSendCounter,
+                    context.ResponseTunnelState,
+                    context.RequestTunnelState);
 
             await responseTunnel.RunAsync();
         }

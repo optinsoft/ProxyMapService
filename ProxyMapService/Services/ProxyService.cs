@@ -167,9 +167,10 @@ namespace ProxyMapService.Services
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
             var sessionAPI = _configuration.GetSection("SessionAPI").Get<SessionAPIConfig>() ?? new SessionAPIConfig();
             var userAgent = _configuration.GetSection("HTTP").GetValue<string>("UserAgent");
+            var defaultEnableTranslateH1ToH2 = _configuration.GetSection("HTTP").GetValue<bool>("EnableTranslateH1ToH2", false);
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
             using var sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
-            var logStep = _configuration.GetSection("DetailedLogging")?.GetValue<bool>("LogStep") ?? false;
+            var logStep = _configuration.GetSection("DetailedLogging").GetValue<bool>("LogStep", false);
 
             if (proxyMappings == null || proxyMappings.Count == 0)
             {
@@ -201,7 +202,8 @@ namespace ProxyMapService.Services
             {
                 tasks.Add(new ProxyMapper(mapping, _listenPorts, _routingLoopDetector, 
                     sessionAPI, _hostRules, _cacheRules, _cacheManager,
-                    userAgent, sslClientOptions, sslServerOptions, _proxyCounters,
+                    userAgent, defaultEnableTranslateH1ToH2,
+                    sslClientOptions, sslServerOptions, _proxyCounters,
                     _logger, _sessionLogger, logStep, _maxListenerStartRetries, cancellationToken).Start());
             }
             _started = true;

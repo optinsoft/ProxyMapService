@@ -6,6 +6,7 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Http;
+using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Providers;
 using ProxyMapService.Proxy.RoutingLoopDetector;
@@ -39,6 +40,7 @@ namespace ProxyMapService.Proxy.Sessions
         public bool IgnoreCertificateErrors {  get; set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
+        public bool H1ToH2TranslationEnabled { get; set; }
         public bool IgnoreHostRules { get; set; }
         public SslClientOptionsConfig SslClientConfig { get; private set; }
         public SslServerOptionsConfig SslServerConfig { get; private set; }
@@ -70,6 +72,8 @@ namespace ProxyMapService.Proxy.Sessions
 
         public ClientHelloInfo? ClientHello {  get; set; }
         public SslApplicationProtocol NegotiatedAlpn { get; set; } = new();
+        public bool TranslateH1ToH2 { get; set; }
+        public Http2Connection? OutgoingHttp2Connection { get; set; }
 
         public ProxyType? InboundType { get; set; }
 
@@ -193,7 +197,8 @@ namespace ProxyMapService.Proxy.Sessions
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             ISessionManager sessionManager, List<HostRule> hostRules, 
-            List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent,
+            List<CacheRule> cacheRules, CacheManager cacheManager, 
+            string? userAgent, bool defaultEnableTranslateH1ToH2,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
@@ -217,6 +222,7 @@ namespace ProxyMapService.Proxy.Sessions
             IgnoreCertificateErrors = mapping.Listen.IgnoreCertificateErrors;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;
+            H1ToH2TranslationEnabled = mapping.Listen.EnableTranslateH1ToH2 ?? defaultEnableTranslateH1ToH2;
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;

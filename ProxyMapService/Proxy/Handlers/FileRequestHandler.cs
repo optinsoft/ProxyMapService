@@ -3,10 +3,10 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
+using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
-using System;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -20,8 +20,6 @@ namespace ProxyMapService.Proxy.Handlers
     {
         private static readonly FileRequestHandler Self = new();
         private const int BufferSize = 8192;
-
-        private static readonly byte[] Http2Preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8.ToArray();
 
         private sealed class RequestReadResult
         {
@@ -318,17 +316,17 @@ namespace ProxyMapService.Proxy.Handlers
         {
             CancellationToken token = context.Token;
 
-            while (leftover.Length < Http2Preface.Length)
+            while (leftover.Length < H2.Preface.Length)
             {
                 for (int i = 0; i < leftover.Length; i++)
                 {
-                    if (leftover[i] != Http2Preface[i])
+                    if (leftover[i] != H2.Preface[i])
                     {
                         return (false, leftover);
                     }
                 }
 
-                byte[] buffer = new byte[Http2Preface.Length - leftover.Length];
+                byte[] buffer = new byte[H2.Preface.Length - leftover.Length];
                 int readBytes = await incomingStream.ReadAsync(buffer, token);
                 if (readBytes == 0)
                 {
@@ -340,9 +338,9 @@ namespace ProxyMapService.Proxy.Handlers
                 buffer.CopyTo(leftover, oldLength);
             }
 
-            for (int i = 0; i < Http2Preface.Length; i++)
+            for (int i = 0; i < H2.Preface.Length; i++)
             {
-                if (leftover[i] != Http2Preface[i])
+                if (leftover[i] != H2.Preface[i])
                 {
                     return (false, leftover);
                 }

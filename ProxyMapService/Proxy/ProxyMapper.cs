@@ -13,7 +13,8 @@ namespace ProxyMapService.Proxy
 {
     public class ProxyMapper(ProxyMapping mapping, List<PortRange> listenPorts,
         IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, List<HostRule> hostRules, 
-        List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
+        List<CacheRule> cacheRules, CacheManager cacheManager, 
+        string? userAgent, bool defaultEnableTranslateH1ToH2,
         SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
         ProxyCounters proxyCounters, ILogger serviceLogger, ILogger sessionLogger, 
         bool logStep, int maxListenerStartRetries, CancellationToken stoppingToken)
@@ -108,7 +109,8 @@ namespace ProxyMapService.Proxy
             {
                 await Session.Run(inboundEndPoint, client, mapping, loopDetector,
                     sessionAPI, proxyProvider, proxyAuthenticator, sessionManager,
-                    hostRules, _cacheRules ?? cacheRules, cacheManager, userAgent,
+                    hostRules, _cacheRules ?? cacheRules, cacheManager, 
+                    userAgent, defaultEnableTranslateH1ToH2,
                     sslClientConfig, sslServerConfig,
                     proxyCounters, sessionLogger, logStep, token);
             }

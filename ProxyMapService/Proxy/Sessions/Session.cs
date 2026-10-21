@@ -77,7 +77,8 @@ namespace ProxyMapService.Proxy.Sessions
             ProxyMapping mapping, IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, 
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
             ISessionManager sessionManager, List<HostRule> hostRules, 
-            List<CacheRule> cacheRules, CacheManager cacheManager, string? userAgent, 
+            List<CacheRule> cacheRules, CacheManager cacheManager, 
+            string? userAgent, bool defaultEnableTranslateH1ToH2,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
         {
@@ -120,7 +121,8 @@ namespace ProxyMapService.Proxy.Sessions
                     mapping, loopDetector, sessionAPI, 
                     serverCertificate, caCertificate,
                     proxyProvider, proxyAuthenticator, sessionManager,
-                    hostRules, cacheRules, cacheManager, userAgent,
+                    hostRules, cacheRules, cacheManager, 
+                    userAgent, defaultEnableTranslateH1ToH2,
                     sslClientConfig, sslServerConfig,
                     proxyCounters, logger, token);
                 proxyCounters.SessionsCounter?.OnSessionStarted(context);

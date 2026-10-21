@@ -32,7 +32,7 @@ namespace ProxyMapService.Proxy.Tunnels
             selfState,
             otherTunnelState)
         {
-            _parser = new HttpParser(true, _context.ResponseHeader == null);
+            _parser = new(true, _context.ResponseHeader == null);
         }
 
         protected override void Dispose(bool disposing)
@@ -127,7 +127,7 @@ namespace ProxyMapService.Proxy.Tunnels
 
             CreateResponseCacheFileStream(_context, requestHeader);
 
-            await SendHeaderAsync(headerAndTail.HeaderLines, token);
+            await SendHeaderAsync(headerAndTail.HeaderLines, tracker, token);
 
             if (headerAndTail.TailBytes == null)
             {
@@ -149,7 +149,7 @@ namespace ProxyMapService.Proxy.Tunnels
                         await _context.ResponseCacheFileStream.WriteAsync(body, CancellationToken.None);
                         await HandleEndOfResponseCacheFileStream(_context);
                     }
-                    await SendBodyAsync(body, token);
+                    await SendBodyAsync(body, tracker, token);
                 }
                 return headerAndTail.TailBytes.AsMemory()[consumed..];
             }
@@ -192,7 +192,7 @@ namespace ProxyMapService.Proxy.Tunnels
                             _context.DisposeResponseCacheFileStream();
                         }
                     }
-                    await SendBodyAsync(body, token);
+                    await SendBodyAsync(body, tracker, token);
                 }
                 return data[consumed..];
             }
@@ -217,7 +217,7 @@ namespace ProxyMapService.Proxy.Tunnels
             return data[data.Length..];
         }
 
-        protected override async Task SendHeaderAsync(string[] lines, CancellationToken token)
+        protected override async Task SendHeaderAsync(string[] lines, IBodyTracker tracker, CancellationToken token)
         {
             string header = string.Join("\r\n", lines);
             byte[] headerBytes = Encoding.ASCII.GetBytes(header);

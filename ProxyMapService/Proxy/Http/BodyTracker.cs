@@ -23,14 +23,22 @@ namespace ProxyMapService.Proxy.Http
         private long _bodyLength;
         private MemoryStream? _bodyStream = shouldAccumulate && accumulateStream == null ? new() : null;
 
+        private readonly List<(int Offset, int Length)> _payload = new(1);
+
         public bool Completed => _state == State.Completed;
 
         public bool Failed => _state == State.Failed;
 
         public long BodyLength => _bodyLength;
 
+        public IReadOnlyList<(int Offset, int Length)> Payload => _payload;
+
+        public IReadOnlyList<string>? Trailers => null;
+
         public bool TryAppend(ReadOnlySpan<byte> data, out int consumed)
         {
+            _payload.Clear();
+
 #if DEBUG
             logger.LogDebug(
                 "{prefix}append data length: {length}.",
@@ -70,6 +78,8 @@ namespace ProxyMapService.Proxy.Http
             if (consumed > 0)
             {
                 var part = data[..consumed];
+
+                _payload.Add((0, consumed));
 
                 _bodyLength += consumed;
                 if (shouldAccumulate)

@@ -40,6 +40,7 @@ namespace ProxyMapService.Proxy.Configurations
         public bool? IgnoreCertificateErrors { get; set; }
         public SslMode? SslMode { get; set; }
         public SslMode? UpstreamSslMode { get; set; }
+        public bool? EnableTranslateH1ToH2 { get; set; }
         public string? CertificatePath { 
             get => _certificatePath; 
             set

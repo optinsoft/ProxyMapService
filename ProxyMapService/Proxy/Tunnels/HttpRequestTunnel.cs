@@ -1,8 +1,8 @@
 ﻿using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Http;
+using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Sessions;
-using System.Text;
 using static ProxyMapService.Proxy.Utils.CacheUtils;
 using static ProxyMapService.Proxy.Utils.HttpBodyUtils;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
@@ -17,8 +17,6 @@ namespace ProxyMapService.Proxy.Tunnels
 
         private int _bytesInPrefaceBuffer = 0;
         private byte[]? _rolledBackBytes = null;
-
-        private static readonly byte[] Http2Preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8.ToArray();
 
         public HttpRequestTunnel(
             SessionContext context,
@@ -39,7 +37,7 @@ namespace ProxyMapService.Proxy.Tunnels
             selfState,
             otherTunnelState)
         {
-            _parser = new HttpParser(false, _context.RequestHeader == null);
+            _parser = new(false, _context.RequestHeader == null);
             _protocolDetected = context.IncomingHttp2 || (context.Http != null && context.Http.HTTPVerb != "CONNECT");
         }
 
@@ -182,7 +180,7 @@ namespace ProxyMapService.Proxy.Tunnels
             }
             else
             {
-                await SendHeaderAsync(headerAndTail.HeaderLines, token);
+                await SendHeaderAsync(headerAndTail.HeaderLines, tracker, token);
             }
 
             if (headerAndTail.TailBytes == null)
@@ -200,7 +198,7 @@ namespace ProxyMapService.Proxy.Tunnels
                 if (consumed > 0)
                 {
                     var body = headerAndTail.TailBytes[..consumed];
-                    await SendBodyAsync(body, token);
+                    await SendBodyAsync(body, tracker, token);
                 }
                 return headerAndTail.TailBytes.AsMemory()[consumed..];
             }
@@ -229,7 +227,7 @@ namespace ProxyMapService.Proxy.Tunnels
                 if (consumed > 0)
                 {
                     var body = data[..consumed];
-                    await SendBodyAsync(body, token);
+                    await SendBodyAsync(body, tracker, token);
                 }
                 return data[consumed..];
             }
@@ -242,19 +240,19 @@ namespace ProxyMapService.Proxy.Tunnels
 
         private PrefaceResult TryDetectHttp2(ref ReadOnlyMemory<byte> data)
         {
-            int availableToCompare = Math.Min(data.Length, Http2Preface.Length - _bytesInPrefaceBuffer);
+            int availableToCompare = Math.Min(data.Length, H2.Preface.Length - _bytesInPrefaceBuffer);
 
             if (availableToCompare > 0)
             {
                 var incomingSpan = data.Span.Slice(0, availableToCompare);
-                var expectedSpan = Http2Preface.AsSpan(_bytesInPrefaceBuffer, availableToCompare);
+                var expectedSpan = H2.Preface.AsSpan(_bytesInPrefaceBuffer, availableToCompare);
 
                 if (!incomingSpan.SequenceEqual(expectedSpan))
                 {
                     if (_bytesInPrefaceBuffer > 0)
                     {
                         _rolledBackBytes = new byte[_bytesInPrefaceBuffer];
-                        Http2Preface.AsSpan(0, _bytesInPrefaceBuffer).CopyTo(_rolledBackBytes);
+                        H2.Preface.AsSpan(0, _bytesInPrefaceBuffer).CopyTo(_rolledBackBytes);
                     }
 
                     return PrefaceResult.IsHttp1;
@@ -264,12 +262,12 @@ namespace ProxyMapService.Proxy.Tunnels
                 _bytesInPrefaceBuffer += availableToCompare;
             }
 
-            if (_bytesInPrefaceBuffer == Http2Preface.Length)
+            if (_bytesInPrefaceBuffer == H2.Preface.Length)
             {
                 if (_bytesInPrefaceBuffer > 0)
                 {
                     _rolledBackBytes = new byte[_bytesInPrefaceBuffer];
-                    Http2Preface.AsSpan(0, _bytesInPrefaceBuffer).CopyTo(_rolledBackBytes);
+                    H2.Preface.AsSpan(0, _bytesInPrefaceBuffer).CopyTo(_rolledBackBytes);
                 }
 
                 return PrefaceResult.IsHttp2;

@@ -53,6 +53,10 @@ namespace ProxyMapService.Proxy.Utils
                 {
                     context.UpstreamSslMode = hostRule.UpstreamSslMode.Value;
                 }
+                if (hostRule.EnableTranslateH1ToH2 != null)
+                {
+                    context.H1ToH2TranslationEnabled = hostRule.EnableTranslateH1ToH2.Value;
+                }
                 if (hostRule.ServerCertificate != null)
                 {
                     context.ServerCertificate = hostRule.ServerCertificate;

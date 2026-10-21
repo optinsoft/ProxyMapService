@@ -200,29 +200,35 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1251,
             Level = LogLevel.Information,
-            Message = "TLS handshake with {hostname}:{port} completed successfully, protocol: {protocol}.")]
-        private static partial void LogClientTLSHandshakeSucceededInternal(this ILogger logger, string hostname, int port, string protocol);
+            Message = "TLS handshake with {hostname}:{port} completed successfully.")]
+        private static partial void LogClientTLSHandshakeSucceededInternal(this ILogger logger, string hostname, int port);
 
         [LoggerMessage(
             EventId = 1252,
+            Level = LogLevel.Information,
+            Message = "TLS handshake with {hostname}:{port} completed successfully, protocol: HTTP/2.")]
+        private static partial void LogClientTLSHandshakeSucceededInternal2(this ILogger logger, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1253,
             Level = LogLevel.Information,
             Message = "TLS handshake with client {remoteEndPoint} completed successfully.")]
         private static partial void LogServerTLSHandshakeSucceededInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
-            EventId = 1253,
+            EventId = 1254,
             Level = LogLevel.Information,
             Message = "TLS handshake with client {remoteEndPoint} completed successfully, protocol: HTTP/2.")]
         private static partial void LogServerTLSHandshakeSucceededInternal2(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
         [LoggerMessage(
-            EventId = 1254,
+            EventId = 1255,
             Level = LogLevel.Warning,
             Message = "TLS handshake with {hostname}:{port} failed. {message}")]
         private static partial void LogClientTLSHandshakeFailedInternal(this ILogger logger, string message, string hostname, int port);
 
         [LoggerMessage(
-            EventId = 1255,
+            EventId = 1256,
             Level = LogLevel.Warning,
             Message = "TLS handshake with client {remoteEndPoint} failed. {message}")]
         public static partial void LogServerTLSHandshakeFailed(this ILogger logger, System.Net.EndPoint? remoteEndPoint, string message);
@@ -413,6 +419,12 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Detected HTTP/2 protocol from client {remoteEndPoint}.")]
         public static partial void LogDetectedClientHTTP2(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
 
+        [LoggerMessage(
+            EventId = 1298,
+            Level = LogLevel.Information,
+            Message = "HTTP/1.1 -> HTTP/2 translation: client {ClientEndPoint} speaks HTTP/1.1, upstream {Hostname}:{Port} negotiated h2")]
+        private static partial void LogHttp1to2TranslationInternal(this ILogger logger, System.Net.EndPoint? clientEndPoint, string hostname, int port);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;
@@ -589,20 +601,14 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogClientTLSHandshakeSucceeded(this ILogger logger, HostAddress host, SslApplicationProtocol negotiatedProtocol)
         {
-            string protocolName;
             if (negotiatedProtocol == SslApplicationProtocol.Http2)
             {
-                protocolName = "HTTP/2";
-            }
-            else if (negotiatedProtocol == SslApplicationProtocol.Http11)
-            {
-                protocolName = "HTTP/1.1";
+                logger.LogClientTLSHandshakeSucceededInternal2(host.Hostname, host.Port);
             }
             else
             {
-                protocolName = Encoding.UTF8.GetString(negotiatedProtocol.Protocol.Span);
+                logger.LogClientTLSHandshakeSucceededInternal(host.Hostname, host.Port);
             }
-            logger.LogClientTLSHandshakeSucceededInternal(host.Hostname, host.Port, protocolName);
         }
 
         public static void LogServerTLSHandshakeSucceeded(this ILogger logger, System.Net.EndPoint? remoteEndPoint, SslApplicationProtocol negotiatedProtocol)
@@ -640,6 +646,11 @@ namespace ProxyMapService.Proxy.Handlers
         public static void LogNotNullResponseBodyTracker(this ILogger logger, HostAddress host)
         {
             logger.LogNotNullResponseBodyTrackerInternal(host.Hostname, host.Port);
+        }
+
+        public static void LogHttp1to2Translation(this ILogger logger, System.Net.EndPoint? clientEndPoint, HostAddress host)
+        {
+            logger.LogHttp1to2TranslationInternal(clientEndPoint, host.Hostname, host.Port);
         }
     }
 }

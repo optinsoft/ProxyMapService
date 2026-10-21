@@ -20,6 +20,7 @@ namespace ProxyMapService.Proxy.Http
 
         private const int MaxChunkHeaderLength = 256;
         private const int MaxTrailerLength = 8192;
+        private const int MaxTrailerCount = 64;
         private const long MaxChunkSize = 2L * 1024 * 1024 * 1024;
 
 #if DEBUG
@@ -41,14 +42,23 @@ namespace ProxyMapService.Proxy.Http
         private long _bodyLength;
         private MemoryStream? _bodyStream = shouldAccumulate && accumulateStream == null ? new() : null;
 
+        private readonly List<(int Offset, int Length)> _payload = new(2);
+        private readonly List<string> _trailers = new();
+
         public bool Completed => _state == State.Completed;
 
         public bool Failed => _state == State.Failed;
 
         public long BodyLength => _bodyLength;
 
+        public IReadOnlyList<(int Offset, int Length)> Payload => _payload;
+
+        public IReadOnlyList<string>? Trailers => _trailers;
+
         public bool TryAppend(ReadOnlySpan<byte> data, out int consumed)
         {
+            _payload.Clear();
+
 #if DEBUG
             logger.LogDebug(
                 "{prefix}append data length: {length}.",
@@ -175,7 +185,7 @@ namespace ProxyMapService.Proxy.Http
                             $"Invalid chunk size '{line}'.");
                     }
 
-                    if (_chunkBytesRemaining > MaxChunkSize)
+                    if (_chunkBytesRemaining < 0 || _chunkBytesRemaining > MaxChunkSize)
                     {
                         throw new InvalidDataException(
                             $"Chunk size {_chunkBytesRemaining} exceeds limit.");
@@ -198,18 +208,21 @@ namespace ProxyMapService.Proxy.Http
 
             if (available >= _chunkBytesRemaining)
             {
-                _bodyLength += _chunkBytesRemaining;
+                int n = (int)_chunkBytesRemaining;
+                _payload.Add((pos, n));
+                _bodyLength += n;
                 if (shouldAccumulate)
                 {
-                    accumulateStream?.Write(data.Slice(pos, (int)_chunkBytesRemaining));
-                    _bodyStream?.Write(data.Slice(pos, (int)_chunkBytesRemaining));
+                    accumulateStream?.Write(data.Slice(pos, n));
+                    _bodyStream?.Write(data.Slice(pos, n));
                 }
-                pos += (int)_chunkBytesRemaining;
+                pos += n;
                 _chunkBytesRemaining = 0;
                 _state = State.ReadChunkDataCRLF;
             }
             else
             {
+                _payload.Add((pos, available));
                 _bodyLength += available;
                 if (shouldAccumulate)
                 {
@@ -275,6 +288,14 @@ namespace ProxyMapService.Proxy.Http
                         bodyLogger?.OnCompleted(context, requestHeader, contentType, contentEncoding, _bodyLength, accumulateStream ?? _bodyStream);
                         return pos;
                     }
+
+                    if (_trailers.Count >= MaxTrailerCount)
+                    {
+                        throw new InvalidDataException(
+                            $"Too many chunk trailers (max {MaxTrailerCount}).");
+                    }
+
+                    _trailers.Add(Encoding.Latin1.GetString(_lineBuffer, 0, _lineLength - 2));
 
                     ResetLineBuffer();
                 }
