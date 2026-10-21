@@ -208,9 +208,10 @@ namespace ProxyMapService.Proxy.Handlers
             catch (IOException ex)
             {
                 LogRequestTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
-                //return;
-                incomingReady.SetException(ex);
-                throw;
+                incomingReady.TrySetCanceled();
+                return;
+                //incomingReady.SetException(ex);
+                //throw;
             }
             catch (AuthenticationException ex)
             {
@@ -303,9 +304,10 @@ namespace ProxyMapService.Proxy.Handlers
             catch (IOException ex)
             {
                 LogResponseTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
-                //return;
-                outgoingReady.SetException(ex);
-                throw;
+                outgoingReady.TrySetCanceled();
+                return;
+                //outgoingReady.SetException(ex);
+                //throw;
             }
             catch (AuthenticationException ex)
             {
