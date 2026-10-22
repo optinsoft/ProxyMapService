@@ -347,7 +347,7 @@ namespace ProxyMapService.Proxy.Sessions
                 OutgoingHeaderStream.Dispose();
                 DisposeResponseCacheFileStream();
                 DisposeRequestBodyTracker();
-                DisposeRequestBodyTracker();
+                DisposeResponseBodyTracker();
             }
         }
     }
