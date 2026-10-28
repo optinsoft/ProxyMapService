@@ -170,7 +170,7 @@ namespace ProxyMapService.Proxy.Http2
             return Encoding.Latin1.GetBytes(sb.ToString());
         }
 
-        private static string Reason(int status)
+        public static string Reason(int status)
         {
             var name = Enum.IsDefined(typeof(HttpStatusCode), status) ? ((HttpStatusCode)status).ToString() : "";
             return ReasonSplit().Replace(name, " ");

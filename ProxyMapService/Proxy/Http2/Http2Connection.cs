@@ -28,11 +28,10 @@ namespace ProxyMapService.Proxy.Http2
     }
 
     /// <summary>Accumulates bytes and yields whole frames.</summary>
-    public sealed class H2FrameReader
+    public sealed class H2FrameReader(int MaxFrameSize = 16384) // our SETTINGS_MAX_FRAME_SIZE (default)
     {
         private byte[] _buf = new byte[32 * 1024];
         private int _start, _end;
-        private const int MaxFrameSize = 16384; // our SETTINGS_MAX_FRAME_SIZE (default)
 
         public void Append(ReadOnlySpan<byte> data)
         {
