@@ -355,10 +355,9 @@ namespace ProxyMapService.Proxy.Sessions
 
         public void CompleteRequest(HttpRequestHeader? requestHeader)
         {
-            if (requestHeader != null && requestHeader.TryMarkCompleted())
-            {
-                CompletionLogger?.OnHttpCompleted(this, requestHeader);
-            }
+            if (requestHeader == null || !requestHeader.TryMarkCompleted()) return;
+            RequestHeaderHistory.TryRemove(requestHeader.RequestNum, out _);
+            CompletionLogger?.OnHttpCompleted(this, requestHeader);
         }
 
         public void CompleteAllRequests()

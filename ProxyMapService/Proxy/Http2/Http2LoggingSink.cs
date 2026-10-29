@@ -127,7 +127,6 @@ namespace ProxyMapService.Proxy.Http2
                 {
                     // the stream may have ended without a response (RST_STREAM, disconnect): mark it as completed, retrying is harmless
                     context.CompleteRequest(st.Request);
-                    context.RequestHeaderHistory.TryRemove(st.Request.RequestNum, out _);
                 }
                 st.Dispose();
                 stream.Tag = null;
