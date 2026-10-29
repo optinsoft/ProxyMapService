@@ -102,13 +102,15 @@ namespace ProxyMapService.Proxy.Http
         private static readonly string[] HttpVersions =
         {
             "HTTP/1.0",
-            "HTTP/1.1"
+            "HTTP/1.1",
+            "HTTP/2"
         };
 
         public enum HttpVersionEnum
         {
             Http10 = 0,
-            Http11 = 1
+            Http11 = 1,
+            Http2 = 2
         }
 
         private static readonly byte[][] HttpVersionPrefixBytes =
@@ -140,6 +142,7 @@ namespace ProxyMapService.Proxy.Http
             {
                 "HTTP/1.0" => true,
                 "HTTP/1.1" => true,
+                "HTTP/2" => true,
                 _ => false
             };
         }
@@ -167,6 +170,7 @@ namespace ProxyMapService.Proxy.Http
             {
                 "HTTP/1.0" => HttpVersionEnum.Http10,
                 "HTTP/1.1" => HttpVersionEnum.Http11,
+                "HTTP/2" => HttpVersionEnum.Http2,
                 _ => null
             };
         }
