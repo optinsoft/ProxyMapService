@@ -4,12 +4,12 @@ using ProxyMapService.Proxy.Http2.HPack;
 namespace ProxyMapService.Proxy.Http2
 {
     /// <summary>IHpackDecoder on top of HPackDecoder from dotnet/runtime. One instance per connection.</summary>
-    public sealed class HpackDecoderAdapter : IHpackDecoder
+    public sealed class HpackDecoderAdapter(int maxDynamicTableSize = HPackDecoder.DefaultHeaderTableSize) : IHpackDecoder
     {
         private const int MaxStringLength = 64 * 1024;       // limit for a single line (name or value)
         private const int MaxHeaderListSize = 256 * 1024;    // limit for the entire header list
 
-        private readonly HPackDecoder _decoder = new(HPackDecoder.DefaultHeaderTableSize, MaxStringLength);
+        private readonly HPackDecoder _decoder = new(maxDynamicTableSize, MaxStringLength);
         private readonly Collector _collector = new(MaxHeaderListSize);
 
         public List<H2Header> Decode(ReadOnlySpan<byte> block)

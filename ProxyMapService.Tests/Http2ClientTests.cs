@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Configuration;
 using System.Net;
-using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;

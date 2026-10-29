@@ -74,6 +74,7 @@ namespace ProxyMapService.Proxy.Sessions
         public SslApplicationProtocol NegotiatedAlpn { get; set; } = new();
         public bool TranslateH1ToH2 { get; set; }
         public Http2Connection? OutgoingHttp2Connection { get; set; }
+        public Http2TrafficObserver? Http2Observer { get; set; }
 
         public ProxyType? InboundType { get; set; }
 
@@ -348,6 +349,7 @@ namespace ProxyMapService.Proxy.Sessions
                 DisposeResponseCacheFileStream();
                 DisposeRequestBodyTracker();
                 DisposeResponseBodyTracker();
+                Http2Observer?.Close();
             }
         }
     }

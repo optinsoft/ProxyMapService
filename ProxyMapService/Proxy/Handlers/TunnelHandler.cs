@@ -189,6 +189,14 @@ namespace ProxyMapService.Proxy.Handlers
                         context.OutgoingHttp2Connection = new Http2Connection(outgoingStream);
                         await context.OutgoingHttp2Connection.StartAsync(context.TunnelToken);
                     }
+                    else if (context.IncomingHttp2 && context.OutgoingHttp2)
+                    {
+                        // h2 <-> h2: traffic passes through as-is, but is parsed by a passive observer (headers and bodies logged)
+                        context.Http2Observer = new Http2TrafficObserver(
+                            new Http2LoggingSink(context),
+                            new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize),
+                            new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize));
+                    }
                 }
                 incomingReady.SetResult();
             }
@@ -230,18 +238,8 @@ namespace ProxyMapService.Proxy.Handlers
                 //throw;
             }
 
-            using var requestTunnel = context.OutgoingHttp2Connection != null
-                ? new H1ToH2RequestTunnel(
-                    context, 
-                    incomingStream, 
-                    outgoingStream, 
-                    outgoingReady,
-                    context.ProxyCounters.IncomingReadCounter, 
-                    context.ProxyCounters.OutgoingSendCounter,
-                    context.RequestTunnelState, 
-                    context.ResponseTunnelState,
-                    context.OutgoingHttp2Connection)
-                : new HttpRequestTunnel(
+            using HttpTunnel requestTunnel = context.Http2Observer != null
+                ? new Http2RequestTunnel(
                     context,
                     incomingStream,
                     outgoingStream,
@@ -249,7 +247,28 @@ namespace ProxyMapService.Proxy.Handlers
                     context.ProxyCounters.IncomingReadCounter,
                     context.ProxyCounters.OutgoingSendCounter,
                     context.RequestTunnelState,
-                    context.ResponseTunnelState);
+                    context.ResponseTunnelState,
+                    context.Http2Observer)
+                : context.OutgoingHttp2Connection != null
+                    ? new H1ToH2RequestTunnel(
+                        context,
+                        incomingStream,
+                        outgoingStream,
+                        outgoingReady,
+                        context.ProxyCounters.IncomingReadCounter,
+                        context.ProxyCounters.OutgoingSendCounter,
+                        context.RequestTunnelState,
+                        context.ResponseTunnelState,
+                        context.OutgoingHttp2Connection)
+                    : new HttpRequestTunnel(
+                        context,
+                        incomingStream,
+                        outgoingStream,
+                        outgoingReady,
+                        context.ProxyCounters.IncomingReadCounter,
+                        context.ProxyCounters.OutgoingSendCounter,
+                        context.RequestTunnelState,
+                        context.ResponseTunnelState);
 
             await requestTunnel.RunAsync();
         }
@@ -326,19 +345,8 @@ namespace ProxyMapService.Proxy.Handlers
                 //throw;
             }
             
-            using var responseTunnel = context.OutgoingHttp2Connection != null
-                ? new  H2ToH1ResponseTunnel(
-                    context, 
-                    outgoingStream, 
-                    incomingStream, 
-                    incomingReady,
-                    context.ProxyCounters.OutgoingReadCounter, 
-                    context.ProxyCounters.IncomingSendCounter,
-                    context.ResponseTunnelState, 
-                    context.RequestTunnelState,
-                    context.OutgoingHttp2Connection,
-                    new HpackDecoderAdapter())
-                : new HttpResponseTunnel(
+            using HttpTunnel responseTunnel = context.Http2Observer != null
+                ? new Http2ResponseTunnel(
                     context,
                     outgoingStream,
                     incomingStream,
@@ -346,7 +354,29 @@ namespace ProxyMapService.Proxy.Handlers
                     context.ProxyCounters.OutgoingReadCounter,
                     context.ProxyCounters.IncomingSendCounter,
                     context.ResponseTunnelState,
-                    context.RequestTunnelState);
+                    context.RequestTunnelState,
+                    context.Http2Observer)
+                : context.OutgoingHttp2Connection != null
+                    ? new H2ToH1ResponseTunnel(
+                        context,
+                        outgoingStream,
+                        incomingStream,
+                        incomingReady,
+                        context.ProxyCounters.OutgoingReadCounter,
+                        context.ProxyCounters.IncomingSendCounter,
+                        context.ResponseTunnelState,
+                        context.RequestTunnelState,
+                        context.OutgoingHttp2Connection,
+                        new HpackDecoderAdapter())
+                    : new HttpResponseTunnel(
+                        context,
+                        outgoingStream,
+                        incomingStream,
+                        incomingReady,
+                        context.ProxyCounters.OutgoingReadCounter,
+                        context.ProxyCounters.IncomingSendCounter,
+                        context.ResponseTunnelState,
+                        context.RequestTunnelState);
 
             await responseTunnel.RunAsync();
         }
