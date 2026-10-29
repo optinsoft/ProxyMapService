@@ -281,7 +281,7 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         private static async Task<byte[]> ReadHttpRequestBody(SessionContext context, Stream incomingStream, 
-            IBodyTracker bodyTracker, byte[] leftover)
+            IHttpBodyTracker bodyTracker, byte[] leftover)
         {
             var buffer = new byte[BufferSize];
 

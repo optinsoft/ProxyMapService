@@ -169,7 +169,7 @@ namespace ProxyMapService.Proxy.Tunnels
             return headerAndTail.TailBytes;
         }
 
-        protected async Task<ReadOnlyMemory<byte>> ProcessReadBodyAsync(ReadOnlyMemory<byte> data, IBodyTracker? tracker, CancellationToken token)
+        protected async Task<ReadOnlyMemory<byte>> ProcessReadBodyAsync(ReadOnlyMemory<byte> data, IHttpBodyTracker? tracker, CancellationToken token)
         {
             if (tracker?.Completed == true)
             {
@@ -229,7 +229,7 @@ namespace ProxyMapService.Proxy.Tunnels
             return data[data.Length..];
         }
 
-        protected override async Task SendHeaderAsync(string[] lines, IBodyTracker tracker, CancellationToken token)
+        protected override async Task SendHeaderAsync(string[] lines, IHttpBodyTracker tracker, CancellationToken token)
         {
             string header = string.Join("\r\n", lines);
             byte[] headerBytes = Encoding.ASCII.GetBytes(header);

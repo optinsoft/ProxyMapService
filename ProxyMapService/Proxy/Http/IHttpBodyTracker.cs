@@ -1,6 +1,6 @@
 ﻿namespace ProxyMapService.Proxy.Http
 {
-    public interface IBodyTracker : IDisposable
+    public interface IHttpBodyTracker : IDisposable
     {
         bool Completed { get; }
         bool Failed { get; }

@@ -206,7 +206,7 @@ namespace ProxyMapService.Proxy.Tunnels
             return headerAndTail.TailBytes;
         }
 
-        protected async Task<ReadOnlyMemory<byte>> ProcessReadBodyAsync(ReadOnlyMemory<byte> data, IBodyTracker? tracker, CancellationToken token)
+        protected async Task<ReadOnlyMemory<byte>> ProcessReadBodyAsync(ReadOnlyMemory<byte> data, IHttpBodyTracker? tracker, CancellationToken token)
         {
             if (tracker?.Completed == true)
             {

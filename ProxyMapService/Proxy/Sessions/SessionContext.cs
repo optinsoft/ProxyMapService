@@ -131,8 +131,8 @@ namespace ProxyMapService.Proxy.Sessions
                 }
             }
         }
-        public IBodyTracker? RequestBodyTracker { get; set; }
-        public IBodyTracker? ResponseBodyTracker { get; set; }
+        public IHttpBodyTracker? RequestBodyTracker { get; set; }
+        public IHttpBodyTracker? ResponseBodyTracker { get; set; }
         public CacheEntry? ResponseCacheEntry { get; set; }
         public FileStream? ResponseCacheFileStream { get; set; }
         public List<CacheRule> RequestCacheRules { get => _requestCacheRules; }

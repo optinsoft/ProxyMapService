@@ -181,14 +181,14 @@ namespace ProxyMapService.Proxy.Tunnels
             context.Logger.LogResponseFromCache(cacheFileStream.Name);
         }
 
-        protected virtual async Task SendHeaderAsync(string[] lines, IBodyTracker tracker, CancellationToken token)
+        protected virtual async Task SendHeaderAsync(string[] lines, IHttpBodyTracker tracker, CancellationToken token)
         {
             string header = string.Join("\r\n", lines);
             byte[] headerBytes = Encoding.ASCII.GetBytes(header);
             await SendRawAsync(headerBytes.AsMemory(0, headerBytes.Length), token);
         }
 
-        protected virtual async Task SendBodyAsync(ReadOnlyMemory<byte> bytes, IBodyTracker tracker, CancellationToken token)
+        protected virtual async Task SendBodyAsync(ReadOnlyMemory<byte> bytes, IHttpBodyTracker tracker, CancellationToken token)
         {
             await SendRawAsync(bytes, token);
         }

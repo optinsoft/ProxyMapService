@@ -3,8 +3,8 @@ using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
 namespace ProxyMapService.Proxy.Http
 {
-    public class BodyTracker(ILogger logger, bool response, HttpRequestHeader? requestHeader, string? contentType, string? contentEncoding, long contentLength, 
-        bool hasBody, IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IBodyTracker
+    public class HttpBodyTracker(ILogger logger, bool response, HttpRequestHeader? requestHeader, string? contentType, string? contentEncoding, long contentLength, 
+        bool hasBody, IHttpBodyLogger? bodyLogger, object context, bool shouldAccumulate, MemoryStream? accumulateStream) : IHttpBodyTracker
     {
         private enum State
         {

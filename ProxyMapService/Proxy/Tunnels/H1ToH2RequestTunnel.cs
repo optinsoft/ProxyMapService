@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Tunnels
             _conn = conn;
         }
 
-        protected override async Task SendHeaderAsync(string[] lines, IBodyTracker tracker, CancellationToken token)
+        protected override async Task SendHeaderAsync(string[] lines, IHttpBodyTracker tracker, CancellationToken token)
         {
             var h = new HttpRequestHeader(lines);
             if (!Http1Http2Converter.TryBuildRequest(h, true, out var headers, out var err))
@@ -46,7 +46,7 @@ namespace ProxyMapService.Proxy.Tunnels
             _streamId = await _conn.BeginRequestAsync(h.HTTPVerb!, h.KeepAlive, headers, endStream: tracker.Completed, token);
         }
 
-        protected override async Task SendBodyAsync(ReadOnlyMemory<byte> bytes, IBodyTracker tracker, CancellationToken token)
+        protected override async Task SendBodyAsync(ReadOnlyMemory<byte> bytes, IHttpBodyTracker tracker, CancellationToken token)
         {
             var ranges = tracker.Payload;
             bool done = tracker.Completed;

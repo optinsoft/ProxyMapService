@@ -8,7 +8,7 @@ namespace ProxyMapService.Proxy.Utils
 {
     public static class HttpBodyUtils
     {
-        public static IBodyTracker CreateRequestBodyTracker(SessionContext context, 
+        public static IHttpBodyTracker CreateRequestBodyTracker(SessionContext context, 
             HttpRequestHeader requestHeader, MemoryStream? accumulateBodyStream)
         {
             if (context.RequestBodyTracker != null)
@@ -16,10 +16,10 @@ namespace ProxyMapService.Proxy.Utils
                 context.Logger.LogNotNullRequestBodyTracker(context.Host);
                 //Debug.Assert(false, "Context RequestBodyTracker is not null");
             }
-            IBodyTracker tracker;
+            IHttpBodyTracker tracker;
             if (requestHeader.TransferEncodingChunked)
             {
-                tracker = new ChunkedBodyTracker(
+                tracker = new HttpChunkedBodyTracker(
                     context.Logger,
                     false,
                     requestHeader,
@@ -33,7 +33,7 @@ namespace ProxyMapService.Proxy.Utils
             }
             else
             {
-                tracker = new BodyTracker(
+                tracker = new HttpBodyTracker(
                     context.Logger,
                     false,
                     requestHeader,
@@ -50,7 +50,7 @@ namespace ProxyMapService.Proxy.Utils
             return tracker;
         }
 
-        public static IBodyTracker CreateResponseBodyTracker(SessionContext context, 
+        public static IHttpBodyTracker CreateResponseBodyTracker(SessionContext context, 
             HttpResponseHeader responseHeader, HttpRequestHeader? requestHeader)
         {
             if (context.ResponseBodyTracker != null)
@@ -58,10 +58,10 @@ namespace ProxyMapService.Proxy.Utils
                 context.Logger.LogNotNullResponseBodyTracker(context.Host);
                 //Debug.Assert(false, "Context ResponseBodyTracker is not null");
             }
-            IBodyTracker tracker;
+            IHttpBodyTracker tracker;
             if (responseHeader.TransferEncodingChunked)
             {
-                tracker = new ChunkedBodyTracker(
+                tracker = new HttpChunkedBodyTracker(
                     context.Logger,
                     true,
                     requestHeader,
@@ -75,7 +75,7 @@ namespace ProxyMapService.Proxy.Utils
             }
             else
             {
-                tracker = new BodyTracker(
+                tracker = new HttpBodyTracker(
                     context.Logger,
                     true,
                     requestHeader,
