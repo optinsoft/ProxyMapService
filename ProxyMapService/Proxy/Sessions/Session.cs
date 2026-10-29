@@ -147,10 +147,7 @@ namespace ProxyMapService.Proxy.Sessions
                         step = HandleStep.Terminate;
                     }
                 } while (step != HandleStep.Terminate);
-                if (context.RequestHeader != null)
-                {
-                    context.CompletionLogger?.OnHttpCompleted(context, context.RequestHeader);
-                }
+                context.CompleteAllRequests();
             }
             finally
             {

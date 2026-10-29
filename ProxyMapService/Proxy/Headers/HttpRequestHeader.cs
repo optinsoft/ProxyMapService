@@ -6,6 +6,8 @@ namespace ProxyMapService.Proxy.Headers
 {
     public class HttpRequestHeader
     {
+        private int _completed;
+
         public HttpRequestHeader(byte[] array, string? requestId = null)
         {
             RequestId = requestId ?? Guid.NewGuid().ToString();
@@ -40,7 +42,9 @@ namespace ProxyMapService.Proxy.Headers
 
         public int RequestNum { get; set; } = 0;
         public string RequestId { get; set; }
-        
+
+        public bool TryMarkCompleted() => Interlocked.Exchange(ref _completed, 1) == 0;
+
         public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
         {
             return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);

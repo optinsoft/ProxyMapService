@@ -352,5 +352,23 @@ namespace ProxyMapService.Proxy.Sessions
                 Http2Observer?.Close();
             }
         }
+
+        public void CompleteRequest(HttpRequestHeader? requestHeader)
+        {
+            if (requestHeader != null && requestHeader.TryMarkCompleted())
+            {
+                CompletionLogger?.OnHttpCompleted(this, requestHeader);
+            }
+        }
+
+        public void CompleteAllRequests()
+        {
+            // finish everything that didn't finish on its own: aborted requests, "until connection close" responses
+            foreach (var request in RequestHeaderHistory.OrderBy(kv => kv.Key).Select(kv => kv.Value))
+            {
+                CompleteRequest(request);
+            }
+            CompleteRequest(RequestHeader);
+        }
     }
 }

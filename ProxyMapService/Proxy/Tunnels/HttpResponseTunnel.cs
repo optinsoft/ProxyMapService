@@ -43,6 +43,17 @@ namespace ProxyMapService.Proxy.Tunnels
             }
             base.Dispose(disposing);
         }
+        
+        private void CompleteCurrentRequest()
+        {
+            var response = _context.ResponseHeader;
+            if (response == null) return;
+            if (response.StatusCode?.StartsWith('1') == true) return; // an interim 1xx does not complete the request
+            if (_context.RequestHeaderHistory.TryGetValue(response.ResponseNum, out var request))
+            {
+                _context.CompleteRequest(request);
+            }
+        }
 
         protected override async Task ProcessAsync(ReadOnlyMemory<byte> data, CancellationToken token)
         {
@@ -71,6 +82,7 @@ namespace ProxyMapService.Proxy.Tunnels
                 }
                 if (_context.ResponseBodyTracker?.Completed == true)
                 {
+                    CompleteCurrentRequest();
                     _selfState.ResetReadHeaders = true;
                 }
             }

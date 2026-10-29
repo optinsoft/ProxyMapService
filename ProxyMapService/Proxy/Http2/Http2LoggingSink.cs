@@ -104,7 +104,11 @@ namespace ProxyMapService.Proxy.Http2
 
         public override void OnResponseEnd(Http2StreamInfo stream)
         {
-            (stream.Tag as StreamLog)?.ResponseBody?.Complete();
+            if (stream.Tag is StreamLog st)
+            {
+                st.ResponseBody?.Complete();
+                context.CompleteRequest(st.Request); // completion of this specific request, not the last one in the session
+            }
         }
 
         public override void OnStreamReset(Http2StreamInfo stream, H2Direction by, uint errorCode)
@@ -121,6 +125,8 @@ namespace ProxyMapService.Proxy.Http2
                 // in h2 there are very many streams per connection: we clean up the request history when a stream completes
                 if (st.Request != null)
                 {
+                    // the stream may have ended without a response (RST_STREAM, disconnect): mark it as completed, retrying is harmless
+                    context.CompleteRequest(st.Request);
                     context.RequestHeaderHistory.TryRemove(st.Request.RequestNum, out _);
                 }
                 st.Dispose();
