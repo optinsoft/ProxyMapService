@@ -77,9 +77,8 @@ namespace ProxyMapService.Proxy.Sessions
             ProxyMapping mapping, IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, 
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
             ISessionManager sessionManager, List<HostRule> hostRules, 
-            List<CacheRule> cacheRules, CacheManager cacheManager, 
-            string? userAgent, bool defaultEnableTranslateH1ToH2,
-            SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
+            List<CacheRule> cacheRules, CacheManager cacheManager,
+            HttpConfig httpConfig, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
         {
             var incomingEndPoint = incomingClient.Client.RemoteEndPoint;
@@ -122,8 +121,7 @@ namespace ProxyMapService.Proxy.Sessions
                     serverCertificate, caCertificate,
                     proxyProvider, proxyAuthenticator, sessionManager,
                     hostRules, cacheRules, cacheManager, 
-                    userAgent, defaultEnableTranslateH1ToH2,
-                    sslClientConfig, sslServerConfig,
+                    httpConfig, sslClientConfig, sslServerConfig,
                     proxyCounters, logger, token);
                 proxyCounters.SessionsCounter?.OnSessionStarted(context);
                 var step = HandleStep.Initialize;

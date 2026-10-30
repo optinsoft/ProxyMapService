@@ -198,8 +198,7 @@ namespace ProxyMapService.Proxy.Sessions
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
             ISessionManager sessionManager, List<HostRule> hostRules, 
-            List<CacheRule> cacheRules, CacheManager cacheManager, 
-            string? userAgent, bool defaultEnableTranslateH1ToH2,
+            List<CacheRule> cacheRules, CacheManager cacheManager, HttpConfig httpConfig,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
@@ -223,7 +222,7 @@ namespace ProxyMapService.Proxy.Sessions
             IgnoreCertificateErrors = mapping.Listen.IgnoreCertificateErrors;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;
-            H1ToH2TranslationEnabled = mapping.Listen.EnableTranslateH1ToH2 ?? defaultEnableTranslateH1ToH2;
+            H1ToH2TranslationEnabled = mapping.Listen.EnableTranslateH1ToH2 ?? httpConfig.EnableTranslateH1ToH2;
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;
@@ -233,7 +232,7 @@ namespace ProxyMapService.Proxy.Sessions
             HostRules = hostRules;
             CacheRules = cacheRules;
             CacheManager = cacheManager;
-            UserAgent = userAgent;
+            UserAgent = httpConfig.UserAgent;
             SslClientConfig = sslClientConfig;
             SslServerConfig = sslServerConfig;
             ProxyCounters = proxyCounters;
