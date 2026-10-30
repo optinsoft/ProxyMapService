@@ -35,6 +35,7 @@
         public SslMode SslMode { get; set; } = SslMode.Auto;
         public SslMode UpstreamSslMode { get; set; } = SslMode.Auto;
         public bool? EnableTranslateH1ToH2 { get; set; }
+        public bool? EnableDowngradeToHttp1ForCache { get; set; }
         public bool IgnoreHostRules { get; set; } = false;
     }
 }

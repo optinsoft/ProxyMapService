@@ -150,7 +150,58 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
         private static partial void LogTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
 
+        [LoggerMessage(
+            EventId = 1315,
+            Level = LogLevel.Information,
+            Message = "Client {Client} is switched to HTTP/1.1 for {Host}: Host override or cache rules need to inspect and modify requests")]
+        private static partial void LogClientDowngradedToHttp1(ILogger logger, System.Net.EndPoint? client, HostAddress host);
+
+        [LoggerMessage(
+            EventId = 1316,
+            Level = LogLevel.Warning,
+            Message = "Cannot switch client {Client} to HTTP/1.1 for {Host}: {Reason}. Host override and caching are not applied to this session")]
+        private static partial void LogClientDowngradeImpossible(ILogger logger, System.Net.EndPoint? client, HostAddress host, string reason);
+
         #endregion
+
+        /// <summary>
+        /// Host override and cache only work with HTTP/1.1 (headers are rewritten, responses are served from a file),
+        /// while HTTP/2 is forwarded as is. Therefore, such a session gets HTTP/1.1 from the client's perspective,
+        /// and toward the server, if it chose h2, there is a translation from h1 -> h2.
+        /// Returns false if switching is not possible (then everything remains as before).
+        /// <paramref name="upstreamOptions"/> == null — the server has no TLS, there is nothing to negotiate.
+        /// </summary>
+        private static bool TryDowngradeClientToHttp1(SessionContext context, SslClientAuthenticationOptions? upstreamOptions)
+        {
+            var clientAlpn = context.ClientHello?.Alpn;
+            bool clientHasHttp1 = clientAlpn is not { Count: > 0 } || clientAlpn.Contains(SslApplicationProtocol.Http11);
+            if (!clientHasHttp1)
+            {
+                LogClientDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host, "the client offers only h2");
+                return false;
+            }
+
+            if (upstreamOptions?.ApplicationProtocols is { Count: > 0 } configured)
+            {
+                bool upstreamHttp1 = configured.Contains(SslApplicationProtocol.Http11);
+                bool upstreamHttp2 = configured.Contains(SslApplicationProtocol.Http2) && context.H1ToH2TranslationEnabled;
+                if (!upstreamHttp1 && !upstreamHttp2)
+                {
+                    LogClientDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host,
+                        "SslClientOptions allow only h2 and HTTP/1.1 -> HTTP/2 translation is disabled");
+                    return false;
+                }
+
+                // we offer h2 to the server only if translation is available: the client will get http/1.1 anyway
+                var offer = new List<SslApplicationProtocol>(2);
+                if (upstreamHttp2) offer.Add(SslApplicationProtocol.Http2);
+                if (upstreamHttp1) offer.Add(SslApplicationProtocol.Http11);
+                upstreamOptions.ApplicationProtocols = offer;
+            }
+
+            LogClientDowngradedToHttp1(context.Logger, context.IncomingEndPoint, context.Host);
+            return true;
+        }
 
         private static async Task RunRequestTunnel(SessionContext context,
             SslStream? incomingSslStream, CountingStream incomingStream, CountingStream outgoingStream,
@@ -170,7 +221,11 @@ namespace ProxyMapService.Proxy.Handlers
                     await outgoingReady.Task.WaitAsync(context.TunnelToken);
 
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
-                    if (sslServerOptions.ApplicationProtocols?.Count > 1)
+                    if (context.DowngradeClientToHttp1)
+                    {
+                        sslServerOptions.ApplicationProtocols = new() { SslApplicationProtocol.Http11 };
+                    }
+                    else if (sslServerOptions.ApplicationProtocols?.Count > 1)
                     {
                         if (context.NegotiatedAlpn.Protocol.Length > 0)
                             sslServerOptions.ApplicationProtocols = new() { context.NegotiatedAlpn };
@@ -286,7 +341,12 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         sslClientOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
                     }
-                    if (sslClientOptions.ApplicationProtocols?.Count > 1)
+                    bool downgrade = context.DecryptSSL
+                        && context.RequestTunnelState.IsSecure
+                        && context.RequiresHttp1Client
+                        && TryDowngradeClientToHttp1(context, sslClientOptions);
+                    context.DowngradeClientToHttp1 = downgrade;
+                    if (!downgrade && sslClientOptions.ApplicationProtocols?.Count > 1)
                     {
                         var hello = context.ClientHello;
                         if (hello != null)
@@ -303,6 +363,10 @@ namespace ProxyMapService.Proxy.Handlers
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                     context.OutgoingHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
+                }
+                else if (context.DecryptSSL && context.RequestTunnelState.IsSecure && context.RequiresHttp1Client)
+                {
+                    context.DowngradeClientToHttp1 = TryDowngradeClientToHttp1(context, null);
                 }
                 outgoingReady.SetResult();
                 await incomingReady.Task.WaitAsync(context.TunnelToken);
