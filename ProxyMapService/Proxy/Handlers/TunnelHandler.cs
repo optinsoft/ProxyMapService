@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using ProxyMapService.Proxy.Configurations;
+﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http2;
@@ -154,13 +153,13 @@ namespace ProxyMapService.Proxy.Handlers
             EventId = 1315,
             Level = LogLevel.Information,
             Message = "Client {Client} is switched to HTTP/1.1 for {Host}: Host override or cache rules need to inspect and modify requests")]
-        private static partial void LogClientDowngradedToHttp1(ILogger logger, System.Net.EndPoint? client, HostAddress host);
+        private static partial void LogIncomingDowngradedToHttp1(ILogger logger, System.Net.EndPoint? client, HostAddress host);
 
         [LoggerMessage(
             EventId = 1316,
             Level = LogLevel.Warning,
             Message = "Cannot switch client {Client} to HTTP/1.1 for {Host}: {Reason}. Host override and caching are not applied to this session")]
-        private static partial void LogClientDowngradeImpossible(ILogger logger, System.Net.EndPoint? client, HostAddress host, string reason);
+        private static partial void LogIncomingDowngradeImpossible(ILogger logger, System.Net.EndPoint? client, HostAddress host, string reason);
 
         #endregion
 
@@ -171,13 +170,13 @@ namespace ProxyMapService.Proxy.Handlers
         /// Returns false if switching is not possible (then everything remains as before).
         /// <paramref name="upstreamOptions"/> == null — the server has no TLS, there is nothing to negotiate.
         /// </summary>
-        private static bool TryDowngradeClientToHttp1(SessionContext context, SslClientAuthenticationOptions? upstreamOptions)
+        private static bool TryDowngradeIncomingToHttp1(SessionContext context, SslClientAuthenticationOptions? upstreamOptions)
         {
             var clientAlpn = context.ClientHello?.Alpn;
             bool clientHasHttp1 = clientAlpn is not { Count: > 0 } || clientAlpn.Contains(SslApplicationProtocol.Http11);
             if (!clientHasHttp1)
             {
-                LogClientDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host, "the client offers only h2");
+                LogIncomingDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host, "the client offers only h2");
                 return false;
             }
 
@@ -187,7 +186,7 @@ namespace ProxyMapService.Proxy.Handlers
                 bool upstreamHttp2 = configured.Contains(SslApplicationProtocol.Http2) && context.H1ToH2TranslationEnabled;
                 if (!upstreamHttp1 && !upstreamHttp2)
                 {
-                    LogClientDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host,
+                    LogIncomingDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host,
                         "SslClientOptions allow only h2 and HTTP/1.1 -> HTTP/2 translation is disabled");
                     return false;
                 }
@@ -199,7 +198,7 @@ namespace ProxyMapService.Proxy.Handlers
                 upstreamOptions.ApplicationProtocols = offer;
             }
 
-            LogClientDowngradedToHttp1(context.Logger, context.IncomingEndPoint, context.Host);
+            LogIncomingDowngradedToHttp1(context.Logger, context.IncomingEndPoint, context.Host);
             return true;
         }
 
@@ -221,7 +220,7 @@ namespace ProxyMapService.Proxy.Handlers
                     await outgoingReady.Task.WaitAsync(context.TunnelToken);
 
                     var sslServerOptions = SslOptionsFactory.BuildSslServerOptions(context, serverCertificate);
-                    if (context.DowngradeClientToHttp1)
+                    if (context.DowngradeIncomingToHttp1)
                     {
                         sslServerOptions.ApplicationProtocols = new() { SslApplicationProtocol.Http11 };
                     }
@@ -343,9 +342,9 @@ namespace ProxyMapService.Proxy.Handlers
                     }
                     bool downgrade = context.DecryptSSL
                         && context.RequestTunnelState.IsSecure
-                        && context.RequiresHttp1Client
-                        && TryDowngradeClientToHttp1(context, sslClientOptions);
-                    context.DowngradeClientToHttp1 = downgrade;
+                        && context.RequiresHttp1Incoming
+                        && TryDowngradeIncomingToHttp1(context, sslClientOptions);
+                    context.DowngradeIncomingToHttp1 = downgrade;
                     if (!downgrade && sslClientOptions.ApplicationProtocols?.Count > 1)
                     {
                         var hello = context.ClientHello;
@@ -364,9 +363,9 @@ namespace ProxyMapService.Proxy.Handlers
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                     context.OutgoingHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
-                else if (context.DecryptSSL && context.RequestTunnelState.IsSecure && context.RequiresHttp1Client)
+                else if (context.DecryptSSL && context.RequestTunnelState.IsSecure && context.RequiresHttp1Incoming)
                 {
-                    context.DowngradeClientToHttp1 = TryDowngradeClientToHttp1(context, null);
+                    context.DowngradeIncomingToHttp1 = TryDowngradeIncomingToHttp1(context, null);
                 }
                 outgoingReady.SetResult();
                 await incomingReady.Task.WaitAsync(context.TunnelToken);

@@ -41,6 +41,8 @@ namespace ProxyMapService.Proxy.Configurations
         public SslMode? SslMode { get; set; }
         public SslMode? UpstreamSslMode { get; set; }
         public bool? EnableTranslateH1ToH2 { get; set; }
+        public bool? DisableDowngradeToHttp1ForCache { get; set; }
+        public bool? DisableDowngradeToHttp1ForOverwrittenHost { get; set; }
         public string? CertificatePath { 
             get => _certificatePath; 
             set

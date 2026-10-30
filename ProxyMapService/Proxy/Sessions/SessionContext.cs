@@ -41,7 +41,8 @@ namespace ProxyMapService.Proxy.Sessions
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
         public bool H1ToH2TranslationEnabled { get; set; }
-        public bool DowngradeToHttp1ForCache { get; set; }
+        public bool DowngradeToHttp1ForCacheEnabled { get; set; }
+        public bool DowngradeToHttp1ForOverwrittenHostEnabled { get; set; }
         public bool IgnoreHostRules { get; set; }
         public SslClientOptionsConfig SslClientConfig { get; private set; }
         public SslServerOptionsConfig SslServerConfig { get; private set; }
@@ -74,8 +75,10 @@ namespace ProxyMapService.Proxy.Sessions
         public ClientHelloInfo? ClientHello {  get; set; }
         public SslApplicationProtocol NegotiatedAlpn { get; set; } = new();
         public bool TranslateH1ToH2 { get; set; }
-        public bool DowngradeClientToHttp1 { get; set; }
-        public bool RequiresHttp1Client => Host.Overwritten || (DowngradeToHttp1ForCache && CacheRules is { Count: > 0 });
+        public bool DowngradeIncomingToHttp1 { get; set; }
+        public bool RequiresHttp1Incoming => 
+            (DowngradeToHttp1ForOverwrittenHostEnabled && Host.Overwritten) || 
+            (DowngradeToHttp1ForCacheEnabled && CacheRules is { Count: > 0 });
         public Http2ClientConnection? OutgoingHttp2Client { get; set; }
         public Http2TrafficObserver? Http2Observer { get; set; }
 
@@ -226,7 +229,8 @@ namespace ProxyMapService.Proxy.Sessions
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;
             H1ToH2TranslationEnabled = mapping.Listen.EnableTranslateH1ToH2 ?? httpConfig.EnableTranslateH1ToH2;
-            DowngradeToHttp1ForCache = mapping.Listen.EnableDowngradeToHttp1ForCache ?? httpConfig.EnableDowngradeToHttp1ForCache;
+            DowngradeToHttp1ForCacheEnabled = !(mapping.Listen.DisableDowngradeToHttp1ForCache ?? httpConfig.DisableDowngradeToHttp1ForCache);
+            DowngradeToHttp1ForOverwrittenHostEnabled = !(mapping.Listen.DisableDowngradeToHttp1ForOverwrittenHost ?? httpConfig.DisableDowngradeToHttp1ForOverwrittenHost);
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;

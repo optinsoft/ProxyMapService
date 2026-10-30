@@ -57,6 +57,14 @@ namespace ProxyMapService.Proxy.Utils
                 {
                     context.H1ToH2TranslationEnabled = hostRule.EnableTranslateH1ToH2.Value;
                 }
+                if (hostRule.DisableDowngradeToHttp1ForCache != null)
+                {
+                    context.DowngradeToHttp1ForCacheEnabled = !hostRule.DisableDowngradeToHttp1ForCache.Value;
+                }
+                if (hostRule.DisableDowngradeToHttp1ForOverwrittenHost != null)
+                {
+                    context.DowngradeToHttp1ForOverwrittenHostEnabled = !hostRule.DisableDowngradeToHttp1ForOverwrittenHost.Value;
+                }
                 if (hostRule.ServerCertificate != null)
                 {
                     context.ServerCertificate = hostRule.ServerCertificate;
