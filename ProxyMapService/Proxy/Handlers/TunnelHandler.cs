@@ -241,8 +241,8 @@ namespace ProxyMapService.Proxy.Handlers
                     if (context.TranslateH1ToH2)
                     {
                         context.Logger.LogHttp1to2Translation(context.IncomingEndPoint, context.Host);
-                        context.OutgoingHttp2Connection = new Http2Connection(outgoingStream);
-                        await context.OutgoingHttp2Connection.StartAsync(context.TunnelToken);
+                        context.OutgoingHttp2Client = new Http2ClientConnection(outgoingStream);
+                        await context.OutgoingHttp2Client.StartAsync(context.TunnelToken);
                     }
                     else if (context.IncomingHttp2 && context.OutgoingHttp2)
                     {
@@ -304,7 +304,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.RequestTunnelState,
                     context.ResponseTunnelState,
                     context.Http2Observer)
-                : context.OutgoingHttp2Connection != null
+                : context.OutgoingHttp2Client != null
                     ? new H1ToH2RequestTunnel(
                         context,
                         incomingStream,
@@ -314,7 +314,7 @@ namespace ProxyMapService.Proxy.Handlers
                         context.ProxyCounters.OutgoingSendCounter,
                         context.RequestTunnelState,
                         context.ResponseTunnelState,
-                        context.OutgoingHttp2Connection)
+                        context.OutgoingHttp2Client)
                     : new HttpRequestTunnel(
                         context,
                         incomingStream,
@@ -420,7 +420,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.ResponseTunnelState,
                     context.RequestTunnelState,
                     context.Http2Observer)
-                : context.OutgoingHttp2Connection != null
+                : context.OutgoingHttp2Client != null
                     ? new H2ToH1ResponseTunnel(
                         context,
                         outgoingStream,
@@ -430,7 +430,7 @@ namespace ProxyMapService.Proxy.Handlers
                         context.ProxyCounters.IncomingSendCounter,
                         context.ResponseTunnelState,
                         context.RequestTunnelState,
-                        context.OutgoingHttp2Connection,
+                        context.OutgoingHttp2Client,
                         new HpackDecoderAdapter())
                     : new HttpResponseTunnel(
                         context,

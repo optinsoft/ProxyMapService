@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using ProxyMapService.Proxy.Configurations;
+﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
 using ProxyMapService.Proxy.Http;
@@ -96,6 +95,12 @@ namespace ProxyMapService.Proxy.Handlers
             context.IncomingHttp2 = (incomingSslStream?.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
             bool protocolDetected = context.IncomingHttp2 || http != null;
 
+            if (context.IncomingHttp2)
+            {
+                // ALPN selected h2: from here on the entire exchange is frame-based
+                return await RunHttp2(context, incomingStream, ReadOnlyMemory<byte>.Empty);
+            }
+
             while (!token.IsCancellationRequested)
             {
                 using MemoryStream bodyStream = new();
@@ -127,6 +132,8 @@ namespace ProxyMapService.Proxy.Handlers
                         if (context.IncomingHttp2)
                         {
                             context.Logger.LogDetectedClientHTTP2(context.IncomingEndPoint);
+                            // h2c with prior knowledge: leftover contains the preface and everything already read after it
+                            return await RunHttp2(context, incomingStream, leftover);
                         }
                     }
 
@@ -372,6 +379,159 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.Logger.LogResponseFromFile(fileStream.Name);
         }
+
+        private async Task<HandleStep> RunHttp2(SessionContext context, Stream incomingStream, ReadOnlyMemory<byte> initial)
+        {
+            var connection = new Http2ServerConnection(incomingStream, new HpackDecoderAdapter(4096),
+                stream => HandleHttp2Stream(context, stream), context.Logger);
+            try
+            {
+                await connection.RunAsync(initial, context.Token);
+            }
+            catch (Exception ex) when (ex is IOException or SocketException or ObjectDisposedException)
+            {
+                context.Logger.LogExceptionWarning(ex.GetType().Name, ex.Message);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            context.CompleteAllRequests();
+            return HandleStep.Terminate;
+        }
+
+        /// <summary>
+        /// Called from the connection read loop synchronously before the first await, so here (and only here)
+        /// it is safe to touch context.RequestHeader: requests arrive strictly in order.
+        /// </summary>
+        private async Task HandleHttp2Stream(SessionContext context, Http2ServerStream stream)
+        {
+            HttpRequestHeader request;
+            try
+            {
+                request = Http2HeaderBridge.CreateRequestHeader(stream.Headers);
+            }
+            catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
+            {
+                context.Logger.LogHttpBadRequest();
+                await ReplyHttp2Text(context, stream, null, 400, "Bad Request");
+                return;
+            }
+
+            context.RequestHeader = request; // assigns RequestNum and puts the header into RequestHeaderHistory
+            context.RequestHeadersLogger?.OnHttpRequestHeader(context, request);
+            if (request.BadRequest)
+            {
+                context.Logger.LogHttpBadRequest();
+                await ReplyHttp2Text(context, stream, request, 400, "Bad Request");
+                context.CompleteRequest(request);
+                return;
+            }
+            context.SessionManager.NotifyIfRequestUrlMatches(context, request, context.IncomingHttp2 && context.SslMode != SslMode.No);
+
+            try
+            {
+                await HandleHttp2Request(context, stream, request);
+            }
+            finally
+            {
+                context.CompleteRequest(request);
+            }
+        }
+
+        /// <summary>The h2 counterpart of HandleRequest; override it together with HandleRequest if HandleRequest is changed in a derived class.</summary>
+        protected virtual async Task HandleHttp2Request(SessionContext context, Http2ServerStream stream, HttpRequestHeader http)
+        {
+            if (http.HTTPVerb != "GET")
+            {
+                context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
+                await ReplyHttp2Text(context, stream, http, 405, "Method Not Allowed", ("allow", "GET"));
+                return;
+            }
+
+            await using var fileStream = OpenFileFromHttpPath(context.RootDir, http.HTTPTargetPath, ["index.html", "index.htm"]);
+            if (fileStream == null)
+            {
+                context.Logger.LogHttpFileNotFound(http.HTTPTargetPath);
+                await ReplyHttp2Text(context, stream, http, 404, "Not Found");
+                return;
+            }
+
+            long length = fileStream.Length;
+            var headers = new List<(string Name, string Value)>
+            {
+                ("content-type", GetContentType(fileStream.Name)),
+                ("content-length", length.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("date", DateTime.UtcNow.ToString("R", System.Globalization.CultureInfo.InvariantCulture)),
+            };
+            LogHttp2ResponseHeader(context, http, 200, headers);
+
+            if (length == 0)
+            {
+                await stream.SendHeadersAsync(200, headers, true);
+            }
+            else
+            {
+                await stream.SendHeadersAsync(200, headers, false);
+                var buffer = new byte[64 * 1024];
+                long sent = 0;
+                while (true)
+                {
+                    int n = await fileStream.ReadAsync(buffer.AsMemory(), stream.Token);
+                    if (n == 0)
+                    {
+                        // the file turned out shorter than declared: we close the stream (the client will see a content-length mismatch)
+                        await stream.SendDataAsync(ReadOnlyMemory<byte>.Empty, true);
+                        break;
+                    }
+                    sent += n;
+                    bool last = sent >= length;
+                    await stream.SendDataAsync(buffer.AsMemory(0, n), last);
+                    if (last) break;
+                }
+            }
+
+            context.Logger.LogResponseFromFile(fileStream.Name);
+        }
+
+        private static async Task ReplyHttp2Text(SessionContext context, Http2ServerStream stream, HttpRequestHeader? http,
+            int status, string reason, params (string Name, string Value)[] extra)
+        {
+            byte[] body = System.Text.Encoding.UTF8.GetBytes(reason);
+            var headers = new List<(string Name, string Value)>
+            {
+                ("content-type", "text/plain; charset=utf-8"),
+                ("content-length", body.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("date", DateTime.UtcNow.ToString("R", System.Globalization.CultureInfo.InvariantCulture)),
+            };
+            headers.AddRange(extra);
+            if (http != null) LogHttp2ResponseHeader(context, http, status, headers);
+            await stream.SendHeadersAsync(status, headers, false);
+            await stream.SendDataAsync(body, true);
+        }
+
+        private static void LogHttp2ResponseHeader(SessionContext context, HttpRequestHeader http, int status,
+            List<(string Name, string Value)> headers)
+        {
+            if (context.ResponseHeadersLogger == null) return;
+            var lines = new List<string>(headers.Count + 1) { $"HTTP/2 {status} {Http1Http2Converter.Reason(status)}" };
+            foreach (var (name, value) in headers) lines.Add($"{name}: {value}");
+            context.ResponseHeadersLogger.OnHttpResponseHeader(context, http, true, lines.ToArray());
+        }
+
+        private static string GetContentType(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() switch
+        {
+            ".html" or ".htm" => "text/html; charset=utf-8",
+            ".css" => "text/css; charset=utf-8",
+            ".js" => "text/javascript; charset=utf-8",
+            ".json" => "application/json; charset=utf-8",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".txt" => "text/plain; charset=utf-8",
+            ".ico" => "image/x-icon",
+            _ => "application/octet-stream"
+        };
 
         private static FileStream? OpenFileFromHttpPath(string? rootDir, string? relativePath, List<string> indexFiles)
         {

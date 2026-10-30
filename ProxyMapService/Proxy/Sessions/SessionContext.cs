@@ -76,7 +76,7 @@ namespace ProxyMapService.Proxy.Sessions
         public bool TranslateH1ToH2 { get; set; }
         public bool DowngradeClientToHttp1 { get; set; }
         public bool RequiresHttp1Client => Host.Overwritten || (DowngradeToHttp1ForCache && CacheRules is { Count: > 0 });
-        public Http2Connection? OutgoingHttp2Connection { get; set; }
+        public Http2ClientConnection? OutgoingHttp2Client { get; set; }
         public Http2TrafficObserver? Http2Observer { get; set; }
 
         public ProxyType? InboundType { get; set; }

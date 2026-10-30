@@ -9,7 +9,7 @@ namespace ProxyMapService.Proxy.Tunnels
 {
     public class H1ToH2RequestTunnel : HttpRequestTunnel
     {
-        private readonly Http2Connection _conn;
+        private readonly Http2ClientConnection _conn;
         private int _streamId;
 
         public H1ToH2RequestTunnel(
@@ -21,7 +21,7 @@ namespace ProxyMapService.Proxy.Tunnels
             BytesSendCounter sendCounter,
             TunnelState selfState,
             TunnelState otherTunnelState,
-            Http2Connection conn)
+            Http2ClientConnection conn)
             : base(
             context,
             source,

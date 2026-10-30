@@ -1,75 +1,13 @@
 ﻿using System.Buffers;
 using System.Buffers.Binary;
-using System.Text;
 
 namespace ProxyMapService.Proxy.Http2
-{
-    public static class H2
-    {
-        public const byte Data = 0, Headers = 1, Priority = 2, RstStream = 3, Settings = 4,
-            PushPromise = 5, Ping = 6, GoAway = 7, WindowUpdate = 8, Continuation = 9;
-        public const byte EndStream = 0x1, Ack = 0x1, EndHeaders = 0x4, Padded = 0x8, PriorityFlag = 0x20;
-        public static readonly byte[] Preface = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"u8.ToArray();
-    }
-
-    public readonly record struct H2Header(string Name, string Value);
-    public readonly record struct H2Frame(byte Type, byte Flags, int StreamId, byte[] Payload);
-
-    /// <summary>Wrapper over the HPACK decoder (copied from dotnet/runtime).</summary>
-    public interface IHpackDecoder
-    {
-        List<H2Header> Decode(ReadOnlySpan<byte> block);
-    }
-
-    /// <summary>Wrapper over the HPACK encoder (copied from dotnet/runtime).</summary>
-    public interface IHpackEncoder
-    {
-        byte[] Encode(IReadOnlyList<H2Header> headers);
-    }
-
-    /// <summary>Accumulates bytes and yields whole frames.</summary>
-    public sealed class H2FrameReader(int MaxFrameSize = 16384) // our SETTINGS_MAX_FRAME_SIZE (default)
-    {
-        private byte[] _buf = new byte[32 * 1024];
-        private int _start, _end;
-
-        public void Append(ReadOnlySpan<byte> data)
-        {
-            if (_buf.Length - _end < data.Length)
-            {
-                int len = _end - _start;
-                if (_buf.Length - len < data.Length)
-                    Array.Resize(ref _buf, Math.Max(_buf.Length * 2, len + data.Length));
-                Buffer.BlockCopy(_buf, _start, _buf, 0, len);
-                _start = 0;
-                _end = len;
-            }
-            data.CopyTo(_buf.AsSpan(_end));
-            _end += data.Length;
-        }
-
-        public bool TryRead(out H2Frame frame)
-        {
-            frame = default;
-            int avail = _end - _start;
-            if (avail < 9) return false;
-            var s = _buf.AsSpan(_start, avail);
-            int len = (s[0] << 16) | (s[1] << 8) | s[2];
-            if (len > MaxFrameSize) throw new InvalidDataException("HTTP/2 frame is too large");
-            if (avail < 9 + len) return false;
-            frame = new H2Frame(s[3], s[4], BinaryPrimitives.ReadInt32BigEndian(s.Slice(5, 4)) & 0x7FFFFFFF,
-                s.Slice(9, len).ToArray());
-            _start += 9 + len;
-            if (_start == _end) _start = _end = 0;
-            return true;
-        }
-    }
-    
+{    
     /// <summary>
     /// Client side of a single HTTP/2 connection to the upstream. One active request at a time
     /// (the client speaks HTTP/1.1, so pipelining is serialized). The sole frame writer.
     /// </summary>
-    public sealed class Http2Connection
+    public sealed class Http2ClientConnection
     {
         private const int OurStreamWindow = 1 << 20;
 
@@ -87,7 +25,7 @@ namespace ProxyMapService.Proxy.Http2
         private int _activeStream;
         private bool _requestEnded, _responseEnded, _goAway;
 
-        public Http2Connection(Stream stream, IHpackEncoder? encoder = null)
+        public Http2ClientConnection(Stream stream, IHpackEncoder? encoder = null)
         {
             _stream = stream;
             _encoder = encoder ?? new HpackEncoderAdapter();

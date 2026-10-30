@@ -12,7 +12,7 @@ namespace ProxyMapService.Proxy.Tunnels
         private const int WindowThreshold = 32 * 1024;
         private const int MaxHeaderBlock = 256 * 1024;
 
-        private readonly Http2Connection _conn;
+        private readonly Http2ClientConnection _conn;
         private readonly IHpackDecoder _hpack;
 
         private readonly H2FrameReader _reader = new();
@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Tunnels
             BytesSendCounter sendCounter,
             TunnelState selfState,
             TunnelState otherTunnelState,
-            Http2Connection conn, 
+            Http2ClientConnection conn, 
             IHpackDecoder hpack)
             : base(
             context,
