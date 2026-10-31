@@ -10,6 +10,7 @@
         public string? RequestMethod { get; set; }
         public string? Route { get; set; }
         public string? TargetHost { get; set; }
+        public string? Protocol { get; set; }
         public string? RequestLine { get; set; }
         public Dictionary<string, string> Headers { get; set; } = [];
     }

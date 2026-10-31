@@ -7,6 +7,8 @@ export interface HttpRequestEntry {
   requestMethod: string;
   route: string;
   targetHost: string;
+  protocol: string;
+  requestLine: string;
   headers: Record<string, string>;
 }
 
@@ -20,12 +22,14 @@ export interface HttpResponseEntry {
   id: string;
   completed: boolean;
   inbound: string;
+  protocol: string;
   statusCode: string;
   statusText: string;
   type: string;
   size: number | null;
   route: string;
   targetHost: string;
+  statusLine: string;
   headers: Record<string, string>;
 }
 

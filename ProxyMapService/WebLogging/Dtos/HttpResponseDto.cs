@@ -6,6 +6,7 @@
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public bool Completed { get; set; }
         public string? Inbound { get; set; }
+        public string? Protocol { get; set; }
         public string? StatusCode { get; set; }
         public string? StatusText { get; set; }
         public string? Route { get; set; }

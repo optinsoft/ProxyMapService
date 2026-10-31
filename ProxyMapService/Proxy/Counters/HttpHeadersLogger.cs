@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Utils;
+﻿using ProxyMapService.Proxy.Http;
+using ProxyMapService.Proxy.Utils;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 

@@ -1,4 +1,4 @@
-﻿// Ignore Spelling: Proxified
+﻿// Ignore Spelling: Proxified, Ssl, Alpn
 
 using ProxyMapService.Proxy.Authenticator;
 using ProxyMapService.Proxy.Cache;
@@ -152,9 +152,9 @@ namespace ProxyMapService.Proxy.Sessions
         public IHttpCompletionLogger? CompletionLogger { get => ProxyCounters.HttpCompletionLogger; }
         public IHttpBodyLogger? RequestBodyLogger { get => ProxyCounters.HttpRequestBodyLogger; }
         public IHttpBodyLogger? ResponseBodyLogger { get => ProxyCounters.HttpResponseBodyLogger; }
-        public string? GetInbound()
-        {
-            return (InboundType switch
+        public string? Inbound 
+        { 
+            get => (InboundType switch
             {
                 ProxyType.Http => $"http://{InboundEndpoint}",
                 ProxyType.Socks4 => $"socks4://{InboundEndpoint}",
@@ -162,40 +162,42 @@ namespace ProxyMapService.Proxy.Sessions
                 _ => null
             });
         }
-        public string? GetRoute()
+        public string? Route
         {
-            string cachePrefix = CachedReply ? "(cache) " : "";
-            switch (ProxyServer?.ProxyType)
+            get
             {
-                case ProxyType.Http:
-                    return $"{cachePrefix}http://{ProxyServer.Host}:{ProxyServer.Port}";
-                case ProxyType.Socks4:
-                    return $"{cachePrefix}socks4://{ProxyServer.Host}:{ProxyServer.Port}";
-                case ProxyType.Socks5:
-                    return $"{cachePrefix}socks5://{ProxyServer.Host}:{ProxyServer.Port}";
-                default:
-                    break;
-            }
-            if (HostAction == null) return null;
-            switch (HostAction.Value.ActionValue)
-            {
-                case SessionActionEnum.Proxy:
-                    return $"{cachePrefix}proxy";
-                case SessionActionEnum.Bypass:
-                    return $"{cachePrefix}direct";
-                case SessionActionEnum.File:
-                    return $"{cachePrefix}file";
-                case SessionActionEnum.SessionAPI:
-                    return $"{cachePrefix}session api";
-                default:
-                    //SessionActionEnum.Deny
-                    return "deny";
+                string cachePrefix = CachedReply ? "(cache) " : "";
+                switch (ProxyServer?.ProxyType)
+                {
+                    case ProxyType.Http:
+                        return $"{cachePrefix}http://{ProxyServer.Host}:{ProxyServer.Port}";
+                    case ProxyType.Socks4:
+                        return $"{cachePrefix}socks4://{ProxyServer.Host}:{ProxyServer.Port}";
+                    case ProxyType.Socks5:
+                        return $"{cachePrefix}socks5://{ProxyServer.Host}:{ProxyServer.Port}";
+                    default:
+                        break;
+                }
+                if (HostAction == null) return null;
+                switch (HostAction.Value.ActionValue)
+                {
+                    case SessionActionEnum.Proxy:
+                        return $"{cachePrefix}proxy";
+                    case SessionActionEnum.Bypass:
+                        return $"{cachePrefix}direct";
+                    case SessionActionEnum.File:
+                        return $"{cachePrefix}file";
+                    case SessionActionEnum.SessionAPI:
+                        return $"{cachePrefix}session api";
+                    default:
+                        //SessionActionEnum.Deny
+                        return "deny";
+                }
             }
         }
-        public string? GetTargetHost()
+        public string? TargetHost
         {
-            if (Host.Hostname.Length == 0) return null;
-            return $"{Host.Hostname}:{Host.Port}";
+            get => ((Host.Hostname.Length == 0) ? null : $"{Host.Hostname}:{Host.Port}");
         }
 
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 

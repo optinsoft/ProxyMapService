@@ -49,9 +49,9 @@ namespace ProxyMapService.WebLogging
 
             if (sender is not IHttpLoggersProvider loggersProvider) return;
 
-            var inbound = loggersProvider.GetInbound();
-            var route = loggersProvider.GetRoute();
-            var targetHost = loggersProvider.GetTargetHost();
+            var inbound = loggersProvider.Inbound;
+            var route = loggersProvider.Route;
+            var targetHost = loggersProvider.TargetHost;
             var completed = e.Completed;
             var headers = e.Headers;
 
