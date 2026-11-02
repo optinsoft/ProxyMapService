@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, watch } from 'vue'
 import type { HttpRequestEntry, HttpResponseEntry, HttpBodyEntry, MergedTrafficEntry, HttpCompletionEntry } from '../types/http'
 import HttpBodyViewer from './HttpBodyViewer.vue'
 import { type ColumnKey, type ColumnFilters, allColumns } from '../types/column'
@@ -183,7 +183,33 @@ function formatDuration(ms: number): string {
   return `${ms} ms`
 }
 
-const visibleColumns = ref(allColumns.map(c => c.key))
+const COLUMNS_STORAGE_KEY = 'httpTrafficVisibleColumns'
+const allColumnKeys = allColumns.map(c => c.key)
+
+function loadVisibleColumns(): ColumnKey[] {
+  try {
+    const raw = localStorage.getItem(COLUMNS_STORAGE_KEY)
+    if (!raw) return allColumnKeys
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return allColumnKeys
+    // Only keep keys we actually know about, to guard against stale/unknown values.
+    const known = allColumnKeys.filter(key => parsed.includes(key))
+    return known.length ? known : allColumnKeys
+  } catch (err) {
+    console.error('Failed to load column settings from localStorage:', err)
+    return allColumnKeys
+  }
+}
+
+const visibleColumns = ref<ColumnKey[]>(loadVisibleColumns())
+
+watch(visibleColumns, (value) => {
+  try {
+    localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(value))
+  } catch (err) {
+    console.error('Failed to save column settings to localStorage:', err)
+  }
+}, { deep: true })
 
 const displayedColumns = computed(() =>
     allColumns.filter(c => visibleColumns.value.includes(c.key))
