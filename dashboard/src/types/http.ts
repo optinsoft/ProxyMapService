@@ -3,11 +3,12 @@ export interface HttpRequestEntry {
   id: string;
   completed: boolean;
   inbound: string;
+  clientProto: string;
+  targetProto: string;
   requestURI: string;
   requestMethod: string;
   route: string;
   targetHost: string;
-  protocol: string;
   requestLine: string;
   headers: Record<string, string>;
 }
@@ -22,7 +23,6 @@ export interface HttpResponseEntry {
   id: string;
   completed: boolean;
   inbound: string;
-  protocol: string;
   statusCode: string;
   statusText: string;
   type: string;
@@ -176,6 +176,8 @@ export interface MergedTrafficEntry {
   id: string;
   timestamp: string;
   inbound: string;
+  clientProto: string;
+  targetProto: string;
   requestURI: string;
   requestMethod: string;
   route: string;

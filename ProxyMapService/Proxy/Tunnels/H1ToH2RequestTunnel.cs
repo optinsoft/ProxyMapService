@@ -40,7 +40,7 @@ namespace ProxyMapService.Proxy.Tunnels
             var h = new HttpRequestHeader(lines);
             if (!Http1Http2Converter.TryBuildRequest(h, true, out var headers, out var err))
             {
-                await HttpProto.HttpReplyError(_context, h, _source, "HTTP/1.1 501 Not Implemented", err);
+                await HttpProto.HttpReplyNotImplemented(_context, h, _source, err);
                 throw new IOException(err);
             }
             _streamId = await _conn.BeginRequestAsync(h.HTTPVerb!, h.KeepAlive, headers, endStream: tracker.Completed, token);

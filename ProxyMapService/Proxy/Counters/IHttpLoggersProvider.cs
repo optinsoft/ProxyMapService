@@ -10,5 +10,7 @@
         string? Inbound {  get; }
         string? Route { get; }
         string? TargetHost { get; }
+        bool ClientHttp2 { get; }
+        bool TargetHttp2 { get; }
     }
 }

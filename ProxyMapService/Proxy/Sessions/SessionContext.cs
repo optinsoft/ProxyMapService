@@ -72,8 +72,8 @@ namespace ProxyMapService.Proxy.Sessions
         public bool IncomingHttp2 { get; set; }
         public bool OutgoingHttp2 { get; set; }
 
-        public ClientHelloInfo? ClientHello {  get; set; }
-        public SslApplicationProtocol NegotiatedAlpn { get; set; } = new();
+        public ClientHelloInfo? IncomingClientHello {  get; set; }
+        public SslApplicationProtocol OutgoingNegotiatedAlpn { get; set; } = new();
         public bool TranslateH1ToH2 { get; set; }
         public bool DowngradeIncomingToHttp1 { get; set; }
         public bool RequiresHttp1Incoming => 
@@ -199,6 +199,8 @@ namespace ProxyMapService.Proxy.Sessions
         {
             get => ((Host.Hostname.Length == 0) ? null : $"{Host.Hostname}:{Host.Port}");
         }
+        public bool ClientHttp2 => IncomingHttp2;
+        public bool TargetHttp2 => OutgoingHttp2;
 
         public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
             System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, 

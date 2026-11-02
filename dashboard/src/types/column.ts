@@ -2,6 +2,8 @@ export type ColumnKey =
   | 'time'
   | 'inbound'
   | 'route'
+  | 'clientProto'
+  | 'targetProto'
   | 'targetHost'
   | 'requestURI'
   | 'method'
@@ -21,6 +23,8 @@ export const allColumns: Column[] = [
   { key: 'time', label: 'Time' },
   { key: 'inbound', label: 'Inbound' },
   { key: 'route', label: 'Route' },
+  { key: 'clientProto', label: 'Client Proto' },
+  { key: 'targetProto', label: 'Target Proto' },
   { key: 'targetHost', label: 'Target Host' },
   { key: 'requestURI', label: 'Request URI' },
   { key: 'method', label: 'Method' },

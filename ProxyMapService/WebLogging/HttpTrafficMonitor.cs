@@ -51,7 +51,9 @@ namespace ProxyMapService.WebLogging
 
             var inbound = loggersProvider.Inbound;
             var route = loggersProvider.Route;
-            var targetHost = loggersProvider.TargetHost;
+            var targetHost = loggersProvider.TargetHost;            
+            var clientHttp2 = loggersProvider.ClientHttp2;
+            var targetHttp2 = loggersProvider.TargetHttp2;
             var completed = e.Completed;
             var headers = e.Headers;
 
@@ -67,7 +69,7 @@ namespace ProxyMapService.WebLogging
             }
             else
             {
-                if (HttpHeaderParser.ParseRequestRawHeaders(headers, e.HeaderId, completed) is HttpRequestDto requestDto)
+                if (HttpHeaderParser.ParseRequestRawHeaders(headers, e.HeaderId, completed, clientHttp2, targetHttp2) is HttpRequestDto requestDto)
                 {
                     requestDto.Inbound = inbound;
                     requestDto.Route = route;

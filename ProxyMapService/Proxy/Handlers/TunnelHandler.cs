@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Handlers
                     return HandleStep.Terminate;
                 }
 
-                context.ClientHello = tlsRecord != null ? TlsClientHelloParser.ParseClientHello(tlsRecord) : null;
+                context.IncomingClientHello = tlsRecord != null ? TlsClientHelloParser.ParseClientHello(tlsRecord) : null;
 
                 bool isIncomingSSL = context.SslMode switch
                 {
@@ -172,7 +172,7 @@ namespace ProxyMapService.Proxy.Handlers
         /// </summary>
         private static bool TryDowngradeIncomingToHttp1(SessionContext context, SslClientAuthenticationOptions? upstreamOptions)
         {
-            var clientAlpn = context.ClientHello?.Alpn;
+            var clientAlpn = context.IncomingClientHello?.Alpn;
             bool clientHasHttp1 = clientAlpn is not { Count: > 0 } || clientAlpn.Contains(SslApplicationProtocol.Http11);
             if (!clientHasHttp1)
             {
@@ -226,8 +226,8 @@ namespace ProxyMapService.Proxy.Handlers
                     }
                     else if (sslServerOptions.ApplicationProtocols?.Count > 1)
                     {
-                        if (context.NegotiatedAlpn.Protocol.Length > 0)
-                            sslServerOptions.ApplicationProtocols = new() { context.NegotiatedAlpn };
+                        if (context.OutgoingNegotiatedAlpn.Protocol.Length > 0)
+                            sslServerOptions.ApplicationProtocols = new() { context.OutgoingNegotiatedAlpn };
                         else
                             sslServerOptions.ApplicationProtocols = null;
                     }
@@ -347,7 +347,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.DowngradeIncomingToHttp1 = downgrade;
                     if (!downgrade && sslClientOptions.ApplicationProtocols?.Count > 1)
                     {
-                        var hello = context.ClientHello;
+                        var hello = context.IncomingClientHello;
                         if (hello != null)
                         {
                             var common = hello.Alpn is { Count: > 0 }
@@ -358,7 +358,7 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                     }
                     await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.TunnelToken);
-                    context.NegotiatedAlpn = outgoingSslStream.NegotiatedApplicationProtocol;
+                    context.OutgoingNegotiatedAlpn = outgoingSslStream.NegotiatedApplicationProtocol;
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                     context.OutgoingHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);

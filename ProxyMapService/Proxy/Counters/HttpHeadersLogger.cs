@@ -1,11 +1,10 @@
-﻿using ProxyMapService.Proxy.Http;
-using ProxyMapService.Proxy.Utils;
+﻿using ProxyMapService.Proxy.Utils;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 using HttpResponseHeader = ProxyMapService.Proxy.Headers.HttpResponseHeader;
 
 namespace ProxyMapService.Proxy.Counters
 {
-    public class HttpHeadersLogger(bool response, IHttpLoggingSwitch? loggingSwitch) : IHttpHeadersLogger
+    public class HttpHeadersLogger(IHttpLoggingSwitch? loggingSwitch) : IHttpHeadersLogger
     {
         public void OnHttpRequestHeader(object context, HttpRequestHeader? requestHeader)
         {

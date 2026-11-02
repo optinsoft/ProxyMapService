@@ -83,6 +83,8 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       id: req.id,
       timestamp: new Date(req.timestamp).toLocaleTimeString(),
       inbound: req.inbound,
+      clientProto: req.clientProto,
+      targetProto: req.targetProto,
       requestURI: req.requestURI,
       requestMethod: req.requestMethod.toUpperCase(),
       route: routeDisplay,
@@ -197,6 +199,8 @@ const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
   time: tx => tx.timestamp,
   inbound: tx => tx.inbound,
   route: tx => tx.route,
+  clientProto: tx => tx.clientProto,
+  targetProto: tx => tx.targetProto,
   targetHost: tx => tx.targetHost,
   requestURI: tx => tx.requestURI,
   method: tx => tx.requestMethod,
@@ -270,7 +274,15 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
     <div class="workspace">
       <!-- Left side: The Main log table grid -->
       <div class="table-container">
+        <div class="table-head">
         <table class="traffic-table">
+          <colgroup>
+            <col
+              v-for="column in displayedColumns"
+              :key="column.key"
+              :class="`col-${column.key}`"
+            />
+          </colgroup>
           <thead>
             <tr>
               <th
@@ -295,6 +307,17 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
               </th>
             </tr>            
           </thead>
+        </table>
+        </div>
+        <div class="table-body">
+        <table class="traffic-table">
+          <colgroup>
+            <col
+              v-for="column in displayedColumns"
+              :key="column.key"
+              :class="`col-${column.key}`"
+            />
+          </colgroup>
           <tbody>
             <tr v-if="mergedTransactions.length === 0">
               <td :colspan="displayedColumns.length" class="empty-row">No transactions captured yet...</td>
@@ -330,6 +353,12 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
                     {{ tx.route }}
                   </span>
                 </template>
+                <template v-else-if="column.key === 'clientProto'">
+                  {{ tx.clientProto || '-' }}
+                </template>
+                <template v-else-if="column.key === 'targetProto'">
+                  {{ tx.targetProto || '-' }}
+                </template>
                 <template v-else-if="column.key === 'targetHost'">
                   {{ tx.targetHost }}
                 </template>
@@ -363,6 +392,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <!-- splitter between the Main log table grid and the headers inspector sidebar -->
@@ -388,6 +418,8 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
             <p><strong>Time:</strong> <span class="mono">{{ selectedTransaction.timestamp }}</span></p>            
             <p><strong>Inbound:</strong> <span class="mono">{{ selectedTransaction.inbound }}</span></p>
             <p><strong>Route:</strong> <span class="mono">{{ selectedTransaction.route }}</span></p>
+            <p><strong>Client Protocol:</strong> <span class="mono">{{ selectedTransaction.clientProto || '-' }}</span></p>
+            <p><strong>Target Protocol:</strong> <span class="mono">{{ selectedTransaction.targetProto || '-' }}</span></p>
             <p><strong>Target Host:</strong> <span class="mono">{{ selectedTransaction.targetHost }}</span></p>
             <p><strong>Request URI:</strong> <span class="mono">{{ selectedTransaction.requestURI }}</span></p>
             <p><strong>Request Method:</strong> <span class="mono">{{ selectedTransaction.requestMethod }}</span></p>
@@ -534,19 +566,25 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
 
 /* Workspace Splitter Layout */
 .workspace { display: flex; flex: 1; overflow: hidden; }
-.table-container { flex: 1; overflow-y: auto; background-color: #1e1e1e; }
+.table-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; background-color: #1e1e1e; }
+/* Header (column labels + filter inputs) is static; only the records area scrolls.
+   scrollbar-gutter: stable on both keeps the column widths aligned with the body scrollbar */
+.table-head { overflow: hidden; scrollbar-gutter: stable; }
+.table-body { flex: 1; overflow-y: auto; scrollbar-gutter: stable; }
 
 .traffic-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; color: #d4d4d4; table-layout: fixed; }
 .traffic-table th {
   background-color: #252526; color: #858585; font-weight: 600;
-  padding: 10px; position: sticky; top: 0; border-bottom: 1px solid #2d2d2d; z-index: 2;
+  padding: 10px; border-bottom: 1px solid #2d2d2d;
 }
 /* Width distribution metrics */
 .col-time { width: 5%; }
 .col-inbound { width: 12%; }
-.col-route { width: 12%; }
-.col-targetHost { width: 18%; }
-.col-requestURI { width: 18%; }
+.col-route { width: 11%; }
+.col-clientProto { width: 8%; }
+.col-targetProto { width: 8%; }
+.col-targetHost { width: 15%; }
+.col-requestURI { width: 15%; }
 .col-method { width: 5%; }
 .col-status { width: 15%; }
 .col-type { width: 5%; }
@@ -562,6 +600,8 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
 .cell-time { color: #858585; font-family: monospace; }
 .cell-inbound { color: #e3e3e3; font-family: monospace; }
 .cell-route { color: #e3e3e3; font-family: monospace; }
+.cell-clientProto { color: #e3e3e3; font-family: monospace; }
+.cell-targetProto { color: #e3e3e3; font-family: monospace; }
 .cell-targetHost { color: #e3e3e3; font-family: monospace; }
 .cell-requestURI { color: #e3e3e3; font-family: monospace; }
 .cell-method { color: #e3e3e3; font-family: monospace; }

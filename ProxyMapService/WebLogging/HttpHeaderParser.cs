@@ -5,7 +5,8 @@ namespace ProxyMapService.WebLogging
 {
     public static class HttpHeaderParser
     {
-        public static HttpRequestDto? ParseRequestRawHeaders(string[]? rawHeaders, string id, bool completed)
+        public static HttpRequestDto? ParseRequestRawHeaders(string[]? rawHeaders, string id, bool completed, 
+            bool clientHttp2, bool targetHttp2)
         {
             if (rawHeaders == null) return null;
 
@@ -15,7 +16,7 @@ namespace ProxyMapService.WebLogging
             string? requestLine = null;
             string? httpVerb = null;
             string? httpTarget = null;
-            string? httpProtocol = null;
+            string? httpProto = null;
 
             foreach (var headerLine in rawHeaders)
             {
@@ -39,7 +40,7 @@ namespace ProxyMapService.WebLogging
                                 target = target.Slice(0, targetEnd);
                                 httpVerb = method.ToString();
                                 httpTarget = target.ToString();
-                                httpProtocol = proto.ToString();
+                                httpProto = proto.ToString();
                             }
                         }
                     }
@@ -63,9 +64,10 @@ namespace ProxyMapService.WebLogging
             {
                 Id = id,
                 Completed = completed,
+                ClientProto = clientHttp2 ? "HTTP/2" : httpProto,
+                TargetProto = targetHttp2 ? "HTTP/2" : httpProto,
                 RequestURI = httpTarget,
                 RequestMethod = httpVerb,
-                Protocol = httpProtocol,
                 RequestLine = requestLine,
                 Headers = dictionary
             };
@@ -81,7 +83,6 @@ namespace ProxyMapService.WebLogging
 
             bool firstLine = true;
             string? statusLine = null;
-            string? httpProtocol = null;
             string? httpStatusCode = null;
             string? httpStatuseText = null;
             string? contentType = null;
@@ -105,7 +106,6 @@ namespace ProxyMapService.WebLogging
                         {
                             var statusCode = status.Slice(0, codeEnd).TrimEnd();
                             var statusText = status.Slice(codeEnd + 1).TrimStart();
-                            httpProtocol = version.ToString();
                             httpStatusCode = statusCode.ToString();
                             httpStatuseText = statusText.ToString();
                         }
@@ -141,7 +141,6 @@ namespace ProxyMapService.WebLogging
             {
                 Id = id,
                 Completed = completed,
-                Protocol = httpProtocol,
                 StatusCode = httpStatusCode,
                 StatusText = httpStatuseText,
                 StatusLine = statusLine,
