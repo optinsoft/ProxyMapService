@@ -19,10 +19,10 @@ namespace ProxyMapService.Tests
 
         private int _connectionCount;
         private int _requestCount;
-
+        
         public int ConnectionCount =>
             Volatile.Read(ref _connectionCount);
-
+        
         public int RequestCount =>
             Volatile.Read(ref _requestCount);
 
@@ -172,12 +172,19 @@ namespace ProxyMapService.Tests
 
             request.CertificateExtensions.Add(san.Build());
 
-            var certificate = request.CreateSelfSigned(
+            // Leaf certificate signed by the test root CA (instead of self-signed),
+            // so the proxy can validate the chain against the CA from SslClientOptions:TrustedCAs.
+            var ca = TestRootCa.Certificate;
+            using var leaf = request.Create(
+                ca,
                 DateTimeOffset.UtcNow.AddMinutes(-5),
-                DateTimeOffset.UtcNow.AddHours(1));
+                DateTimeOffset.UtcNow.AddHours(1),
+                Guid.NewGuid().ToByteArray());
+
+            var certificateWithKey = leaf.CopyWithPrivateKey(rsa);
 
             return new X509Certificate2(
-                certificate.Export(X509ContentType.Pfx));
+                certificateWithKey.Export(X509ContentType.Pfx));
         }
     }
 }
