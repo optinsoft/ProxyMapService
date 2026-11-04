@@ -32,7 +32,7 @@ namespace ProxyMapService.Proxy.Ssl
                     ? X509RevocationMode.Online
                     : X509RevocationMode.NoCheck,
                 ApplicationProtocols = context.SslClientConfig.ApplicationProtocols
-                    .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(p => new SslApplicationProtocol(p.Trim()))
                     .ToList()
             };
@@ -51,7 +51,7 @@ namespace ProxyMapService.Proxy.Ssl
                     ? X509RevocationMode.Online
                     : X509RevocationMode.NoCheck,
                 ApplicationProtocols = context.SslServerConfig.ApplicationProtocols
-                    .Split([','], StringSplitOptions.RemoveEmptyEntries)
+                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(p => new SslApplicationProtocol(p.Trim()))
                     .ToList()
             };
