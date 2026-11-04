@@ -34,12 +34,6 @@ namespace ProxyMapService.Proxy.Tunnels
             _observer = observer;
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing) _observer.Close();
-            base.Dispose(disposing);
-        }
-
         protected override async Task ProcessAsync(ReadOnlyMemory<byte> data, CancellationToken token)
         {
             // forwarding first: analysis must not add latency and cannot break it
