@@ -126,7 +126,7 @@ namespace ProxyMapService.Tests
 
             var handler = new SocketsHttpHandler
             {
-                UseProxy = false, // туннель строим сами
+                UseProxy = false, // We're building the tunnel ourselves
                 ConnectCallback = async (context, token) =>
                 {
                     onTunnelOpened();
@@ -146,7 +146,7 @@ namespace ProxyMapService.Tests
                         var connectResponse = await ReadHeadersAsync(network, token);
                         Assert.StartsWith("HTTP/1.1 200", connectResponse);
 
-                        // Возвращаем "сырой" туннель: TLS + ALPN поверх него сделает сам SocketsHttpHandler
+                        // Returning the "raw" tunnel: SocketsHttpHandler will handle TLS + ALPN on top of it
                         return network;
                     }
                     catch
