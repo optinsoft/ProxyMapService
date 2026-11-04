@@ -64,8 +64,14 @@ namespace ProxyMapService.Proxy.Configurations
                 {
                     if (_path != null)
                     {
+                        string expandedPath = _path;
+                        if (expandedPath.StartsWith("~", StringComparison.Ordinal))
+                        {
+                            string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                            expandedPath = System.IO.Path.Combine(home, expandedPath.TrimStart('~', '/'));
+                        }
                         _certificate = new X509Certificate2(
-                            _path,
+                            expandedPath,
                             _password);
                     }
                     else if (_subject != null)
