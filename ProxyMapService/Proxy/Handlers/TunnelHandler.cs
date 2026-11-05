@@ -1,6 +1,7 @@
 ﻿using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Exceptions;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Sessions;
@@ -161,6 +162,7 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Cannot switch client {Client} to HTTP/1.1 for {Host}: {Reason}. Host override and caching are not applied to this session")]
         private static partial void LogIncomingDowngradeImpossible(ILogger logger, System.Net.EndPoint? client, HostAddress host, string reason);
 
+
         #endregion
 
         /// <summary>
@@ -245,11 +247,22 @@ namespace ProxyMapService.Proxy.Handlers
                     }
                     else if (context.IncomingHttp2 && context.OutgoingHttp2)
                     {
-                        // h2 <-> h2: traffic passes through as-is, but is parsed by a passive observer (headers and bodies logged)
+                        // h2 <-> h2: traffic is parsed by a passive observer (headers and bodies logged)
                         context.Http2Observer = new Http2TrafficObserver(
                             new Http2LoggingSink(context),
                             new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize),
                             new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize));
+
+                        if (context.Host.Overwritten)
+                        {
+                            // host override: in addition, every client header block is re-encoded with the new
+                            // :authority before it reaches the server (switching the client to HTTP/1.1 was not possible)
+                            context.Http2RequestRewriter = new Http2HeaderRewriter(
+                                new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize),
+                                headers => HttpHeaderRewriter.OverrideHostHeader(headers, context.Host),
+                                (streamId, headers) => context.Logger.LogHttp2HostRewritten(streamId, Http2StreamInfo.Find(headers, ":authority")));
+                            context.Logger.LogHttp2HostRewritingEnabled(context.IncomingEndPoint, context.Host);
+                        }
                     }
                 }
                 incomingReady.SetResult();
@@ -293,7 +306,19 @@ namespace ProxyMapService.Proxy.Handlers
             }
 
             using HttpTunnel requestTunnel = context.Http2Observer != null
-                ? new Http2RequestTunnel(
+                ? (context.Http2RequestRewriter != null
+                    ? (HttpTunnel)new Http2RequestRewriteTunnel(
+                        context,
+                        incomingStream,
+                        outgoingStream,
+                        outgoingReady,
+                        context.ProxyCounters.IncomingReadCounter,
+                        context.ProxyCounters.OutgoingSendCounter,
+                        context.RequestTunnelState,
+                        context.ResponseTunnelState,
+                        context.Http2Observer,
+                        context.Http2RequestRewriter)
+                    : new Http2RequestTunnel(
                     context,
                     incomingStream,
                     outgoingStream,
@@ -303,6 +328,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.RequestTunnelState,
                     context.ResponseTunnelState,
                     context.Http2Observer)
+                    )
                 : context.OutgoingHttp2Client != null
                     ? new H1ToH2RequestTunnel(
                         context,

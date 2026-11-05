@@ -81,6 +81,7 @@ namespace ProxyMapService.Proxy.Sessions
             (DowngradeToHttp1ForCacheEnabled && CacheRules is { Count: > 0 });
         public Http2ClientConnection? OutgoingHttp2Client { get; set; }
         public Http2TrafficObserver? Http2Observer { get; set; }
+        public Http2HeaderRewriter? Http2RequestRewriter { get; set; }
 
         public ProxyType? InboundType { get; set; }
 
@@ -234,7 +235,7 @@ namespace ProxyMapService.Proxy.Sessions
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;
             H1ToH2TranslationEnabled = mapping.Listen.EnableTranslateH1ToH2 ?? httpConfig.EnableTranslateH1ToH2;
             DowngradeToHttp1ForCacheEnabled = !(mapping.Listen.DisableDowngradeToHttp1ForCache ?? httpConfig.DisableDowngradeToHttp1ForCache);
-            DowngradeToHttp1ForOverwrittenHostEnabled = !(mapping.Listen.DisableDowngradeToHttp1ForOverwrittenHost ?? httpConfig.DisableDowngradeToHttp1ForOverwrittenHost);
+            DowngradeToHttp1ForOverwrittenHostEnabled = false; //!(mapping.Listen.DisableDowngradeToHttp1ForOverwrittenHost ?? httpConfig.DisableDowngradeToHttp1ForOverwrittenHost);
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;
@@ -361,6 +362,7 @@ namespace ProxyMapService.Proxy.Sessions
                 DisposeRequestBodyTracker();
                 DisposeResponseBodyTracker();
                 Http2Observer?.Close();
+                Http2RequestRewriter?.Dispose();
             }
         }
 

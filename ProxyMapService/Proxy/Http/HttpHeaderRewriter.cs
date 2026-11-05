@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Network;
+﻿using ProxyMapService.Proxy.Http2;
+using ProxyMapService.Proxy.Network;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -59,29 +60,53 @@ namespace ProxyMapService.Proxy.Http
             return null;
         }
 
-        public static bool OverrideHostHeader(string[] lines, HostAddress host)
+        public static bool OverrideHostHeader(Span<string> headers, HostAddress host)
         {
             bool overwritten = false;
 
-            if (lines.Length > 0)
+            for (int i = 0; i < headers.Length; i++)
             {
-                for (int i = 1; i < lines.Length; i++)
+                if (headers[i].StartsWith("Host:", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (lines[i].StartsWith("Host:", StringComparison.OrdinalIgnoreCase))
+                    var oldHost = headers[i].AsSpan(5).TrimStart();
+                    var port = oldHost.IndexOf(':');
+                    if (port != -1)
                     {
-                        var oldHost = lines[i].AsSpan(5).TrimStart();
-                        var port = oldHost.IndexOf(':');
-                        if (port != -1)
-                        {
-                            oldHost = oldHost.Slice(0, port);
-                        }
-                        if (oldHost.Equals(host.OriginalHostname, StringComparison.OrdinalIgnoreCase))
-                        {
-                            lines[i] = $"Host: {host.Hostname}:{host.Port}";
-                            overwritten = true;
-                        }
-                        break;
+                        oldHost = oldHost.Slice(0, port);
                     }
+                    if (oldHost.Equals(host.OriginalHostname, StringComparison.OrdinalIgnoreCase))
+                    {
+                        headers[i] = $"Host: {host.Hostname}:{host.Port}";
+                        overwritten = true;
+                    }
+                    break;
+                }
+            }
+
+            return overwritten;
+        }
+
+        /// <summary>
+        /// The HTTP/2 counterpart of <see cref="OverrideHostHeader(string[], HostAddress)"/> for a decoded header block:
+        /// replaces the host with the overridden one in the ":authority" pseudo-header and, if present,
+        /// in the regular "host" header. The caller is responsible for checking <see cref="HostAddress.Overwritten"/>.
+        /// </summary>
+        public static bool OverrideHostHeader(List<H2Header> headers, HostAddress host)
+        {
+            bool overwritten = false;
+
+            for (int i = 0; i < headers.Count; i++)
+            {
+                var h = headers[i];
+                if (h.Name is not (":authority" or "host")) continue;
+
+                var oldHost = h.Value;
+                var port = oldHost.IndexOf(':');
+                if (port != -1) oldHost = oldHost[..port];
+                if (oldHost.Equals(host.OriginalHostname, StringComparison.OrdinalIgnoreCase))
+                {
+                    headers[i] = h with { Value = $"{host.Hostname}:{host.Port}" };
+                    overwritten = true;
                 }
             }
 

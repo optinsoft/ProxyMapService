@@ -163,8 +163,8 @@ namespace ProxyMapService.Proxy.Tunnels
                     {
                         headerAndTail.HeaderLines[0] = modifiedFirstLine;
                     }
+                    HttpHeaderRewriter.OverrideHostHeader(headerAndTail.HeaderLines.AsSpan()[1..], _context.Host);
                 }
-                HttpHeaderRewriter.OverrideHostHeader(headerAndTail.HeaderLines, _context.Host);
             }
 
             using var cacheFileStream = requestCacheEntry != null ? GetCacheEntryFileStream(requestCacheEntry) : null;
