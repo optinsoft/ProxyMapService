@@ -1,0 +1,1 @@
+Stop-Process -Id (Get-NetTCPConnection -LocalPort 5001).OwningProcess
