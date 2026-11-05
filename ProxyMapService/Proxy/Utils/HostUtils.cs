@@ -61,9 +61,9 @@ namespace ProxyMapService.Proxy.Utils
                 {
                     context.DowngradeToHttp1ForCacheEnabled = !hostRule.DisableDowngradeToHttp1ForCache.Value;
                 }
-                if (hostRule.DisableDowngradeToHttp1ForOverwrittenHost != null)
+                if (hostRule.EnableDowngradeToHttp1ForOverwrittenHost != null)
                 {
-                    context.DowngradeToHttp1ForOverwrittenHostEnabled = !hostRule.DisableDowngradeToHttp1ForOverwrittenHost.Value;
+                    context.DowngradeToHttp1ForOverwrittenHostEnabled = hostRule.EnableDowngradeToHttp1ForOverwrittenHost.Value;
                 }
                 if (hostRule.ServerCertificate != null)
                 {

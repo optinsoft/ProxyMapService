@@ -235,7 +235,7 @@ namespace ProxyMapService.Proxy.Sessions
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;
             H1ToH2TranslationEnabled = mapping.Listen.EnableTranslateH1ToH2 ?? httpConfig.EnableTranslateH1ToH2;
             DowngradeToHttp1ForCacheEnabled = !(mapping.Listen.DisableDowngradeToHttp1ForCache ?? httpConfig.DisableDowngradeToHttp1ForCache);
-            DowngradeToHttp1ForOverwrittenHostEnabled = false; //!(mapping.Listen.DisableDowngradeToHttp1ForOverwrittenHost ?? httpConfig.DisableDowngradeToHttp1ForOverwrittenHost);
+            DowngradeToHttp1ForOverwrittenHostEnabled = mapping.Listen.EnableDowngradeToHttp1ForOverwrittenHost ?? httpConfig.EnableDowngradeToHttp1ForOverwrittenHost;
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;
