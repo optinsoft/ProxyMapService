@@ -19,6 +19,16 @@
             },
             "dotnetRunMessages": true
         },
+        "test": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "swagger",
+            "applicationUrl": "http://localhost:5014",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Test"
+            },
+            "dotnetRunMessages": true
+        },
         "dashboard": {
             "commandName": "Project",
             "launchBrowser": false,
