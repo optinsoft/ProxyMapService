@@ -23,12 +23,20 @@
             Message = "[h2 stream {StreamId}] cannot build an HTTP header for logging: {ErrorMessage}")]
         public static partial void CannotBuildHeader(ILogger logger, int streamId, string errorMessage);
 
-        [LoggerMessage(EventId = 1506, Level = LogLevel.Information,
+        [LoggerMessage(EventId = 1506, Level = LogLevel.Debug,
             Message = "[h2] client {Client}: header rewriting is enabled for {Host}")]
         public static partial void LogHttp2HostRewritingEnabled(this ILogger logger, System.Net.EndPoint? client, ProxyMapService.Proxy.Network.HostAddress host);
 
         [LoggerMessage(EventId = 1507, Level = LogLevel.Debug,
             Message = "[h2 stream {StreamId}] request host rewritten, :authority is now {Authority}")]
         public static partial void LogHttp2HostRewritten(this ILogger logger, int streamId, string? authority);
+
+        [LoggerMessage(EventId = 1508, Level = LogLevel.Warning,
+            Message = "[h2 stream {StreamId}] request handler failed: {ExceptionName}: {ErrorMessage}")]
+        public static partial void ServerHandlerFailed(ILogger? logger, int streamId, string exceptionName, string errorMessage);
+
+        [LoggerMessage(EventId = 1509, Level = LogLevel.Debug,
+            Message = "[h2] server connection closed: {Reason}")]
+        public static partial void ServerConnectionClosed(ILogger? logger, string reason);
     }
 }
