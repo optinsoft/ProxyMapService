@@ -23,12 +23,6 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'http' " />
 
   <ItemGroup>
-    <Compile Remove="Proxy\HPack\**" />
-    <Content Remove="Proxy\HPack\**" />
-    <EmbeddedResource Remove="Proxy\HPack\**" />
-    <None Remove="Proxy\HPack\**" />
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="Fare" Version="2.2.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.13" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />

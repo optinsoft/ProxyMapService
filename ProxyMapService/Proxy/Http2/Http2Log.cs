@@ -24,7 +24,7 @@
         public static partial void CannotBuildHeader(ILogger logger, int streamId, string errorMessage);
 
         [LoggerMessage(EventId = 1506, Level = LogLevel.Information,
-            Message = "[h2] client {Client}: header rewriting is enabled for {Host} (the host is overwritten and the client could not be switched to HTTP/1.1)")]
+            Message = "[h2] client {Client}: header rewriting is enabled for {Host}")]
         public static partial void LogHttp2HostRewritingEnabled(this ILogger logger, System.Net.EndPoint? client, ProxyMapService.Proxy.Network.HostAddress host);
 
         [LoggerMessage(EventId = 1507, Level = LogLevel.Debug,
