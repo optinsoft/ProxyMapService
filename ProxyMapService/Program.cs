@@ -198,7 +198,7 @@ if (builder.Configuration.GetValue<bool>("Security:AllowOnlyLocalhost"))
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Test"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
