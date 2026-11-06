@@ -1,4 +1,6 @@
-﻿using ProxyMapService.Proxy.Http2;
+﻿// Ignore Spelling: Rewriter
+
+using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Network;
 
 namespace ProxyMapService.Proxy.Http
