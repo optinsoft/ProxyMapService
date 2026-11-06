@@ -389,9 +389,13 @@ namespace ProxyMapService.Proxy.Handlers
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                     context.OutgoingHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
                 }
-                else if (context.DecryptSSL && context.RequestTunnelState.IsSecure && context.RequiresHttp1Incoming)
+                else
                 {
-                    context.DowngradeIncomingToHttp1 = TryDowngradeIncomingToHttp1(context, null);
+                    bool downgrade = context.DecryptSSL 
+                        && context.RequestTunnelState.IsSecure 
+                        && context.RequiresHttp1Incoming
+                        && TryDowngradeIncomingToHttp1(context, null);
+                    context.DowngradeIncomingToHttp1 = downgrade;
                 }
                 outgoingReady.SetResult();
                 await incomingReady.Task.WaitAsync(context.TunnelToken);

@@ -19,9 +19,10 @@ namespace ProxyMapService.Tests
             var proxyHost = configuration["Proxy:Host"] ?? "127.0.0.1";
             var proxyPort = configuration.GetValue<int>("Proxy:Port", 5001);
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
+            var certHost = configuration.GetValue<string>("TestServer:CertHost") ?? testHost;
             var useHttp2 = configuration.GetValue<bool>("TestServer:UseHttp2", false);
 
-            await using var server = new HttpsTestServer(5111, hostname: testHost, useHttp2: useHttp2);
+            await using var server = new HttpsTestServer(5111, hostname: certHost, useHttp2: useHttp2);
 
             await server.StartAsync();
 
