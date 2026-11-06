@@ -73,13 +73,16 @@ namespace ProxyMapService.Proxy.Sessions
 
         #endregion
 
+        // set by ProxyService from DetailedLogging:LogStep (checked once per run)
+        internal static volatile bool LogStepEnabled = false;
+
         public static async Task Run(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
             ProxyMapping mapping, IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, 
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator, 
             ISessionManager sessionManager, List<HostRule> hostRules, 
             List<CacheRule> cacheRules, CacheManager cacheManager,
             HttpConfig httpConfig, SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
-            ProxyCounters proxyCounters, ILogger logger, bool logStep, CancellationToken token)
+            ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
         {
             var incomingEndPoint = incomingClient.Client.RemoteEndPoint;
             if (incomingEndPoint is System.Net.IPEndPoint ipEndPoint)
@@ -129,12 +132,12 @@ namespace ProxyMapService.Proxy.Sessions
                 {
                     try
                     {
-                        if (logStep)
+                        if (LogStepEnabled)
                         {
                             LogRunStep(logger, step);
                         }
                         step = await Handlers[step].Run(context);
-                        if (logStep)
+                        if (LogStepEnabled)
                         {
                             LogNextStep(logger, step);
                         }

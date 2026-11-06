@@ -16,7 +16,7 @@ namespace ProxyMapService.Proxy
         List<CacheRule> cacheRules, CacheManager cacheManager, HttpConfig httpConfig,
         SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
         ProxyCounters proxyCounters, ILogger serviceLogger, ILogger sessionLogger, 
-        bool logStep, int maxListenerStartRetries, CancellationToken stoppingToken)
+        int maxListenerStartRetries, CancellationToken stoppingToken)
     {
         private readonly List<ProxyServer> _proxyServers = [];
         private readonly List<IConfigurationRoot> _proxyServerFileConfigurations = [];
@@ -110,7 +110,7 @@ namespace ProxyMapService.Proxy
                     sessionAPI, proxyProvider, proxyAuthenticator, sessionManager,
                     hostRules, _cacheRules ?? cacheRules, cacheManager, 
                     httpConfig, sslClientConfig, sslServerConfig,
-                    proxyCounters, sessionLogger, logStep, token);
+                    proxyCounters, sessionLogger, token);
             }
 
             using var listener = new Listener(inboundEndPoint, incomingClientHandler, serviceLogger);

@@ -44,7 +44,8 @@ namespace ProxyMapService.Proxy.Http2
             _hpack = hpack;
             _encoder = encoder ?? new HpackEncoderAdapter();
             _handler = handler;
-            _logger = logger;
+            // h2 diagnostics are subject to DetailedLogging:Http2Logging
+            _logger = Http2Log.DiagnosticsLogger(logger);
         }
 
         private static TaskCompletionSource NewTcs() => new(TaskCreationOptions.RunContinuationsAsynchronously);

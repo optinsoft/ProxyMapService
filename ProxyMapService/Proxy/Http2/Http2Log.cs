@@ -2,6 +2,34 @@
 {
     internal static partial class Http2Log
     {
+        /// <summary>
+        /// Switches h2 diagnostics on/off (DetailedLogging:Http2Logging, set by ProxyService).
+        /// Off by default. When disabled, Debug-level diagnostics (stream/GOAWAY/connection events)
+        /// are suppressed even if the category level is Debug; warnings and errors still pass through.
+        /// </summary>
+        internal static volatile bool DiagnosticsEnabled = false;
+
+        /// <summary>
+        /// Returns the logger h2 diagnostics should be written through:
+        /// either the logger as is, or a warning-only wrapper when diagnostics are disabled.
+        /// </summary>
+        public static ILogger? DiagnosticsLogger(ILogger? logger)
+        {
+            return DiagnosticsEnabled ? logger : logger == null ? null : new WarningOnlyLogger(logger);
+        }
+
+        private sealed class WarningOnlyLogger(ILogger inner) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => inner.BeginScope(state);
+            public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Warning && inner.IsEnabled(logLevel);
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (logLevel >= LogLevel.Warning)
+                    inner.Log(logLevel, eventId, state, exception, formatter);
+            }
+        }
+
         [LoggerMessage(EventId = 1501, Level = LogLevel.Debug,
             Message = "[h2 stream {StreamId}] {Method} {Path} -> {Status}, request {RequestBytes} B, response {ResponseBytes} B, {ElapsedMs} ms")]
         public static partial void StreamCompleted(ILogger logger, int streamId, string? method, string? path, int status,

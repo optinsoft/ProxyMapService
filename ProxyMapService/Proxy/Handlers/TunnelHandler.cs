@@ -257,11 +257,12 @@ namespace ProxyMapService.Proxy.Handlers
                         {
                             // host override: in addition, every client header block is re-encoded with the new
                             // :authority before it reaches the server (switching the client to HTTP/1.1 was not possible)
+                            var h2RewriteLogger = Http2Log.DiagnosticsLogger(context.Logger)!;
                             context.Http2RequestRewriter = new Http2HeaderRewriter(
                                 new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize),
                                 headers => HttpHeaderRewriter.OverrideHostHeader(headers, context.Host),
-                                (streamId, headers) => context.Logger.LogHttp2HostRewritten(streamId, Http2StreamInfo.Find(headers, ":authority")));
-                            context.Logger.LogHttp2HostRewritingEnabled(context.IncomingEndPoint, context.Host);
+                                (streamId, headers) => h2RewriteLogger.LogHttp2HostRewritten(streamId, Http2StreamInfo.Find(headers, ":authority")));
+                            h2RewriteLogger.LogHttp2HostRewritingEnabled(context.IncomingEndPoint, context.Host);
                         }
                     }
                 }

@@ -11,6 +11,9 @@ namespace ProxyMapService.Proxy.Http2
     /// </summary>
     public sealed class Http2LoggingSink(SessionContext context) : Http2TrafficSink
     {
+        // diagnostics (stream/GOAWAY events, observer failures) go through a logger that may be
+        // warning-only when DetailedLogging:Http2Logging is disabled
+        private readonly ILogger _diagnostics = Http2Log.DiagnosticsLogger(context.Logger)!;
         private sealed class StreamLog : IDisposable
         {
             public HttpRequestHeader? Request;
@@ -43,7 +46,7 @@ namespace ProxyMapService.Proxy.Http2
             }
             catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
             {
-                Http2Log.CannotBuildHeader(context.Logger, stream.StreamId, ex.Message);
+                Http2Log.CannotBuildHeader(_diagnostics, stream.StreamId, ex.Message);
                 return;
             }
 
@@ -79,7 +82,7 @@ namespace ProxyMapService.Proxy.Http2
             }
             catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
             {
-                Http2Log.CannotBuildHeader(context.Logger, stream.StreamId, ex.Message);
+                Http2Log.CannotBuildHeader(_diagnostics, stream.StreamId, ex.Message);
                 return;
             }
 
@@ -112,12 +115,12 @@ namespace ProxyMapService.Proxy.Http2
 
         public override void OnStreamReset(Http2StreamInfo stream, H2Direction by, uint errorCode)
         {
-            Http2Log.StreamReset(context.Logger, stream.StreamId, by.ToString(), errorCode);
+            Http2Log.StreamReset(_diagnostics, stream.StreamId, by.ToString(), errorCode);
         }
 
         public override void OnStreamCompleted(Http2StreamInfo stream)
         {
-            Http2Log.StreamCompleted(context.Logger, stream.StreamId, stream.Method, stream.Path, stream.Status,
+            Http2Log.StreamCompleted(_diagnostics, stream.StreamId, stream.Method, stream.Path, stream.Status,
                 stream.RequestBytes, stream.ResponseBytes, (long)(DateTime.UtcNow - stream.StartedUtc).TotalMilliseconds);
             if (stream.Tag is StreamLog st)
             {
@@ -134,12 +137,12 @@ namespace ProxyMapService.Proxy.Http2
 
         public override void OnGoAway(H2Direction by, int lastStreamId, uint errorCode)
         {
-            Http2Log.GoAway(context.Logger, by.ToString(), lastStreamId, errorCode);
+            Http2Log.GoAway(_diagnostics, by.ToString(), lastStreamId, errorCode);
         }
 
         public override void OnObserverFailed(H2Direction direction, Exception exception)
         {
-            Http2Log.ObserverFailed(context.Logger, direction.ToString(), exception.GetType().Name, exception.Message);
+            Http2Log.ObserverFailed(_diagnostics, direction.ToString(), exception.GetType().Name, exception.Message);
         }
     }
 }
