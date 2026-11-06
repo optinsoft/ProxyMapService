@@ -319,15 +319,15 @@ namespace ProxyMapService.Proxy.Handlers
                         context.Http2Observer,
                         context.Http2RequestRewriter)
                     : new Http2RequestTunnel(
-                    context,
-                    incomingStream,
-                    outgoingStream,
-                    outgoingReady,
-                    context.ProxyCounters.IncomingReadCounter,
-                    context.ProxyCounters.OutgoingSendCounter,
-                    context.RequestTunnelState,
-                    context.ResponseTunnelState,
-                    context.Http2Observer)
+                        context,
+                        incomingStream,
+                        outgoingStream,
+                        outgoingReady,
+                        context.ProxyCounters.IncomingReadCounter,
+                        context.ProxyCounters.OutgoingSendCounter,
+                        context.RequestTunnelState,
+                        context.ResponseTunnelState,
+                        context.Http2Observer)
                     )
                 : context.OutgoingHttp2Client != null
                     ? new H1ToH2RequestTunnel(

@@ -76,9 +76,21 @@ namespace ProxyMapService.Proxy.Sessions
         public SslApplicationProtocol OutgoingNegotiatedAlpn { get; set; } = new();
         public bool TranslateH1ToH2 { get; set; }
         public bool DowngradeIncomingToHttp1 { get; set; }
-        public bool RequiresHttp1Incoming => 
-            (DowngradeToHttp1ForOverwrittenHostEnabled && Host.Overwritten) || 
-            (DowngradeToHttp1ForCacheEnabled && CacheRules is { Count: > 0 });
+        public bool RequiresHttp1Incoming
+        {
+            get
+            {
+                if (DowngradeToHttp1ForOverwrittenHostEnabled && Host.Overwritten)
+                {
+                    return true;
+                }
+                if (DowngradeToHttp1ForCacheEnabled && CacheRules is { Count: > 0 })
+                {
+                    return true;
+                }
+                return false;
+            }
+        }
         public Http2ClientConnection? OutgoingHttp2Client { get; set; }
         public Http2TrafficObserver? Http2Observer { get; set; }
         public Http2HeaderRewriter? Http2RequestRewriter { get; set; }
