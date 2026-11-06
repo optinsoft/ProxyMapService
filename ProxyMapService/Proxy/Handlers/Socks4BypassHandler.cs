@@ -38,11 +38,12 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 await context.OutgoingClient.ConnectAsync(context.OutgoingEndPoint, context.Token);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+                context.Logger.LogBypassConnectionFailed(ex.Message, context.OutgoingEndPoint, context.Host);
                 await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
-                throw;
+                return HandleStep.Terminate;
             }
 
             context.Logger.LogBypassServerConnected(context.OutgoingEndPoint, context.Host);

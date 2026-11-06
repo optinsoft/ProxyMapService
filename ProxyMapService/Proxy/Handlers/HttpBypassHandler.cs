@@ -61,6 +61,7 @@ namespace ProxyMapService.Proxy.Handlers
             catch (SocketException ex)
             {
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+				context.Logger.LogBypassConnectionFailed(ex.Message, context.OutgoingEndPoint, context.Host);
                 switch (ex.SocketErrorCode)
                 {
                     case SocketError.TimedOut:
@@ -71,13 +72,14 @@ namespace ProxyMapService.Proxy.Handlers
                         await HttpProto.HttpReplyBadGateway(context, context.Http, $"SocketError {ex.SocketErrorCode}");
                         break;
                 }
-                throw;
+                return HandleStep.Terminate;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+                context.Logger.LogBypassConnectionFailed(ex.Message, context.OutgoingEndPoint, context.Host);
                 await HttpProto.HttpReplyBadGateway(context, context.Http);
-                throw;
+                return HandleStep.Terminate;
             }
 
             context.Logger.LogBypassServerConnected(context.OutgoingEndPoint, context.Host);

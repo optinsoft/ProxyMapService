@@ -114,6 +114,18 @@ namespace ProxyMapService.Proxy.Handlers
         private static partial void LogHttpConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, string proxyHost, int proxyPort);
 
         [LoggerMessage(
+            EventId = 1216,
+            Level = LogLevel.Warning,
+            Message = "Bypass connection to server {remoteEndPoint} failed. {message}")]
+        private static partial void LogBypassConnectionFailedInternal(this ILogger logger, string message, System.Net.EndPoint? remoteEndPoint);
+
+        [LoggerMessage(
+            EventId = 1216,
+            Level = LogLevel.Warning,
+            Message = "Bypass connection to server {hostname}:{port} ({remoteEndPoint}) failed. {message}")]
+        private static partial void LogBypassConnectionFailedInternal2(this ILogger logger, string message, string hostname, int port, System.Net.EndPoint? remoteEndPoint);
+
+        [LoggerMessage(
             EventId = 1212,
             Level = LogLevel.Warning,
             Message = "SOCKS4 connection to server {hostname}:{port} failed. {message}")]
@@ -436,6 +448,18 @@ namespace ProxyMapService.Proxy.Handlers
                 }
             }
             return remoteEndPoint;
+        }
+
+        public static void LogBypassConnectionFailed(this ILogger logger, string message, System.Net.EndPoint? remoteEndPoint, HostAddress host)
+        {
+            if (host.IsHostnameIP())
+            {
+                logger.LogBypassConnectionFailedInternal(message, remoteEndPoint);
+            }
+            else
+            {
+                logger.LogBypassConnectionFailedInternal2(message, host.Hostname, host.Port, remoteEndPoint);
+            }
         }
 
         public static void LogBypassServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, HostAddress host)

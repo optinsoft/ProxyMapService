@@ -54,14 +54,16 @@ namespace ProxyMapService.Proxy.Handlers
                     SocketError.NetworkUnreachable => Socks5Status.NetworkUnreachable,
                     _ => Socks5Status.GeneralFailure
                 };
+                context.Logger.LogBypassConnectionFailed(ex.Message, context.OutgoingEndPoint, context.Host);
                 await Socks5Proto.Socks5ReplyStatus(context, status);
-                throw;
+                return HandleStep.Terminate;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 context.ProxyCounters.SessionsCounter?.OnBypassFailed(context);
+                context.Logger.LogBypassConnectionFailed(ex.Message, context.OutgoingEndPoint, context.Host);
                 await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.GeneralFailure);
-                throw;
+                return HandleStep.Terminate;
             }
 
             context.Logger.LogBypassServerConnected(context.OutgoingEndPoint, context.Host);
