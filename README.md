@@ -152,3 +152,49 @@ To install the certificate on Windows:
 5. Launch your pre-configured Google Chrome proxy instance and browse any HTTPS website (e.g., `https://google.com`).
 
 The dashboard will now display full HTTP details instead of basic generic `CONNECT` tunnels, **allowing you to see and monitor completely decrypted traffic.**
+
+---
+
+## Chrome-like TLS Fingerprint
+
+When SSL decryption is enabled, the Proxy Map Service terminates the client's TLS connection and opens its own TLS connection to the target server. By default, this upstream connection is made with the standard .NET `SslStream`, whose TLS handshake is easily recognizable as non-browser traffic — some servers and anti-bot systems flag such connections.
+
+Proxy Map Service can make the upstream TLS handshake **indistinguishable from Google Chrome's** by using [BoringSslStream](https://github.com/optinsoft/BoringSslStream) — a TLS stream backed by BoringSSL (the TLS library used by Chromium). It replicates Chrome's ClientHello byte-for-byte, including cipher suites, extensions, GREASE, post-quantum key groups and ALPN/ALPS, so the connection gets a genuine Chrome JA4/JA3 fingerprint:
+
+```text
+SslStream:        t13d311100_e8f1e7e78f70_f6eeaf393d2e   (default .NET TLS handshake)
+BoringSslStream:  t13d1517h2_8daaf6152771_cb7bf5808d99   (Chrome-like TLS handshake)
+```
+
+### How to Enable
+
+Chrome-like fingerprinting requires SSL decryption to be enabled (`DecryptSSL: true`, see [Turning on SSL Decryption](#turning-on-ssl-decryption)). Then set `UseBoringSsl` to `true` in the `SslClientOptions` section of `appsettings.Production.json`:
+
+```json
+"SslClientOptions": {
+    "EnabledSslProtocols": "Tls12,Tls13",
+    "CheckCertificateRevocation": true,
+    "ApplicationProtocols": "http/1.1,h2",
+    "UseBoringSsl": true
+}
+```
+
+Restart the `ProxyMapService.exe` application for the change to take effect.
+
+### Notes
+
+* The `UseBoringSsl` option only affects the **outgoing (upstream)** TLS connections of decrypted traffic. It does not change how the proxy accepts client connections.
+* Because BoringSslStream replicates Chrome's ClientHello, the `EnabledSslProtocols` setting does not apply to it — the TLS versions and cipher suites are chosen exactly as Chrome chooses them.
+* The negotiated application protocol (ALPN) still follows the `ApplicationProtocols` setting, so HTTP/2 to the server keeps working as before.
+* Server certificate validation settings (`CheckCertificateRevocation`, `TrustedCAs`, and the `IgnoreCertificateErrors` mapping option) remain fully effective with BoringSslStream.
+* The shipped NuGet package includes the native BoringSSL binary for Windows x64, Linux x64 and macOS ARM64, so no extra dependencies are required.
+
+### Verifying the Fingerprint
+
+The repository includes an integration test that captures the TLS ClientHello sent to the upstream server and computes its JA4 fingerprint. Run the test proxy instance, then:
+
+```bash
+dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Ja4Fingerprint" -l "console;verbosity=detailed"
+```
+
+The test output prints the JA4 fingerprint of the upstream ClientHello (e.g., `t13d1517h2_8daaf6152771_cb7bf5808d99` with `UseBoringSsl: true`), along with the full list of offered cipher suites and extensions.
