@@ -8,6 +8,7 @@ using ProxyMapService.Proxy;
 using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.RoutingLoopDetector;
@@ -171,8 +172,13 @@ namespace ProxyMapService.Services
             var httpConfig = _configuration.GetSection("HTTP").Get<HttpConfig>() ?? new HttpConfig();
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
             using var sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
-            Session.LogStepEnabled = _configuration.GetSection("DetailedLogging").GetValue<bool>("LogStep", false);
-            Http2Log.DiagnosticsEnabled = _configuration.GetSection("DetailedLogging").GetValue<bool>("Http2Logging", false);
+            var detailedLogging = _configuration.GetSection("DetailedLogging");
+            Session.LogStepEnabled = detailedLogging.GetValue<bool>("LogStep", false);
+            Http2Log.DiagnosticsEnabled = detailedLogging.GetValue<bool>("Http2Logging", false);
+            HandlerLogExtensions.ConnectionLogEnabled = detailedLogging.GetValue<bool>("LogConnections", false);
+            HandlerLogExtensions.TlsHandshakeLogEnabled = detailedLogging.GetValue<bool>("LogTlsHandshake", false);
+            HandlerLogExtensions.ProtocolSwitchLogEnabled = detailedLogging.GetValue<bool>("LogProtocolSwitch", false);
+            HandlerLogExtensions.ResponseSourceLogEnabled = detailedLogging.GetValue<bool>("LogResponseSource", false);
 
             if (proxyMappings == null || proxyMappings.Count == 0)
             {

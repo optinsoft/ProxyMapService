@@ -150,19 +150,6 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
         private static partial void LogTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
 
-        [LoggerMessage(
-            EventId = 1315,
-            Level = LogLevel.Information,
-            Message = "Client {Client} is switched to HTTP/1.1 for {Host}: Host override or cache rules need to inspect and modify requests")]
-        private static partial void LogIncomingDowngradedToHttp1(ILogger logger, System.Net.EndPoint? client, HostAddress host);
-
-        [LoggerMessage(
-            EventId = 1316,
-            Level = LogLevel.Warning,
-            Message = "Cannot switch client {Client} to HTTP/1.1 for {Host}: {Reason}. Host override and caching are not applied to this session")]
-        private static partial void LogIncomingDowngradeImpossible(ILogger logger, System.Net.EndPoint? client, HostAddress host, string reason);
-
-
         #endregion
 
         /// <summary>
@@ -178,7 +165,7 @@ namespace ProxyMapService.Proxy.Handlers
             bool clientHasHttp1 = clientAlpn is not { Count: > 0 } || clientAlpn.Contains(SslApplicationProtocol.Http11);
             if (!clientHasHttp1)
             {
-                LogIncomingDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host, "the client offers only h2");
+                context.Logger.LogIncomingDowngradeImpossible(context.IncomingEndPoint, context.Host, "the client offers only h2");
                 return false;
             }
 
@@ -188,7 +175,7 @@ namespace ProxyMapService.Proxy.Handlers
                 bool upstreamHttp2 = configured.Contains(SslApplicationProtocol.Http2) && context.H1ToH2TranslationEnabled;
                 if (!upstreamHttp1 && !upstreamHttp2)
                 {
-                    LogIncomingDowngradeImpossible(context.Logger, context.IncomingEndPoint, context.Host,
+                    context.Logger.LogIncomingDowngradeImpossible(context.IncomingEndPoint, context.Host,
                         "SslClientOptions allow only h2 and HTTP/1.1 -> HTTP/2 translation is disabled");
                     return false;
                 }
@@ -200,7 +187,7 @@ namespace ProxyMapService.Proxy.Handlers
                 upstreamOptions.ApplicationProtocols = offer;
             }
 
-            LogIncomingDowngradedToHttp1(context.Logger, context.IncomingEndPoint, context.Host);
+            context.Logger.LogIncomingDowngradedToHttp1(context.IncomingEndPoint, context.Host);
             return true;
         }
 

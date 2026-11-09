@@ -11,11 +11,43 @@ namespace ProxyMapService.Proxy.Handlers
 {
     public static partial class HandlerLogExtensions
     {
+        /// <summary>
+        /// Switches connection lifecycle logging on/off (DetailedLogging:LogConnections, set by ProxyService).
+        /// Off by default. When disabled, Information-level connect/disconnect messages are suppressed;
+        /// warnings (connection failed, etc.) still pass through.
+        /// </summary>
+        public static volatile bool ConnectionLogEnabled = false;
+
+        /// <summary>
+        /// Switches successful TLS handshake logging on/off (DetailedLogging:LogTlsHandshake, set by ProxyService).
+        /// Off by default. Failed handshakes are warnings and are always logged.
+        /// </summary>
+        public static volatile bool TlsHandshakeLogEnabled = false;
+
+        /// <summary>
+        /// Switches HTTP version switch logging on/off (DetailedLogging:LogProtocolSwitch, set by ProxyService).
+        /// Off by default. Covers h2 detection, HTTP/1.1 downgrade for host override/cache rules
+        /// and HTTP/1.1 -> HTTP/2 translation messages.
+        /// </summary>
+        public static volatile bool ProtocolSwitchLogEnabled = false;
+
+        /// <summary>
+        /// Switches response source logging on/off (DetailedLogging:LogResponseSource, set by ProxyService).
+        /// Off by default. Covers "Response served from file/cache" messages.
+        /// </summary>
+        public static volatile bool ResponseSourceLogEnabled = false;
+
         [LoggerMessage(
             EventId = 1201,
             Level = LogLevel.Information,
             Message = "Client connected from {remoteEndPoint}.")]
-        public static partial void LogClientConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        private static partial void LogClientConnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+
+        public static void LogClientConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint)
+        {
+            if (!ConnectionLogEnabled) return;
+            logger.LogClientConnectedInternal(remoteEndPoint);
+        }
 
         [LoggerMessage(
             EventId = 1202,
@@ -177,31 +209,61 @@ namespace ProxyMapService.Proxy.Handlers
             EventId = 1221,
             Level = LogLevel.Information,
             Message = "Client {remoteEndPoint} disconnected.")]
-        public static partial void LogClientDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        private static partial void LogClientDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+
+        public static void LogClientDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint)
+        {
+            if (!ConnectionLogEnabled) return;
+            logger.LogClientDisconnectedInternal(remoteEndPoint);
+        }
 
         [LoggerMessage(
             EventId = 1222,
             Level = LogLevel.Information,
             Message = "Server {remoteEndPoint} disconnected.")]
-        public static partial void LogBypassServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        private static partial void LogBypassServerDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+
+        public static void LogBypassServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint)
+        {
+            if (!ConnectionLogEnabled) return;
+            logger.LogBypassServerDisconnectedInternal(remoteEndPoint);
+        }
 
         [LoggerMessage(
             EventId = 1223,
             Level = LogLevel.Information,
             Message = "Proxy server {remoteEndPoint} disconnected.")]
-        public static partial void LogProxyServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        private static partial void LogProxyServerDisconnectedInternal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+
+        public static void LogProxyServerDisconnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint)
+        {
+            if (!ConnectionLogEnabled) return;
+            logger.LogProxyServerDisconnectedInternal(remoteEndPoint);
+        }
 
         [LoggerMessage(
             EventId = 1231,
             Level = LogLevel.Information,
             Message = "Response served from file: {filePath}")]
-        public static partial void LogResponseFromFile(this ILogger logger, string filePath);
+        private static partial void LogResponseFromFileInternal(this ILogger logger, string filePath);
+
+        public static void LogResponseFromFile(this ILogger logger, string filePath)
+        {
+            if (!ResponseSourceLogEnabled) return;
+            logger.LogResponseFromFileInternal(filePath);
+        }
 
         [LoggerMessage(
             EventId = 1232,
             Level = LogLevel.Information,
             Message = "Response served from cache: {filePath}")]
-        public static partial void LogResponseFromCache(this ILogger logger, string filePath);
+        private static partial void LogResponseFromCacheInternal(this ILogger logger, string filePath);
+
+        public static void LogResponseFromCache(this ILogger logger, string filePath)
+        {
+            if (!ResponseSourceLogEnabled) return;
+            logger.LogResponseFromCacheInternal(filePath);
+        }
 
         [LoggerMessage(
             EventId = 1241,
@@ -429,13 +491,37 @@ namespace ProxyMapService.Proxy.Handlers
             EventId = 1297,
             Level = LogLevel.Information,
             Message = "Detected HTTP/2 protocol from client {remoteEndPoint}.")]
-        public static partial void LogDetectedClientHTTP2(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+        private static partial void LogDetectedClientHTTP2Internal(this ILogger logger, System.Net.EndPoint? remoteEndPoint);
+
+        public static void LogDetectedClientHTTP2(this ILogger logger, System.Net.EndPoint? remoteEndPoint)
+        {
+            if (!ProtocolSwitchLogEnabled) return;
+            logger.LogDetectedClientHTTP2Internal(remoteEndPoint);
+        }
 
         [LoggerMessage(
             EventId = 1298,
             Level = LogLevel.Information,
             Message = "HTTP/1.1 -> HTTP/2 translation: client {ClientEndPoint} speaks HTTP/1.1, upstream {Hostname}:{Port} negotiated h2")]
         private static partial void LogHttp1to2TranslationInternal(this ILogger logger, System.Net.EndPoint? clientEndPoint, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1315,
+            Level = LogLevel.Information,
+            Message = "Client {Client} is switched to HTTP/1.1 for {Host}: Host override or cache rules need to inspect and modify requests")]
+        private static partial void LogIncomingDowngradedToHttp1Internal(this ILogger logger, System.Net.EndPoint? client, HostAddress host);
+
+        public static void LogIncomingDowngradedToHttp1(this ILogger logger, System.Net.EndPoint? client, HostAddress host)
+        {
+            if (!ProtocolSwitchLogEnabled) return;
+            logger.LogIncomingDowngradedToHttp1Internal(client, host);
+        }
+
+        [LoggerMessage(
+            EventId = 1316,
+            Level = LogLevel.Warning,
+            Message = "Cannot switch client {Client} to HTTP/1.1 for {Host}: {Reason}. Host override and caching are not applied to this session")]
+        public static partial void LogIncomingDowngradeImpossible(this ILogger logger, System.Net.EndPoint? client, HostAddress host, string reason);
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
@@ -464,6 +550,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogBypassServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, HostAddress host)
         {
+            if (!ConnectionLogEnabled) return;
             if (host.IsHostnameIP())
             {
                 logger.LogBypassServerConnectedInternal(remoteEndPoint);
@@ -476,6 +563,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogHttpProxyServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, ProxyServer proxyServer)
         {
+            if (!ConnectionLogEnabled) return;
             if (HostAddress.IsHostnameIP(proxyServer.Host))
             {
                 logger.LogHttpProxyServerConnectedInternal(remoteEndPoint);
@@ -488,6 +576,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogSocks4ProxyServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, ProxyServer proxyServer)
         {
+            if (!ConnectionLogEnabled) return;
             if (HostAddress.IsHostnameIP(proxyServer.Host))
             {
                 logger.LogSocks4ProxyServerConnectedInternal(remoteEndPoint);
@@ -500,6 +589,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogSocks5ProxyServerConnected(this ILogger logger, System.Net.EndPoint? remoteEndPoint, ProxyServer proxyServer)
         {
+            if (!ConnectionLogEnabled) return;
             if (HostAddress.IsHostnameIP(proxyServer.Host))
             {
                 logger.LogSocks5ProxyServerConnectedInternal(remoteEndPoint);
@@ -512,6 +602,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogServerConnectedViaHttpProxy(this ILogger logger, HostAddress host, ProxyServer? proxyServer)
         {
+            if (!ConnectionLogEnabled) return;
             if (proxyServer != null)
             {
                 logger.LogServerConnectedViaHttpProxy(host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
@@ -524,6 +615,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogServerConnectedViaSocks4Proxy(this ILogger logger, HostAddress host, ProxyServer? proxyServer)
         {
+            if (!ConnectionLogEnabled) return;
             if (proxyServer != null)
             {
                 logger.LogServerConnectedViaSocks4Proxy(host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
@@ -536,6 +628,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogServerConnectedViaSocks5Proxy(this ILogger logger, HostAddress host, ProxyServer? proxyServer)
         {
+            if (!ConnectionLogEnabled) return;
             if (proxyServer != null)
             {
                 logger.LogServerConnectedViaSocks5Proxy(host.Hostname, host.Port, proxyServer.Host, proxyServer.Port);
@@ -625,6 +718,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogClientTLSHandshakeSucceeded(this ILogger logger, HostAddress host, SslApplicationProtocol negotiatedProtocol)
         {
+            if (!TlsHandshakeLogEnabled) return;
             if (negotiatedProtocol == SslApplicationProtocol.Http2)
             {
                 logger.LogClientTLSHandshakeSucceededInternal2(host.Hostname, host.Port);
@@ -637,6 +731,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogServerTLSHandshakeSucceeded(this ILogger logger, System.Net.EndPoint? remoteEndPoint, SslApplicationProtocol negotiatedProtocol)
         {
+            if (!TlsHandshakeLogEnabled) return;
             if (negotiatedProtocol == SslApplicationProtocol.Http2)
             {
                 logger.LogServerTLSHandshakeSucceededInternal2(remoteEndPoint);
@@ -674,6 +769,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         public static void LogHttp1to2Translation(this ILogger logger, System.Net.EndPoint? clientEndPoint, HostAddress host)
         {
+            if (!ProtocolSwitchLogEnabled) return;
             logger.LogHttp1to2TranslationInternal(clientEndPoint, host.Hostname, host.Port);
         }
     }
