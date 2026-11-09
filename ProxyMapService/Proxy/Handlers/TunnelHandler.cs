@@ -8,6 +8,7 @@ using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using ProxyMapService.Proxy.Tls;
 using ProxyMapService.Proxy.Tunnels;
+using BoringSsl;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -57,7 +58,11 @@ namespace ProxyMapService.Proxy.Handlers
                 context.ResponseTunnelState.IsSecure = isOutgoingSSL;
 
                 using SslStream? incomingSslStream = context.DecryptSSL && isIncomingSSL ? new(context.IncomingStream) : null;
-                using SslStream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL ? new(context.OutgoingStream) : null;
+                using Stream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL
+                    ? (context.SslClientConfig.UseBoringSsl
+                        ? new BoringSslStream(context.OutgoingStream, context.Host.Hostname)
+                        : new SslStream(context.OutgoingStream))
+                    : null;
 
                 using CountingStream? incomingSslCountingStream =
                     incomingSslStream != null
@@ -341,8 +346,27 @@ namespace ProxyMapService.Proxy.Handlers
             await requestTunnel.RunAsync();
         }
 
+        /// <summary>
+        /// Performs the upstream TLS handshake on either a regular SslStream or a
+        /// BoringSslStream (BoringSSL-backed, Chrome-like JA4 fingerprint) depending on
+        /// SslClientOptions:UseBoringSsl, and returns the negotiated ALPN protocol.
+        /// </summary>
+        private static async Task<SslApplicationProtocol> AuthenticateOutgoingAsClientAsync(
+            Stream outgoingSslStream, SslClientAuthenticationOptions sslClientOptions, CancellationToken token)
+        {
+            if (outgoingSslStream is BoringSslStream boringSslStream)
+            {
+                await boringSslStream.AuthenticateAsClientAsync(sslClientOptions, token);
+                return new SslApplicationProtocol(boringSslStream.AlpnSelected);
+            }
+
+            var sslStream = (SslStream)outgoingSslStream;
+            await sslStream.AuthenticateAsClientAsync(sslClientOptions, token);
+            return sslStream.NegotiatedApplicationProtocol;
+        }
+
         private static async Task RunResponseTunnel(SessionContext context,
-            SslStream? outgoingSslStream, CountingStream incomingStream, CountingStream outgoingStream,
+            Stream? outgoingSslStream, CountingStream incomingStream, CountingStream outgoingStream,
             TaskCompletionSource incomingReady, TaskCompletionSource outgoingReady)
         {
             try
@@ -371,11 +395,11 @@ namespace ProxyMapService.Proxy.Handlers
                             sslClientOptions.ApplicationProtocols = common.Count > 0 ? common : null;
                         }
                     }
-                    await outgoingSslStream.AuthenticateAsClientAsync(sslClientOptions, context.TunnelToken);
-                    context.OutgoingNegotiatedAlpn = outgoingSslStream.NegotiatedApplicationProtocol;
-                    context.Logger.LogClientTLSHandshakeSucceeded(context.Host, outgoingSslStream.NegotiatedApplicationProtocol);
+                    context.OutgoingNegotiatedAlpn = await AuthenticateOutgoingAsClientAsync(
+                        outgoingSslStream, sslClientOptions, context.TunnelToken);
+                    context.Logger.LogClientTLSHandshakeSucceeded(context.Host, context.OutgoingNegotiatedAlpn);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
-                    context.OutgoingHttp2 = (outgoingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
+                    context.OutgoingHttp2 = (context.OutgoingNegotiatedAlpn == SslApplicationProtocol.Http2);
                 }
                 else
                 {

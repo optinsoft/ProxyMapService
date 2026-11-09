@@ -6,6 +6,12 @@
         public bool CheckCertificateRevocation { get; set; } = true;
         public string ApplicationProtocols { get; set; } = "http/1.1";
         public List<TrustedCaConfig> TrustedCAs { get; set; } = [];
+
+        /// <summary>
+        /// Use BoringSslStream (BoringSSL-backed TLS stream with Chrome-like JA4 fingerprints)
+        /// instead of System.Net.Security.SslStream for the upstream (outgoing) TLS connection.
+        /// </summary>
+        public bool UseBoringSsl { get; set; } = false;
     }
 
     /// <summary>
