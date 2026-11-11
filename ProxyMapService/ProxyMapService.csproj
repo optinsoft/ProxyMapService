@@ -23,7 +23,7 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'http' " />
 
   <ItemGroup>
-    <PackageReference Include="BoringSslStream" Version="1.0.1" />
+    <PackageReference Include="BoringSslStream" Version="1.0.2" />
     <PackageReference Include="Fare" Version="2.2.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.13" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />
