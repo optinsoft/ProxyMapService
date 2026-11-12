@@ -155,27 +155,28 @@ The dashboard will now display full HTTP details instead of basic generic `CONNE
 
 ---
 
-## Chrome-like TLS Fingerprint
+## Chrome-like and Firefox-like TLS Fingerprint
 
 When SSL decryption is enabled, the Proxy Map Service terminates the client's TLS connection and opens its own TLS connection to the target server. By default, this upstream connection is made with the standard .NET `SslStream`, whose TLS handshake is easily recognizable as non-browser traffic — some servers and anti-bot systems flag such connections.
 
-Proxy Map Service can make the upstream TLS handshake **indistinguishable from Google Chrome's** by using [BoringSslStream](https://github.com/optinsoft/BoringSslStream) — a TLS stream backed by BoringSSL (the TLS library used by Chromium). It replicates Chrome's ClientHello byte-for-byte, including cipher suites, extensions, GREASE, post-quantum key groups and ALPN/ALPS, so the connection gets a genuine Chrome JA4/JA3 fingerprint:
+Proxy Map Service can make the upstream TLS handshake **indistinguishable from a real browser's** — either **Google Chrome** or **Mozilla Firefox**. For Chrome it uses [BoringSslStream](https://github.com/optinsoft/BoringSslStream), a TLS stream backed by BoringSSL (the TLS library used by Chromium); for Firefox it uses [NssStream](https://github.com/optinsoft/NssStream), backed by NSS (the TLS library used by Firefox). The chosen implementation replicates the browser's ClientHello byte-for-byte, including cipher suites, extensions, GREASE, post-quantum key groups and ALPN/ALPS, so the connection gets a genuine browser JA4/JA3 fingerprint:
 
 ```text
 SslStream:        t13d311100_e8f1e7e78f70_f6eeaf393d2e   (default .NET TLS handshake)
 BoringSslStream:  t13d1517h2_8daaf6152771_cb7bf5808d99   (Chrome-like TLS handshake)
+NssStream:        t13d1514h2_8daaf6152771_fb945f83af24   (Firefox-like TLS handshake)
 ```
 
 ### How to Enable
 
-Chrome-like fingerprinting requires SSL decryption to be enabled (`DecryptSSL: true`, see [Turning on SSL Decryption](#turning-on-ssl-decryption)). Then set `UseBoringSsl` to `true` in the `SslClientOptions` section of `appsettings.Production.json`:
+Browser-like fingerprinting requires SSL decryption to be enabled (`DecryptSSL: true`, see [Turning on SSL Decryption](#turning-on-ssl-decryption)). Then set `TlsClientType` to `"BoringSsl"` for Chrome or `"Nss"` for Firefox in the `SslClientOptions` section of `appsettings.Production.json`:
 
 ```json
 "SslClientOptions": {
     "EnabledSslProtocols": "Tls12,Tls13",
     "CheckCertificateRevocation": true,
     "ApplicationProtocols": "http/1.1,h2",
-    "UseBoringSsl": true
+    "TlsClientType": "BoringSsl"
 }
 ```
 
@@ -183,11 +184,12 @@ Restart the `ProxyMapService.exe` application for the change to take effect.
 
 ### Notes
 
-* The `UseBoringSsl` option only affects the **outgoing (upstream)** TLS connections of decrypted traffic. It does not change how the proxy accepts client connections.
-* Because BoringSslStream replicates Chrome's ClientHello, the `EnabledSslProtocols` setting does not apply to it — the TLS versions and cipher suites are chosen exactly as Chrome chooses them.
+* The `TlsClientType` option (`Native` — default `SslStream`, `BoringSsl` — Chrome-like, `Nss` — Firefox-like) only affects the **outgoing (upstream)** TLS connections of decrypted traffic. It does not change how the proxy accepts client connections.
+* Because BoringSslStream and NssStream replicate the browser's ClientHello, the `EnabledSslProtocols` setting does not apply to them — the TLS versions and cipher suites are chosen exactly as the browser chooses them.
+* `TlsClientType: "Nss"` uses [NssStream](https://github.com/optinsoft/NssStream) — an NSS-backed TLS stream producing a Firefox-like ClientHello. On Linux the native binary links dynamically against the system NSS/NSPR libraries (`libnss3`, present on virtually every distribution); on Windows the required NSS/NSPR DLLs are shipped inside the NuGet package and are copied to the output directory automatically.
 * The negotiated application protocol (ALPN) still follows the `ApplicationProtocols` setting, so HTTP/2 to the server keeps working as before.
-* Server certificate validation settings (`CheckCertificateRevocation`, `TrustedCAs`, and the `IgnoreCertificateErrors` mapping option) remain fully effective with BoringSslStream.
-* The shipped NuGet package includes the native BoringSSL binary for Windows x64, Linux x64 and macOS ARM64, so no extra dependencies are required.
+* Server certificate validation settings (`CheckCertificateRevocation`, `TrustedCAs`, and the `IgnoreCertificateErrors` mapping option) remain fully effective with BoringSslStream and NssStream.
+* The shipped NuGet packages include the native BoringSSL and NSS/NSPR binaries for Windows x64, Linux x64 and macOS ARM64, so no extra dependencies are required.
 
 ### Verifying the Fingerprint
 
@@ -197,4 +199,4 @@ The repository includes an integration test that captures the TLS ClientHello se
 dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Ja4Fingerprint" -l "console;verbosity=detailed"
 ```
 
-The test output prints the JA4 fingerprint of the upstream ClientHello (e.g., `t13d1517h2_8daaf6152771_cb7bf5808d99` with `UseBoringSsl: true`), along with the full list of offered cipher suites and extensions.
+The test output prints the JA4 fingerprint of the upstream ClientHello (e.g., `t13d1517h2_8daaf6152771_cb7bf5808d99` with `TlsClientType: "BoringSsl"` — Chrome-like, or the NSS-produced fingerprint with `TlsClientType: "Nss"` — Firefox-like), along with the full list of offered cipher suites and extensions.

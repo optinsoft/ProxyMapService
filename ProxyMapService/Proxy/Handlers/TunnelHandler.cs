@@ -59,9 +59,12 @@ namespace ProxyMapService.Proxy.Handlers
 
                 using SslStream? incomingSslStream = context.DecryptSSL && isIncomingSSL ? new(context.IncomingStream) : null;
                 using Stream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL
-                    ? (context.SslClientConfig.UseBoringSsl
-                        ? new BoringSslStream(context.OutgoingStream, context.Host.Hostname)
-                        : new SslStream(context.OutgoingStream))
+                    ? context.SslClientConfig.TlsClientType switch
+                    {
+                        TlsClientType.BoringSsl => new BoringSslStream(context.OutgoingStream, context.Host.Hostname),
+                        TlsClientType.Nss => new NssSsl.NssStream(context.OutgoingStream, context.Host.Hostname),
+                        _ => new SslStream(context.OutgoingStream),
+                    }
                     : null;
 
                 using CountingStream? incomingSslCountingStream =
@@ -347,9 +350,10 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         /// <summary>
-        /// Performs the upstream TLS handshake on either a regular SslStream or a
-        /// BoringSslStream (BoringSSL-backed, Chrome-like JA4 fingerprint) depending on
-        /// SslClientOptions:UseBoringSsl, and returns the negotiated ALPN protocol.
+        /// Performs the upstream TLS handshake on a SslStream, BoringSslStream
+        /// (BoringSSL-backed, Chrome-like JA4 fingerprint) or NssStream
+        /// (NSS-backed, Firefox-like JA4 fingerprint) depending on
+        /// SslClientOptions:TlsClientType, and returns the negotiated ALPN protocol.
         /// </summary>
         private static async Task<SslApplicationProtocol> AuthenticateOutgoingAsClientAsync(
             Stream outgoingSslStream, SslClientAuthenticationOptions sslClientOptions, CancellationToken token)
@@ -358,6 +362,12 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 await boringSslStream.AuthenticateAsClientAsync(sslClientOptions, token);
                 return new SslApplicationProtocol(boringSslStream.AlpnSelected);
+            }
+
+            if (outgoingSslStream is NssSsl.NssStream nssStream)
+            {
+                await nssStream.AuthenticateAsClientAsync(sslClientOptions, token);
+                return new SslApplicationProtocol(nssStream.AlpnSelected);
             }
 
             var sslStream = (SslStream)outgoingSslStream;

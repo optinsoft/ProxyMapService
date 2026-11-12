@@ -11,9 +11,9 @@ namespace ProxyMapService.Tests
     /// Captures the TLS ClientHello that the proxy sends to an upstream HTTPS
     /// server and computes its JA4 fingerprint.
     ///
-    /// With SslClientOptions:UseBoringSsl = true the ClientHello must be
+    /// With SslClientOptions:TlsClientType = "BoringSsl" the ClientHello must be
     /// Chrome-like (the BoringSslStream cipher-suite hash matches Google
-    /// Chrome's); with UseBoringSsl = false (System.Net.Security.SslStream)
+    /// Chrome's); with TlsClientType = "Native" (System.Net.Security.SslStream)
     /// it must differ.
     ///
     /// Requires the test proxy instance to be running
@@ -46,8 +46,8 @@ namespace ProxyMapService.Tests
             var proxyHost = configuration["Proxy:Host"] ?? "127.0.0.1";
             var proxyPort = configuration.GetValue<int>("Proxy:Port", 5001);
 
-            bool useBoringSsl = ReadUseBoringSsl();
-            _output.WriteLine($"SslClientOptions:UseBoringSsl = {useBoringSsl}");
+            var tlsClientType = ReadTlsClientType();
+            _output.WriteLine($"SslClientOptions:TlsClientType = {tlsClientType}");
 
             await using var capture = new ClientHelloCaptureServer();
             _output.WriteLine($"ClientHello capture server: 127.0.0.1:{capture.Port}");
@@ -103,13 +103,13 @@ namespace ProxyMapService.Tests
             // TLS 1.3 offered, SNI present.
             Assert.StartsWith("t13d", ja4);
 
-            if (useBoringSsl)
+            if (tlsClientType == "BoringSsl")
             {
                 // BoringSslStream replicates Google Chrome's ClientHello:
                 // the cipher-suite hash must match Chrome's JA4.
                 Assert.True(
                     ja4.Contains(ChromeCipherHash),
-                    $"Expected Chrome-like JA4 with UseBoringSsl=true, got: {ja4}");
+                    $"Expected Chrome-like JA4 with TlsClientType=BoringSsl, got: {ja4}");
             }
             else
             {
@@ -121,10 +121,10 @@ namespace ProxyMapService.Tests
         }
 
         /// <summary>
-        /// Reads SslClientOptions:UseBoringSsl from the proxy's appsettings.Test.json
+        /// Reads SslClientOptions:TlsClientType from the proxy's appsettings.Test.json
         /// (the configuration the test proxy instance is started with).
         /// </summary>
-        private static bool ReadUseBoringSsl()
+        private static string ReadTlsClientType()
         {
             var path = Path.Combine(
                 AppContext.BaseDirectory,
@@ -133,13 +133,15 @@ namespace ProxyMapService.Tests
 
             if (!File.Exists(path))
             {
-                return false;
+                return "Native";
             }
 
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             return document.RootElement.TryGetProperty("SslClientOptions", out var sslOptions) &&
-                   sslOptions.TryGetProperty("UseBoringSsl", out var useBoringSsl) &&
-                   useBoringSsl.ValueKind == JsonValueKind.True;
+                   sslOptions.TryGetProperty("TlsClientType", out var tlsClientType) &&
+                   tlsClientType.ValueKind == JsonValueKind.String
+                ? tlsClientType.GetString()!
+                : "Native";
         }
     }
 }

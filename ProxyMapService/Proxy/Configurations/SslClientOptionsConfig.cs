@@ -8,10 +8,25 @@
         public List<TrustedCaConfig> TrustedCAs { get; set; } = [];
 
         /// <summary>
-        /// Use BoringSslStream (BoringSSL-backed TLS stream with Chrome-like JA4 fingerprints)
-        /// instead of System.Net.Security.SslStream for the upstream (outgoing) TLS connection.
+        /// TLS stream implementation used for the upstream (outgoing) TLS connection:
+        /// Native — System.Net.Security.SslStream;
+        /// BoringSsl — BoringSslStream (BoringSSL-backed, Chrome-like JA4 fingerprint);
+        /// Nss — NssStream (NSS-backed, Firefox-like JA4 fingerprint).
         /// </summary>
-        public bool UseBoringSsl { get; set; } = false;
+        public TlsClientType TlsClientType { get; set; } = TlsClientType.Native;
+    }
+
+    /// <summary>
+    /// Upstream TLS stream implementation (ClientHello fingerprint source).
+    /// </summary>
+    public enum TlsClientType
+    {
+        /// <summary>System.Net.Security.SslStream (system TLS implementation).</summary>
+        Native,
+        /// <summary>BoringSslStream — BoringSSL-backed, Chrome-like JA4 fingerprint.</summary>
+        BoringSsl,
+        /// <summary>NssStream — NSS-backed (Mozilla), Firefox-like JA4 fingerprint.</summary>
+        Nss
     }
 
     /// <summary>
