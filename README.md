@@ -164,7 +164,7 @@ Proxy Map Service can make the upstream TLS handshake **indistinguishable from a
 ```text
 SslStream:        t13d311100_e8f1e7e78f70_f6eeaf393d2e   (default .NET TLS handshake)
 BoringSslStream:  t13d1517h2_8daaf6152771_cb7bf5808d99   (Chrome-like TLS handshake)
-NssStream:        t13d1514h2_8daaf6152771_fb945f83af24   (Firefox-like TLS handshake)
+NssStream:        t13d1616h2_86a278354501_0c27189014cf   (Firefox-like TLS handshake)
 ```
 
 ### How to Enable
@@ -187,6 +187,7 @@ Restart the `ProxyMapService.exe` application for the change to take effect.
 * The `TlsClientType` option (`Native` — default `SslStream`, `BoringSsl` — Chrome-like, `Nss` — Firefox-like) only affects the **outgoing (upstream)** TLS connections of decrypted traffic. It does not change how the proxy accepts client connections.
 * Because BoringSslStream and NssStream replicate the browser's ClientHello, the `EnabledSslProtocols` setting does not apply to them — the TLS versions and cipher suites are chosen exactly as the browser chooses them.
 * `TlsClientType: "Nss"` uses [NssStream](https://github.com/optinsoft/NssStream) — an NSS-backed TLS stream producing a Firefox-like ClientHello. On Linux the native binary links dynamically against the system NSS/NSPR libraries (`libnss3`, present on virtually every distribution); on Windows the required NSS/NSPR DLLs are shipped inside the NuGet package and are copied to the output directory automatically.
+* The Firefox-like ClientHello produced by NssStream depends on the version of the linked NSS: features unsupported by the linked NSS version (ECH GREASE, ML-KEM `X25519MLKEM768`, ML-DSA signature algorithms, brotli) are silently skipped. For example, on NSS 3.98 the JA4 is `t13d1616h2_86a278354501_0c27189014cf`, while on NSS 3.101+ it includes ML-KEM and therefore differs.
 * The negotiated application protocol (ALPN) still follows the `ApplicationProtocols` setting, so HTTP/2 to the server keeps working as before.
 * Server certificate validation settings (`CheckCertificateRevocation`, `TrustedCAs`, and the `IgnoreCertificateErrors` mapping option) remain fully effective with BoringSslStream and NssStream.
 * The shipped NuGet packages include the native BoringSSL and NSS/NSPR binaries for Windows x64, Linux x64 and macOS ARM64, so no extra dependencies are required.
