@@ -201,3 +201,12 @@ dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Ja4Fingerprint" -
 ```
 
 The test output prints the JA4 fingerprint of the upstream ClientHello (e.g., `t13d1517h2_8daaf6152771_cb7bf5808d99` with `TlsClientType: "BoringSsl"` — Chrome-like, or the NSS-produced fingerprint with `TlsClientType: "Nss"` — Firefox-like), along with the full list of offered cipher suites and extensions.
+
+To check the JA4 fingerprint of a TLS library directly (as `BoringSslStream` or `NssStream` would produce it, without running the proxy), use the `BoringSslJa4Probe` and `NssJa4Probe` console utilities:
+
+```bash
+dotnet run --project BoringSslJa4Probe   # Chrome-like: t13d1517h2_8daaf6152771_cb7bf5808d99
+dotnet run --project NssJa4Probe         # Firefox-like: t13d1616h2_86a278354501_0c27189014cf
+```
+
+Each utility starts a local capture server, performs a TLS handshake against it (BoringSSL-backed or NSS-backed respectively), and prints the JA4 fingerprint of the ClientHello along with the full lists of cipher suites and extensions. The BoringSslStream fingerprint is deterministic (it replicates Chrome's ClientHello byte-for-byte); the NssStream fingerprint depends on the version of the linked NSS library.
