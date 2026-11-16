@@ -61,10 +61,10 @@
 
         [LoggerMessage(EventId = 1508, Level = LogLevel.Warning,
             Message = "[h2 stream {StreamId}] request handler failed: {ExceptionName}: {ErrorMessage}")]
-        public static partial void ServerHandlerFailed(ILogger? logger, int streamId, string exceptionName, string errorMessage);
+        public static partial void ServerHandlerFailed(ILogger logger, int streamId, string exceptionName, string errorMessage);
 
         [LoggerMessage(EventId = 1509, Level = LogLevel.Debug,
             Message = "[h2] server connection closed: {Reason}")]
-        public static partial void ServerConnectionClosed(ILogger? logger, string reason);
+        public static partial void ServerConnectionClosed(ILogger logger, string reason);
     }
 }

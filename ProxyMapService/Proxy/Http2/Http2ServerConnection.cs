@@ -94,12 +94,12 @@ namespace ProxyMapService.Proxy.Http2
             }
             catch (H2ConnectionException ex)
             {
-                Http2Log.ServerConnectionClosed(_logger, ex.Message);
+                if (_logger != null) Http2Log.ServerConnectionClosed(_logger, ex.Message);
                 await TrySendGoAwayAsync(ex.Code);
             }
             catch (InvalidDataException ex) // frame too large from the frame reader
             {
-                Http2Log.ServerConnectionClosed(_logger, ex.Message);
+                if (_logger != null) Http2Log.ServerConnectionClosed(_logger, ex.Message);
                 await TrySendGoAwayAsync(H2Error.FrameSizeError);
             }
             catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException)
@@ -381,7 +381,7 @@ namespace ProxyMapService.Proxy.Http2
             }
             catch (Exception ex)
             {
-                Http2Log.ServerHandlerFailed(_logger, s.StreamId, ex.GetType().Name, ex.Message);
+                if (_logger != null) Http2Log.ServerHandlerFailed(_logger, s.StreamId, ex.GetType().Name, ex.Message);
                 if (!s.ResponseStarted && !s.Token.IsCancellationRequested)
                 {
                     try { await SendHeadersAsync(s, 500, [("content-length", "0")], true); }
