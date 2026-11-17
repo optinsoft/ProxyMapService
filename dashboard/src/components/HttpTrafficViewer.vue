@@ -86,7 +86,7 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       clientProto: req.clientProto,
       targetProto: req.targetProto,
       requestURI: req.requestURI,
-      requestMethod: req.requestMethod.toUpperCase(),
+      requestMethod: req.requestMethod?.toUpperCase(),
       route: routeDisplay,
       targetHost: targetHostDisplay,
       statusCode: res ? parseInt(res.statusCode, 10) : null,
