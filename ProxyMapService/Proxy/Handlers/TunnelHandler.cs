@@ -33,7 +33,7 @@ namespace ProxyMapService.Proxy.Handlers
                 }
                 catch (Exception ex) when (ex is IOException or SocketException)
                 {
-                    LogTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
+                    LogPeekTLSHostWarning(context.Logger, context.Host.Hostname, context.Host.Port, ex.GetType().Name, ex.Message);
                     return HandleStep.Terminate;
                 }
 
@@ -155,8 +155,20 @@ namespace ProxyMapService.Proxy.Handlers
         [LoggerMessage(
             EventId = 1313,
             Level = LogLevel.Warning,
-            Message = "[Tunnel] {ExceptionName}: {ErrorMessage}")]
-        private static partial void LogTunnelWarning(ILogger logger, string exceptionName, string errorMessage);
+            Message = "[PeekTLS] [{hostname}:{port}] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogPeekTLSHostWarning(ILogger logger, string hostname, int port, string exceptionName, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1314,
+            Level = LogLevel.Warning,
+            Message = "[RequestTunnel] [{hostname}:{port}] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogRequestTunnelHostWarning(ILogger logger, string hostname, int port, string exceptionName, string errorMessage);
+
+        [LoggerMessage(
+            EventId = 1315,
+            Level = LogLevel.Warning,
+            Message = "[ResponseTunnel] [{hostname}:{port}] {ExceptionName}: {ErrorMessage}")]
+        private static partial void LogResponseTunnelHostWarning(ILogger logger, string hostname, int port, string exceptionName, string errorMessage);
 
         #endregion
 
@@ -278,7 +290,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (IOException ex)
             {
-                LogRequestTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
+                LogRequestTunnelHostWarning(context.Logger, context.Host.Hostname, context.Host.Port, ex.GetType().Name, ex.Message);
                 incomingReady.TrySetCanceled();
                 return;
                 //incomingReady.SetException(ex);
@@ -349,6 +361,9 @@ namespace ProxyMapService.Proxy.Handlers
             await requestTunnel.RunAsync();
         }
 
+        private static SslApplicationProtocol ToAlpn(string? alpn) =>
+            string.IsNullOrEmpty(alpn) ? default : new SslApplicationProtocol(alpn);
+
         /// <summary>
         /// Performs the upstream TLS handshake on a SslStream, BoringSslStream
         /// (BoringSSL-backed, Chrome-like JA4 fingerprint) or NssStream
@@ -361,13 +376,13 @@ namespace ProxyMapService.Proxy.Handlers
             if (outgoingSslStream is BoringSslStream boringSslStream)
             {
                 await boringSslStream.AuthenticateAsClientAsync(sslClientOptions, token);
-                return new SslApplicationProtocol(boringSslStream.AlpnSelected);
+                return ToAlpn(boringSslStream.AlpnSelected);
             }
 
             if (outgoingSslStream is NssSsl.NssStream nssStream)
             {
                 await nssStream.AuthenticateAsClientAsync(sslClientOptions, token);
-                return new SslApplicationProtocol(nssStream.AlpnSelected);
+                return ToAlpn(nssStream.AlpnSelected);
             }
 
             var sslStream = (SslStream)outgoingSslStream;
@@ -437,7 +452,7 @@ namespace ProxyMapService.Proxy.Handlers
             }
             catch (IOException ex)
             {
-                LogResponseTunnelWarning(context.Logger, ex.GetType().Name, ex.Message);
+                LogResponseTunnelHostWarning(context.Logger, context.Host.Hostname, context.Host.Port, ex.GetType().Name, ex.Message);
                 outgoingReady.TrySetCanceled();
                 return;
                 //outgoingReady.SetException(ex);
