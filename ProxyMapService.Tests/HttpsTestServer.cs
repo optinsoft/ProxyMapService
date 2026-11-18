@@ -175,13 +175,18 @@ namespace ProxyMapService.Tests
             // Leaf certificate signed by the test root CA (instead of self-signed),
             // so the proxy can validate the chain against the CA from SslClientOptions:TrustedCAs.
             var ca = TestRootCa.Certificate;
+
+            // Create a unique Serial Number
+            byte[] serialNumber = Guid.NewGuid().ToByteArray();
+            serialNumber[^1] &= 0x7F; // keep the serial positive (big-endian: last byte is most significant in this layout, so clear it)
+
             using var leaf = request.Create(
                 ca,
                 DateTimeOffset.UtcNow.AddMinutes(-5),
                 DateTimeOffset.UtcNow.AddHours(1),
-                Guid.NewGuid().ToByteArray());
+                serialNumber);
 
-            var certificateWithKey = leaf.CopyWithPrivateKey(rsa);
+            using var certificateWithKey = leaf.CopyWithPrivateKey(rsa);
 
             return new X509Certificate2(
                 certificateWithKey.Export(X509ContentType.Pfx));

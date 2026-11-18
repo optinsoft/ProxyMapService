@@ -44,8 +44,8 @@ namespace ProxyMapService.Proxy.Ssl
             var trustedCas = GetTrustedCAs(context.SslClientConfig);
             if (trustedCas.Count > 0)
             {
-                // Если IgnoreCertificateErrors выставлен, TunnelHandler перекроет этот callback
-                // на "всегда true" — он ставится после BuildSslClientOptions.
+                // If IgnoreCertificateErrors is set, TunnelHandler will override this callback
+                // to "always true" — this is applied after BuildSslClientOptions.
                 sslOptions.RemoteCertificateValidationCallback = (_, leaf, _, status) =>
                     ValidateAgainstTrustedCas(leaf, status, trustedCas);
             }
@@ -73,7 +73,7 @@ namespace ProxyMapService.Proxy.Ssl
                 X509ChainStatusFlags.UntrustedRoot
                 | X509ChainStatusFlags.PartialChain;
 
-            var leaf2 = new X509Certificate2(leaf);
+            using var leaf2 = new X509Certificate2(leaf);
 
             foreach (var ca in trustedCas)
             {
@@ -197,6 +197,7 @@ namespace ProxyMapService.Proxy.Ssl
 
             // Create a unique Serial Number
             byte[] serialNumber = Guid.NewGuid().ToByteArray();
+            serialNumber[^1] &= 0x7F; // keep the serial positive (big-endian: last byte is most significant in this layout, so clear it)
 
             // SIGN the request using the CA's private key
             using X509Certificate2 ephemeralCert = request.Create(
@@ -206,10 +207,18 @@ namespace ProxyMapService.Proxy.Ssl
                 serialNumber);
 
             // Join the private key to the public cert
-            var certWithKey = ephemeralCert.CopyWithPrivateKey(rsa);
+            using var certWithKey = ephemeralCert.CopyWithPrivateKey(rsa);
 
             // FIX: Export and Re-import to move the key from Ephemeral -> Persisted
-            return new X509Certificate2(certWithKey.Export(X509ContentType.Pfx));
+            var certBytes = certWithKey.Export(X509ContentType.Pfx);
+#if NET9_0_OR_GREATER
+            return X509CertificateLoader.LoadPkcs12(
+                certBytes, 
+                null, 
+                X509KeyStorageFlags.Exportable);
+#else
+            return new X509Certificate2(certBytes);
+#endif
         }
     }
 }
