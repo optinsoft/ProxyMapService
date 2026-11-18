@@ -79,25 +79,25 @@ namespace ProxyMapService.Proxy.Http
             }
         }
 
-        private static readonly string[] HttpMethods =
+        private static readonly string[] KnownHttpMethods =
         {
             "GET", "POST", "PUT", "DELETE",
             "HEAD", "OPTIONS", "PATCH", "TRACE", 
             "CONNECT"
         };
 
-        public enum HttpMethodEnum
+        public enum KnownHttpMethodEnum
         {
             Get = 0, Post = 1, Put = 2, Delete = 3, 
             Head = 4, Options = 5, Patch = 6, Trace = 7,
             Connect = 8
         }
 
-        private static readonly byte[][] HttpMethodPrefixBytes =
-            HttpMethods.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
+        private static readonly byte[][] KnownHttpMethodPrefixBytes =
+            KnownHttpMethods.Select(m => Encoding.ASCII.GetBytes(m + " ")).ToArray();
 
-        private static readonly string[] HttpMethodPrefixStrings =
-            HttpMethods.Select(m => m + " ").ToArray();
+        private static readonly string[] KnownHttpMethodPrefixStrings =
+            KnownHttpMethods.Select(m => m + " ").ToArray();
 
         private static readonly string[] HttpVersions =
         {
@@ -119,7 +119,7 @@ namespace ProxyMapService.Proxy.Http
         private static readonly string[] HttpVersionPrefixStrings =
             HttpVersions.Select(m => m + " ").ToArray();
 
-        public static bool IsValidHttpMethod(ReadOnlySpan<char> methodSpan)
+        public static bool IsKnownHttpMethod(ReadOnlySpan<char> methodSpan)
         {
             return methodSpan switch
             {
@@ -147,19 +147,19 @@ namespace ProxyMapService.Proxy.Http
             };
         }
 
-        public static HttpMethodEnum? ParseHttpMethod(ReadOnlySpan<char> methodSpan)
+        public static KnownHttpMethodEnum? ParseKnownHttpMethod(ReadOnlySpan<char> methodSpan)
         {
             return methodSpan switch
             {
-                "GET" => HttpMethodEnum.Get,
-                "POST" => HttpMethodEnum.Post,
-                "PUT" => HttpMethodEnum.Put,
-                "DELETE" => HttpMethodEnum.Delete,
-                "HEAD" => HttpMethodEnum.Head,
-                "OPTIONS" => HttpMethodEnum.Options,
-                "PATCH" => HttpMethodEnum.Patch,
-                "TRACE" => HttpMethodEnum.Trace,
-                "CONNECT" => HttpMethodEnum.Connect,
+                "GET" => KnownHttpMethodEnum.Get,
+                "POST" => KnownHttpMethodEnum.Post,
+                "PUT" => KnownHttpMethodEnum.Put,
+                "DELETE" => KnownHttpMethodEnum.Delete,
+                "HEAD" => KnownHttpMethodEnum.Head,
+                "OPTIONS" => KnownHttpMethodEnum.Options,
+                "PATCH" => KnownHttpMethodEnum.Patch,
+                "TRACE" => KnownHttpMethodEnum.Trace,
+                "CONNECT" => KnownHttpMethodEnum.Connect,
                 _ => null
             };
         }
@@ -175,9 +175,63 @@ namespace ProxyMapService.Proxy.Http
             };
         }
 
+        private static bool IsHttpTokenChar(byte c)
+        {
+            return (c >= (byte)'A' && c <= (byte)'Z') ||
+                   (c >= (byte)'a' && c <= (byte)'z') ||
+                   (c >= (byte)'0' && c <= (byte)'9') ||
+                   c is (byte)'!' or (byte)'#' or (byte)'$' or
+                        (byte)'%' or (byte)'&' or (byte)'\'' or
+                        (byte)'*' or (byte)'+' or (byte)'-' or
+                        (byte)'.' or (byte)'^' or (byte)'_' or
+                        (byte)'`' or (byte)'|' or (byte)'~';
+        }
+
+        private static bool IsHttpTokenChar(char c)
+        {
+            return (c >= 'A' && c <= 'Z') ||
+                   (c >= 'a' && c <= 'z') ||
+                   (c >= '0' && c <= '9') ||
+                   c is '!' or '#' or '$' or '%' or '&' or '\'' or
+                        '*' or '+' or '-' or '.' or '^' or '_' or
+                        '`' or '|' or '~';
+        }
+
         public static int StartsWithHttpMethod(ReadOnlySpan<byte> lineSpan, bool partially)
         {
-            foreach (var method in HttpMethodPrefixBytes)
+            int i = 0;
+
+            while (i < lineSpan.Length && IsHttpTokenChar(lineSpan[i]))
+                i++;
+
+            if (i == 0)
+                return 0;
+
+            if (i == lineSpan.Length)
+                return partially ? i : 0;
+
+            return lineSpan[i] == (byte)' ' ? i + 1 : 0;
+        }
+
+        public static int StartsWithHttpMethod(ReadOnlySpan<char> lineSpan, bool partially)
+        {
+            int i = 0;
+
+            while (i < lineSpan.Length && IsHttpTokenChar(lineSpan[i]))
+                i++;
+
+            if (i == 0)
+                return 0;
+
+            if (i == lineSpan.Length)
+                return partially ? i : 0;
+
+            return lineSpan[i] == ' ' ? i + 1 : 0;
+        }
+
+        public static int StartsWithKnownHttpMethod(ReadOnlySpan<byte> lineSpan, bool partially)
+        {
+            foreach (var method in KnownHttpMethodPrefixBytes)
             {
                 var methodSpan = method.AsSpan();
                 int compareLength = partially ? Math.Min(lineSpan.Length, methodSpan.Length) : methodSpan.Length;
@@ -191,9 +245,9 @@ namespace ProxyMapService.Proxy.Http
             return 0;
         }
 
-        public static int StartsWithHttpMethod(ReadOnlySpan<char> lineSpan, bool partially)
+        public static int StartsWithKnownHttpMethod(ReadOnlySpan<char> lineSpan, bool partially)
         {
-            foreach (var method in HttpMethodPrefixStrings)
+            foreach (var method in KnownHttpMethodPrefixStrings)
             {
                 var methodSpan = method.AsSpan();
                 int compareLength = partially ? Math.Min(lineSpan.Length, methodSpan.Length) : methodSpan.Length;
