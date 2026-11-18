@@ -1,3 +1,4 @@
+local.props
 appsettings.Development*.json
 appsettings.Production.json
 *-host-rules.json

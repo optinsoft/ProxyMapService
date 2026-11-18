@@ -23,16 +23,27 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'http' " />
 
   <ItemGroup>
-    <PackageReference Include="BoringSslStream" Version="1.0.4" />
     <PackageReference Include="Fare" Version="2.2.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.13" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NssStream" Version="1.0.5" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
     <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
   </ItemGroup>
 
+  <Import Project="local.props"
+    Condition="Exists('local.props')" />
+
+  <ItemGroup Condition="'$(UseLocalProjects)' == 'true'">
+    <ProjectReference Include="..\..\BoringSslStream\BoringSslStream\BoringSslStream.csproj" />
+    <ProjectReference Include="..\..\NssStream\NssStream\NssStream.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseLocalProjects)' != 'true'">
+	<PackageReference Include="BoringSslStream" Version="1.0.6" />
+	<PackageReference Include="NssStream" Version="1.0.7" />
+  </ItemGroup>
+	
 	<ItemGroup>
 		<Content Update="appsettings.Development*.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
