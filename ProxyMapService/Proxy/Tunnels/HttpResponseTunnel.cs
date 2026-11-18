@@ -48,7 +48,12 @@ namespace ProxyMapService.Proxy.Tunnels
         {
             var response = _context.ResponseHeader;
             if (response == null) return;
-            if (response.StatusCode?.StartsWith('1') == true) return; // an interim 1xx does not complete the request
+            if (response.StatusCode?.StartsWith('1') == true)
+            {
+                // an interim 1xx does not complete the request
+                _context.SwitchProtocol = true;
+                return;
+            }
             if (_context.RequestHeaderHistory.TryGetValue(response.ResponseNum, out var request))
             {
                 _context.CompleteRequest(request);
@@ -70,7 +75,7 @@ namespace ProxyMapService.Proxy.Tunnels
                     _context.DisposeResponseBodyTracker();
                     _context.ResponseCacheEntry = null;
                     _context.DisposeResponseCacheFileStream();
-                    _parser.Reset();
+                    _parser.Reset(_context.SwitchProtocol);
                 }
                 if (_parser.ReadingHeaders)
                 {

@@ -90,7 +90,7 @@ namespace ProxyMapService.Proxy.Tunnels
                     }
                     _context.RequestHeader = null;
                     _context.DisposeRequestBodyTracker();
-                    _parser.Reset();
+                    _parser.Reset(_context.SwitchProtocol);
                 }
                 if (_parser.ReadingHeaders)
                 {

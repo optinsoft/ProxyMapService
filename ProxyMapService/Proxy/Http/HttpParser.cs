@@ -28,12 +28,12 @@ namespace ProxyMapService.Proxy.Http
             _readingHeaders = readHeaders;
         }
 
-        public void Reset()
+        public void Reset(bool switchProtocol)
         {
             _memoryStream.SetLength(0);
             _memoryStream.Position = 0;
             _searchHeadersStart = 0;
-            _readingHeaders = true;
+            _readingHeaders = !switchProtocol;
             _headerLength = 0;
         }
 

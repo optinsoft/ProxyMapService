@@ -29,7 +29,7 @@ namespace ProxyMapService.Proxy.Sessions
         private int _lastRequestNum = 0;
         private int _lastResponseNum = 0;
 
-        public System.Net.IPEndPoint InboundEndpoint {  get; private set; }
+        public System.Net.IPEndPoint InboundEndpoint { get; private set; }
         public TcpClient IncomingClient { get; private set; }
         public TcpClient OutgoingClient { get; private set; }
         public ProxyMapping Mapping { get; private set; }
@@ -37,7 +37,7 @@ namespace ProxyMapService.Proxy.Sessions
         public SessionAPIConfig SessionAPI { get; set; }
         public SessionAction Action { get; set; }
         public bool DecryptSSL { get; set; }
-        public bool IgnoreCertificateErrors {  get; set; }
+        public bool IgnoreCertificateErrors { get; set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
         public bool H1ToH2TranslationEnabled { get; set; }
@@ -67,12 +67,12 @@ namespace ProxyMapService.Proxy.Sessions
         public CountingStream? OutgoingStream { get; set; }
 
         public System.Net.EndPoint? IncomingEndPoint { get; set; }
-        public System.Net.IPEndPoint? OutgoingEndPoint {  get; set; }
+        public System.Net.IPEndPoint? OutgoingEndPoint { get; set; }
 
         public bool IncomingHttp2 { get; set; }
         public bool OutgoingHttp2 { get; set; }
 
-        public ClientHelloInfo? IncomingClientHello {  get; set; }
+        public ClientHelloInfo? IncomingClientHello { get; set; }
         public SslApplicationProtocol OutgoingNegotiatedAlpn { get; set; } = new();
         public bool TranslateH1ToH2 { get; set; }
         public bool DowngradeIncomingToHttp1 { get; set; }
@@ -100,7 +100,7 @@ namespace ProxyMapService.Proxy.Sessions
         public HttpRequestHeader? Http { get; set; }
         public Socks4Header? Socks4 { get; set; }
         public Socks5Header? Socks5 { get; set; }
-        public HostAddress Host { 
+        public HostAddress Host {
             get => _host;
             set
             {
@@ -118,6 +118,7 @@ namespace ProxyMapService.Proxy.Sessions
         public string? RootDir { get; set; }
         public TunnelState RequestTunnelState { get; private set; }
         public TunnelState ResponseTunnelState { get; private set; }
+        public bool SwitchProtocol { get; set; }
         public HttpRequestHeader? RequestHeader
         {
             get => _requestHeader;
@@ -165,8 +166,8 @@ namespace ProxyMapService.Proxy.Sessions
         public IHttpCompletionLogger? CompletionLogger { get => ProxyCounters.HttpCompletionLogger; }
         public IHttpBodyLogger? RequestBodyLogger { get => ProxyCounters.HttpRequestBodyLogger; }
         public IHttpBodyLogger? ResponseBodyLogger { get => ProxyCounters.HttpResponseBodyLogger; }
-        public string? Inbound 
-        { 
+        public string? Inbound
+        {
             get => (InboundType switch
             {
                 ProxyType.Http => $"http://{InboundEndpoint}",
@@ -215,12 +216,12 @@ namespace ProxyMapService.Proxy.Sessions
         public bool ClientHttp2 => IncomingHttp2;
         public bool TargetHttp2 => OutgoingHttp2;
 
-        public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient, 
-            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping, 
-            IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI, 
+        public SessionContext(System.Net.IPEndPoint inboundEndpoint, TcpClient incomingClient,
+            System.Net.EndPoint? incomingEndPoint, ProxyMapping mapping,
+            IRoutingLoopDetector loopDetector, SessionAPIConfig sessionAPI,
             X509Certificate2? serverCertificate, X509Certificate2? caCertificate,
             IProxyProvider proxyProvider, IProxyAuthenticator proxyAuthenticator,
-            ISessionManager sessionManager, List<HostRule> hostRules, 
+            ISessionManager sessionManager, List<HostRule> hostRules,
             List<CacheRule> cacheRules, CacheManager cacheManager, HttpConfig httpConfig,
             SslClientOptionsConfig sslClientConfig, SslServerOptionsConfig sslServerConfig,
             ProxyCounters proxyCounters, ILogger logger, CancellationToken token)
@@ -273,14 +274,14 @@ namespace ProxyMapService.Proxy.Sessions
 
         public void CreateIncomingClientStream()
         {
-            IncomingStream = new CountingStream(IncomingClient.GetStream(), this, 
+            IncomingStream = new CountingStream(IncomingClient.GetStream(), this,
                 ProxyCounters.IncomingReadCounter, ProxyCounters.IncomingSendCounter,
                 RequestTunnelState.TunnelId, ResponseTunnelState.TunnelId);
         }
 
         public void CreateOutgoingClientStream()
         {
-            OutgoingStream = new CountingStream(OutgoingClient.GetStream(), this, 
+            OutgoingStream = new CountingStream(OutgoingClient.GetStream(), this,
                 ProxyCounters.OutgoingReadCounter, ProxyCounters.OutgoingSendCounter,
                 ResponseTunnelState.TunnelId, RequestTunnelState.TunnelId);
         }
