@@ -1,1 +1,1 @@
-dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Http11_Proxy_Https_MultipleRequests_ShouldWork"
+dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Http11_Proxy_Https_MultipleRequests_ShouldWork" @args

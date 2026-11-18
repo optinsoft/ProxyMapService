@@ -1,1 +1,1 @@
-dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Http11_Proxy_Https_TwoPipelinedGets_InSingleRead_ShouldWork"
+dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Http11_Proxy_Https_TwoPipelinedGets_InSingleRead_ShouldWork" @args

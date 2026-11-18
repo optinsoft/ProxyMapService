@@ -1,1 +1,1 @@
-dotnet test ProxyMapService.Tests
+dotnet test ProxyMapService.Tests @args

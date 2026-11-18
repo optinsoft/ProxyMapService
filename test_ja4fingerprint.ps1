@@ -1,1 +1,1 @@
-dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Ja4Fingerprint" -l "console;verbosity=detailed"
+dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Ja4Fingerprint" -l "console;verbosity=detailed" @args

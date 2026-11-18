@@ -1,1 +1,1 @@
-dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Http2_Client_Proxy_Https_ParallelRequests_ShouldMultiplexOverSingleTunnel"
+dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Http2_Client_Proxy_Https_ParallelRequests_ShouldMultiplexOverSingleTunnel" @args

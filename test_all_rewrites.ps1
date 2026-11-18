@@ -1,1 +1,1 @@
-dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Rewrites_"
+dotnet test ProxyMapService.Tests --filter "FullyQualifiedName~Rewrites_" @args
