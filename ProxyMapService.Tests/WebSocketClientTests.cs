@@ -18,7 +18,7 @@ namespace ProxyMapService.Tests
         private const string WebSocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_TextEcho_ShouldWork()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_TextEcho_ShouldWork()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -51,7 +51,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_BinaryEcho_ShouldWork()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_BinaryEcho_ShouldWork()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -80,7 +80,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_ManyMessages_ShouldPreserveOrder()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_ManyMessages_ShouldPreserveOrder()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -116,7 +116,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_LargeFragmentedMessage_ShouldWork()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_LargeFragmentedMessage_ShouldWork()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -159,7 +159,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_ServerPushThenClose_ShouldDeliverAllMessagesAndCloseStatus()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_ServerPushThenClose_ShouldDeliverAllMessagesAndCloseStatus()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -198,7 +198,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_ServerInitiatedClose_ShouldPassCustomStatusCode()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_ServerInitiatedClose_ShouldPassCustomStatusCode()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -226,7 +226,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_SubProtocol_ShouldBeNegotiated()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_SubProtocol_ShouldBeNegotiated()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -256,7 +256,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_HandshakeHeaders_ShouldBeForwardedToServer()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_HandshakeHeaders_ShouldBeForwardedToServer()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -286,7 +286,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_ParallelConnections_ShouldBeIndependent()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_ParallelConnections_ShouldBeIndependent()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
@@ -344,7 +344,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_NonWebSocketRequestToWsEndpoint_ShouldReturn400AndKeepProxyWorking()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_NonWebSocketRequestToWsEndpoint_ShouldReturn400AndKeepProxyWorking()
         {
             var configuration = BuildConfiguration();
             var proxyHost = configuration["Proxy:Host"] ?? "127.0.0.1";
@@ -381,7 +381,7 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public async Task WebSocket_Proxy_Wss_RawHandshake_ShouldReturn101AndRelayFrames()
+        public async Task WebSocket_Proxy_Wss_Over_Http11_RawHandshake_ShouldReturn101AndRelayFrames()
         {
             var configuration = BuildConfiguration();
             var testHost = configuration.GetValue<string>("TestServer:Host") ?? "localhost";
