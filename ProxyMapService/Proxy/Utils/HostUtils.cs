@@ -120,12 +120,9 @@ namespace ProxyMapService.Proxy.Utils
             }
             if (string.IsNullOrEmpty(config.Domain))
             {
-                return host == null || host.Hostname.Length == 0;
+                return false;
             }
-            else
-            {
-                return config.Domain.Equals(host?.Hostname);
-            }
+            return config.Domain.Equals(host?.Hostname);
         }
     }
 }
