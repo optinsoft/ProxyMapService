@@ -38,5 +38,13 @@
         public bool? DisableDowngradeToHttp1ForCache { get; set; }
         public bool? EnableDowngradeToHttp1ForOverwrittenHost { get; set; }
         public bool IgnoreHostRules { get; set; } = false;
+        /// <summary>
+        /// Partial override of the global SslClientOptions for this listening port range.
+        /// </summary>
+        public SslClientOptionsOverride? SslClientOptions { get; set; }
+        /// <summary>
+        /// Partial override of the global SslServerOptions for this listening port range.
+        /// </summary>
+        public SslServerOptionsOverride? SslServerOptions { get; set; }
     }
 }

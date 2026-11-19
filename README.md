@@ -155,6 +155,75 @@ The dashboard will now display full HTTP details instead of basic generic `CONNE
 
 ---
 
+## Per-Port and Per-Host SSL Options Overrides
+
+The global `SslClientOptions` (outgoing TLS connections) and `SslServerOptions` (incoming TLS connections when decryption is enabled) can be refined at two levels:
+
+* **`Listen`** — inside a `ProxyMappings` entry, applies to all traffic of that listening port range (e.g. a different `EnabledSslProtocols` set for a specific port);
+* **`HostRule`** — inside the `HostRules` section, applies only to connections to the matching host (e.g. a dedicated server certificate for a particular host).
+
+Precedence: global `SslClientOptions`/`SslServerOptions` → `Listen.SslClientOptions`/`Listen.SslServerOptions` → `HostRule.SslClientOptions`/`HostRule.SslServerOptions`. Only the properties explicitly set in an override replace the inherited values; everything else is inherited from the level above. For `HostRule` the override is applied only when the rule matches the host and the rule's action is not `Deny`.
+
+Example — stricter protocols for a specific listening port and a dedicated certificate for one host:
+
+```json
+"ProxyMappings": [
+	{
+		"Listen": {
+			"Port": 5001,
+			"DecryptSSL": true,
+			"SslServerOptions": {
+				"EnabledSslProtocols": "Tls12,Tls13"
+			}
+		}
+	}
+],
+"HostRules": {
+	"Items": [
+		{
+			"HostName": "example.com",
+			"SslClientOptions": {
+				"TlsClientType": "BoringSsl"
+			},
+			"SslServerOptions": {
+				"ServerCertificate": {
+					"Path": "certs/example.com.pfx",
+					"Password": "secret"
+				}
+			}
+		}
+	]
+}
+```
+
+The override properties mirror the corresponding global section:
+
+* `SslClientOptions` override: `EnabledSslProtocols`, `CheckCertificateRevocation`, `ApplicationProtocols`, `TrustedCAs`, `TlsClientType`;
+* `SslServerOptions` override: `EnabledSslProtocols`, `ClientCertificateRequired`, `CheckCertificateRevocation`, `ApplicationProtocols`, `ServerCertificate` (path/password or store-based `SslCertificateConfig`), `CACertificate`.
+
+The legacy `HostRule`-level `CertificatePath`/`CertificatePassword` properties have been removed in favor of `SslServerOptions.ServerCertificate`, which is more flexible (it also supports store-based certificates via `StoreLocation`/`StoreName`/`Subject`). Migrate old configurations as follows:
+
+```json
+// before:
+{
+    "HostName": "example.com",
+    "CertificatePath": "certs/example.com.pfx",
+    "CertificatePassword": "secret"
+}
+// after:
+{
+    "HostName": "example.com",
+    "SslServerOptions": {
+        "ServerCertificate": {
+            "Path": "certs/example.com.pfx",
+            "Password": "secret"
+        }
+    }
+}
+```
+
+---
+
 ## Chrome-like and Firefox-like TLS Fingerprint
 
 When SSL decryption is enabled, the Proxy Map Service terminates the client's TLS connection and opens its own TLS connection to the target server. By default, this upstream connection is made with the standard .NET `SslStream`, whose TLS handshake is easily recognizable as non-browser traffic — some servers and anti-bot systems flag such connections.

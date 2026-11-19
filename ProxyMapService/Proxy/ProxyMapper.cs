@@ -102,6 +102,11 @@ namespace ProxyMapService.Proxy
         {
             var inboundEndPoint = new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, listenPort);
 
+            // Effective SSL configs for this listening port range:
+            // global SslClient/SslServerOptions overridden by mapping.Listen.SslClient/SslServerOptions.
+            SslClientOptionsConfig listenSslClientConfig = sslClientConfig.ApplyOverride(mapping.Listen.SslClientOptions);
+            SslServerOptionsConfig listenSslServerConfig = sslServerConfig.ApplyOverride(mapping.Listen.SslServerOptions);
+
             SessionManager sessionManager = new(sessionLogger);
 
             async void incomingClientHandler(TcpClient client, CancellationToken token)
@@ -109,7 +114,7 @@ namespace ProxyMapService.Proxy
                 await Session.Run(inboundEndPoint, client, mapping, loopDetector,
                     sessionAPI, proxyProvider, proxyAuthenticator, sessionManager,
                     hostRules, _cacheRules ?? cacheRules, cacheManager, 
-                    httpConfig, sslClientConfig, sslServerConfig,
+                    httpConfig, listenSslClientConfig, listenSslServerConfig,
                     proxyCounters, sessionLogger, token);
             }
 

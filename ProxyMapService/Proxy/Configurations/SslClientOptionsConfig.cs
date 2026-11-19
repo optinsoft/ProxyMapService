@@ -7,6 +7,52 @@
         public string ApplicationProtocols { get; set; } = "http/1.1";
         public List<TrustedCaConfig> TrustedCAs { get; set; } = [];
 
+        public SslClientOptionsConfig Clone()
+        {
+            return new SslClientOptionsConfig
+            {
+                EnabledSslProtocols = EnabledSslProtocols,
+                CheckCertificateRevocation = CheckCertificateRevocation,
+                ApplicationProtocols = ApplicationProtocols,
+                TrustedCAs = TrustedCAs,
+                TlsClientType = TlsClientType
+            };
+        }
+
+        /// <summary>
+        /// Returns this config unchanged when no overrides are given, otherwise a patched
+        /// clone where only the explicitly set override values differ from the original.
+        /// </summary>
+        public SslClientOptionsConfig ApplyOverride(SslClientOptionsOverride? overrides)
+        {
+            if (overrides == null)
+            {
+                return this;
+            }
+            var result = Clone();
+            if (overrides.EnabledSslProtocols != null)
+            {
+                result.EnabledSslProtocols = overrides.EnabledSslProtocols;
+            }
+            if (overrides.CheckCertificateRevocation != null)
+            {
+                result.CheckCertificateRevocation = overrides.CheckCertificateRevocation.Value;
+            }
+            if (overrides.ApplicationProtocols != null)
+            {
+                result.ApplicationProtocols = overrides.ApplicationProtocols;
+            }
+            if (overrides.TrustedCAs != null)
+            {
+                result.TrustedCAs = overrides.TrustedCAs;
+            }
+            if (overrides.TlsClientType != null)
+            {
+                result.TlsClientType = overrides.TlsClientType.Value;
+            }
+            return result;
+        }
+
         /// <summary>
         /// TLS stream implementation used for the upstream (outgoing) TLS connection:
         /// Native — System.Net.Security.SslStream;

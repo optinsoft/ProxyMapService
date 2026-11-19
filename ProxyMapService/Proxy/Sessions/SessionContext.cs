@@ -44,8 +44,8 @@ namespace ProxyMapService.Proxy.Sessions
         public bool DowngradeToHttp1ForCacheEnabled { get; set; }
         public bool DowngradeToHttp1ForOverwrittenHostEnabled { get; set; }
         public bool IgnoreHostRules { get; set; }
-        public SslClientOptionsConfig SslClientConfig { get; private set; }
-        public SslServerOptionsConfig SslServerConfig { get; private set; }
+        public SslClientOptionsConfig SslClientConfig { get; set; }
+        public SslServerOptionsConfig SslServerConfig { get; set; }
         public X509Certificate2? ServerCertificate { get; set; }
         public X509Certificate2? CACertificate { get; set; }
         public IProxyProvider ProxyProvider { get; private set; }

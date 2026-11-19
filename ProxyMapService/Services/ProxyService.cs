@@ -40,6 +40,11 @@ namespace ProxyMapService.Services
         private CacheManager? _cacheManager;
         private readonly List<PortRange> _listenPorts = [];
         private readonly IRoutingLoopDetector _routingLoopDetector = new RoutingLoopDetector();
+        // Kept alive for the whole lifetime of the mapping tasks: sessions lazily read the
+        // certificates from it long after StartProxyMappingTasks() has returned.
+        // Disposed here when the service is shut down (DI container disposes the singleton),
+        // or in StartProxyMappingTasks() when the service is restarted.
+        private SslServerOptionsConfig? _sslServerOptions;
 
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -171,7 +176,20 @@ namespace ProxyMapService.Services
             var sessionAPI = _configuration.GetSection("SessionAPI").Get<SessionAPIConfig>() ?? new SessionAPIConfig();
             var httpConfig = _configuration.GetSection("HTTP").Get<HttpConfig>() ?? new HttpConfig();
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
-            using var sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
+            _sslServerOptions?.Dispose();
+            _sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
+            var sslServerOptions = _sslServerOptions;
+            // Pre-load the certificates once, single-threaded: they are read lazily per session otherwise.
+            try
+            {
+                _ = sslServerOptions.ServerCertificate.Certificate;
+                _ = sslServerOptions.CACertificate.Certificate;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("[ProxyService.{}] Failed to load SSL server options certificates: {ErrorMessage}",
+                    _serviceId, ex.Message);
+            }
             var detailedLogging = _configuration.GetSection("DetailedLogging");
             Session.LogStepEnabled = detailedLogging.GetValue<bool>("LogStep", false);
             Http2Log.DiagnosticsEnabled = detailedLogging.GetValue<bool>("Http2Logging", false);
@@ -242,6 +260,21 @@ namespace ProxyMapService.Services
             }
             _logger.LogInformation("Terminating proxy mapping tasks...");
             _cts.Cancel();
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _sslServerOptions?.Dispose();
+                _sslServerOptions = null;
+            }
         }
 
         public string GetServiceInfo()

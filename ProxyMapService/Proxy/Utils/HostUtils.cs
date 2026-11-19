@@ -65,9 +65,30 @@ namespace ProxyMapService.Proxy.Utils
                 {
                     context.DowngradeToHttp1ForOverwrittenHostEnabled = hostRule.EnableDowngradeToHttp1ForOverwrittenHost.Value;
                 }
-                if (hostRule.ServerCertificate != null)
+                if (hostRule.SslClientOptions != null)
                 {
-                    context.ServerCertificate = hostRule.ServerCertificate;
+                    context.SslClientConfig = context.SslClientConfig.ApplyOverride(hostRule.SslClientOptions);
+                }
+                if (hostRule.SslServerOptions != null)
+                {
+                    context.SslServerConfig = context.SslServerConfig.ApplyOverride(hostRule.SslServerOptions);
+                    try
+                    {
+                        var overriddenServerCertificate = context.SslServerConfig.ServerCertificate.Certificate;
+                        if (overriddenServerCertificate != null)
+                        {
+                            context.ServerCertificate = overriddenServerCertificate;
+                        }
+                        var overriddenCaCertificate = context.SslServerConfig.CACertificate.Certificate;
+                        if (overriddenCaCertificate != null)
+                        {
+                            context.CACertificate = overriddenCaCertificate;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        context.Logger.LogError("Failed to load host rule SSL certificate overrides: {ErrorMessage}", ex.Message);
+                    }
                 }
                 if (hostRule.RootDir != null)
                 {

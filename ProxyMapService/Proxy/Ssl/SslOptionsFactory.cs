@@ -10,7 +10,9 @@ namespace ProxyMapService.Proxy.Ssl
 {
     public class SslOptionsFactory
     {
-        private static readonly ConcurrentDictionary<SslClientOptionsConfig, IReadOnlyList<X509Certificate2>> _trustedCaCache = new();
+        // Keyed by the TrustedCAs source definitions (not by config instance) so that
+        // per-session merged clones of SslClientOptionsConfig reuse the same resolved CAs.
+        private static readonly ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> _trustedCaCache = new();
 
         private static SslProtocols ParseProtocols(string protocols)
         {
@@ -101,12 +103,18 @@ namespace ProxyMapService.Proxy.Ssl
         {
             if (config.TrustedCAs.Count == 0) return [];
 
-            return _trustedCaCache.GetOrAdd(config, c =>
-                c.TrustedCAs
+            return _trustedCaCache.GetOrAdd(BuildTrustedCaKey(config), _ =>
+                config.TrustedCAs
                     .Select(ResolveTrustedCa)
                     .Where(c => c != null)
                     .Select(c => c!)
                     .ToList());
+        }
+
+        private static string BuildTrustedCaKey(SslClientOptionsConfig config)
+        {
+            return string.Join("|", config.TrustedCAs.Select(ca =>
+                $"{ca.PemFile ?? ""};{ca.CerFile ?? ""};{ca.StoreLocation ?? ""};{ca.StoreName ?? ""};{ca.Subject ?? ""}"));
         }
 
         private static X509Certificate2? ResolveTrustedCa(TrustedCaConfig ca)

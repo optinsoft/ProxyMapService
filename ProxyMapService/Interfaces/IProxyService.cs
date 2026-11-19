@@ -3,7 +3,7 @@ using ProxyMapService.Proxy.Configurations;
 
 namespace ProxyMapService.Interfaces
 {
-    public interface IProxyService
+    public interface IProxyService : IDisposable
     {
         CancellationToken StoppingToken { get; set; }
         bool Started { get; }
