@@ -1,5 +1,7 @@
 ﻿// Ignore Spelling: Proxified
 
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using ProxyMapService.Counters;
 using ProxyMapService.Exceptions;
 using ProxyMapService.Interfaces;
@@ -10,10 +12,11 @@ using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Counters;
 using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Http2;
-using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.RoutingLoopDetector;
+using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Utils;
 using ProxyMapService.WebLogging;
+using System.Linq;
 
 namespace ProxyMapService.Services
 {
@@ -45,6 +48,7 @@ namespace ProxyMapService.Services
         // Disposed here when the service is shut down (DI container disposes the singleton),
         // or in StartProxyMappingTasks() when the service is restarted.
         private SslServerOptionsConfig? _sslServerOptions;
+        private List<ProxyMapping>? _defaultProxyMappings;
 
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -139,6 +143,22 @@ namespace ProxyMapService.Services
                     _proxyCounters.HttpResponseBodyLogger.HttpBodyHandler += httpTrafficMonitor.LogHttpBody;
                 }
             }
+            if (configuration is IConfigurationRoot root)
+            {
+                var loadedJsonFiles = root.Providers
+                    .OfType<JsonConfigurationProvider>()
+                    .Where(p => p.Source.Path != null
+                        && p.Source.FileProvider?.GetFileInfo(p.Source.Path).Exists == true)
+                    .Select(p => p.Source.Path)
+                    .ToList();
+                bool isOnlyBaseSettings = loadedJsonFiles.Contains("appsettings.json")
+                                          && !loadedJsonFiles.Any(f => f!.StartsWith("appsettings.") && f != "appsettings.json");
+
+                if (isOnlyBaseSettings)
+                {
+                    _defaultProxyMappings = _configuration.GetSection("DefaultProxyMappings").Get<List<ProxyMapping>>();
+                }
+            }
             _logger.LogInformation(
                 "[ProxyService.{}] Service is created at {}.",
                 _serviceId,
@@ -173,6 +193,7 @@ namespace ProxyMapService.Services
             }
 
             var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
+            proxyMappings ??= _defaultProxyMappings;
             var sessionAPI = _configuration.GetSection("SessionAPI").Get<SessionAPIConfig>() ?? new SessionAPIConfig();
             var httpConfig = _configuration.GetSection("HTTP").Get<HttpConfig>() ?? new HttpConfig();
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
@@ -200,7 +221,7 @@ namespace ProxyMapService.Services
 
             if (proxyMappings == null || proxyMappings.Count == 0)
             {
-                throw new NoMappingsException();
+                _logger.LogWarning("[ProxyService.{}] No proxy mappings", _serviceId);
             }
 
             _certManager.CreateProxyMapRootCertificate("DO_NOT_TRUST_ProxyMapRoot");
@@ -216,20 +237,26 @@ namespace ProxyMapService.Services
                 DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
             List<Task> tasks = [];
             _routingLoopDetector.ClearListenPorts();
-            foreach (var mapping in proxyMappings)
+            if (proxyMappings != null)
             {
-                for (int port = mapping.Listen.PortRange.Start; port <= mapping.Listen.PortRange.End; port++)
+                foreach (var mapping in proxyMappings)
                 {
-                    _routingLoopDetector.AddListenPort(port);
+                    for (int port = mapping.Listen.PortRange.Start; port <= mapping.Listen.PortRange.End; port++)
+                    {
+                        _routingLoopDetector.AddListenPort(port);
+                    }
                 }
             }
             _routingLoopDetector.InitLocalIpAddresses();
-            foreach (var mapping in proxyMappings)
+            if (proxyMappings != null)
             {
-                tasks.Add(new ProxyMapper(mapping, _listenPorts, _routingLoopDetector, 
-                    sessionAPI, _hostRules, _cacheRules, _cacheManager,
-                    httpConfig, sslClientOptions, sslServerOptions, _proxyCounters,
-                    _logger, _sessionLogger, _maxListenerStartRetries, cancellationToken).Start());
+                foreach (var mapping in proxyMappings)
+                {
+                    tasks.Add(new ProxyMapper(mapping, _listenPorts, _routingLoopDetector,
+                        sessionAPI, _hostRules, _cacheRules, _cacheManager,
+                        httpConfig, sslClientOptions, sslServerOptions, _proxyCounters,
+                        _logger, _sessionLogger, _maxListenerStartRetries, cancellationToken).Start());
+                }
             }
             _started = true;
             _startTime = DateTime.Now;
