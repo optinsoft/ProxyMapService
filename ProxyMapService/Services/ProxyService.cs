@@ -48,7 +48,6 @@ namespace ProxyMapService.Services
         // Disposed here when the service is shut down (DI container disposes the singleton),
         // or in StartProxyMappingTasks() when the service is restarted.
         private SslServerOptionsConfig? _sslServerOptions;
-        private List<ProxyMapping>? _defaultProxyMappings;
 
         public CancellationToken StoppingToken { 
             get => _stoppingToken; 
@@ -143,22 +142,6 @@ namespace ProxyMapService.Services
                     _proxyCounters.HttpResponseBodyLogger.HttpBodyHandler += httpTrafficMonitor.LogHttpBody;
                 }
             }
-            if (configuration is IConfigurationRoot root)
-            {
-                var loadedJsonFiles = root.Providers
-                    .OfType<JsonConfigurationProvider>()
-                    .Where(p => p.Source.Path != null
-                        && p.Source.FileProvider?.GetFileInfo(p.Source.Path).Exists == true)
-                    .Select(p => p.Source.Path)
-                    .ToList();
-                bool isOnlyBaseSettings = loadedJsonFiles.Contains("appsettings.json")
-                                          && !loadedJsonFiles.Any(f => f!.StartsWith("appsettings.") && f != "appsettings.json");
-
-                if (isOnlyBaseSettings)
-                {
-                    _defaultProxyMappings = _configuration.GetSection("DefaultProxyMappings").Get<List<ProxyMapping>>();
-                }
-            }
             _logger.LogInformation(
                 "[ProxyService.{}] Service is created at {}.",
                 _serviceId,
@@ -178,7 +161,9 @@ namespace ProxyMapService.Services
                 throw new ServiceAlreadyStartedException();
             }
 
-            HostRules.LoadRulesList(_hostRules, _configuration.GetSection("HostRules"));
+            // HostRules/ProxyMappings are replaced as a whole by the topmost configuration
+            // layer that defines them (arrays must not be merged index by index across layers).
+            HostRules.LoadRulesList(_hostRules, ConfigurationTopLayerBinder.GetTopLayerSection(_configuration, "HostRules"));
             CacheRules.LoadRulesList(_cacheRules, _configuration.GetSection("CacheRules").Get<CacheRules>());
 
             var cacheConfig = _configuration.GetSection("Cache").Get<CacheConfig>();
@@ -192,13 +177,16 @@ namespace ProxyMapService.Services
                     .GetResult();
             }
 
-            var proxyMappings = _configuration.GetSection("ProxyMappings").Get<List<ProxyMapping>>();
-            proxyMappings ??= _defaultProxyMappings;
+            var proxyMappings = ConfigurationTopLayerBinder.GetTopLayerSection(_configuration, "ProxyMappings").Get<List<ProxyMapping>>();
             var sessionAPI = _configuration.GetSection("SessionAPI").Get<SessionAPIConfig>() ?? new SessionAPIConfig();
             var httpConfig = _configuration.GetSection("HTTP").Get<HttpConfig>() ?? new HttpConfig();
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
             _sslServerOptions?.Dispose();
-            _sslServerOptions = _configuration.GetSection("SslServerOptions").Get<SslServerOptionsConfig>() ?? new SslServerOptionsConfig();
+            // Bind via ConfigurationTopLayerBinder so that ServerCertificate/CACertificate are
+            // taken only from the topmost configuration layer that defines them, instead of
+            // being merged key by key across layers (e.g. Path from appsettings.json mixed
+            // with StoreLocation/StoreName/Subject from appsettings.Production.json).
+            _sslServerOptions = ConfigurationTopLayerBinder.GetSslServerOptions(_configuration);
             var sslServerOptions = _sslServerOptions;
             // Pre-load the certificates once, single-threaded: they are read lazily per session otherwise.
             try

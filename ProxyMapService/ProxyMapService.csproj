@@ -36,7 +36,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>Vitaly Yakovlev (optinosft)</Authors>
     <Copyright>Vitaly Yakovlev, vitaly@optinosft.net</Copyright>
     <Description>Proxy mapping service: routes traffic through external proxy servers or bypasses them, with optional SSL decryption, per-port and per-host SSL/TLS options overrides, browser-like TLS fingerprints (Chrome/Firefox), response caching, HTTP/1.1 pipelining, HTTP/2 and WebSocket support, host blocking rules and a web dashboard.</Description>

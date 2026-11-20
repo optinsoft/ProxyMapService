@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using ProxyMapService.Interfaces;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Middleware;
 using ProxyMapService.Models;
 using ProxyMapService.Proxy.Counters;
@@ -29,9 +30,13 @@ if (logggingEventLog.Exists())
 #pragma warning restore CA1416 // Checking platform compatibility
 }
 
-var jwtAuthConfig = builder.Configuration.GetSection("Authentication:Jwt");
+// Take Authentication from the topmost configuration layer only: if e.g.
+// appsettings.Production.json defines Authentication, the base layer's one must
+// be ignored entirely instead of being merged key by key.
+var authenticationSection = ConfigurationTopLayerBinder.GetTopLayerSection(builder.Configuration, "Authentication");
+var jwtAuthConfig = authenticationSection.GetSection("Jwt");
 var jwtAuthEnabled = jwtAuthConfig.GetValue<bool>("Enabled");
-var devTokenConfig = builder.Configuration.GetSection("Authentication:DevToken");
+var devTokenConfig = authenticationSection.GetSection("DevToken");
 var devTokenEnabled = devTokenConfig.GetValue<bool>("Enabled");
 var serveDashboard = builder.Configuration.GetValue<bool>("Dashboard:Enabled");
 var routePrefix = builder.Configuration.GetValue<string>("Routing:RoutePrefix") ?? "/ProxyMapService";

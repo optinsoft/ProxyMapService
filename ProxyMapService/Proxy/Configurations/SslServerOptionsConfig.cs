@@ -14,6 +14,18 @@ namespace ProxyMapService.Proxy.Configurations
         public SslCertificateConfig ServerCertificate { get => _serverCertificate; }
         public SslCertificateConfig CACertificate { get => _caCertificate; }
 
+        // Used by ConfigurationTopLayerBinder to replace a whole certificate section
+        // (bound from a single configuration layer) instead of merging layers key by key.
+        internal void ReplaceServerCertificate(SslCertificateConfig certificate)
+        {
+            _serverCertificate = certificate;
+        }
+
+        internal void ReplaceCACertificate(SslCertificateConfig certificate)
+        {
+            _caCertificate = certificate;
+        }
+
         public SslServerOptionsConfig Clone()
         {
             // The lazily-loaded certificate configs are shared with the original;
