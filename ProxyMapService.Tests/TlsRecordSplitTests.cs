@@ -392,7 +392,14 @@ namespace ProxyMapService.Tests
             request.CertificateExtensions.Add(
                 new X509EnhancedKeyUsageExtension(
                     new OidCollection { new("1.3.6.1.5.5.7.3.1") }, false));
-            return request.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+            using var certificate = request.CreateSelfSigned(
+                DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddYears(1));
+
+            // On Windows, SslStream cannot use the in-memory (ephemeral) private key
+            // produced by CreateSelfSigned ("the platform does not support ephemeral keys").
+            // Re-importing the exported PFX creates a key the platform can work with
+            // (same workaround as HttpsTestServer.CreateCertificate).
+            return new X509Certificate2(certificate.Export(X509ContentType.Pfx));
         }
     }
 }
