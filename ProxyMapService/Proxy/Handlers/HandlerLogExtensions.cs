@@ -523,6 +523,18 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "Cannot switch client {Client} to HTTP/1.1 for {Host}: {Reason}. Host override and caching are not applied to this session")]
         public static partial void LogIncomingDowngradeImpossible(this ILogger logger, System.Net.EndPoint? client, HostAddress host, string reason);
 
+        [LoggerMessage(
+            EventId = 1317,
+            Level = LogLevel.Debug,
+            Message = "TLS record split ({Spec}) applied to the ClientHello for {Hostname}:{Port}")]
+        private static partial void LogTlsRecordSplitInternal(this ILogger logger, string spec, string hostname, int port);
+
+        public static void LogTlsRecordSplit(this ILogger logger, string spec, HostAddress host)
+        {
+            if (!TlsHandshakeLogEnabled) return;
+            logger.LogTlsRecordSplitInternal(spec, host.Hostname, host.Port);
+        }
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

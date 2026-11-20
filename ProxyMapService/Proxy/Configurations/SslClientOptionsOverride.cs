@@ -14,5 +14,6 @@ namespace ProxyMapService.Proxy.Configurations
         public string? ApplicationProtocols { get; set; }
         public List<TrustedCaConfig>? TrustedCAs { get; set; }
         public TlsClientType? TlsClientType { get; set; }
+        public string? TlsRecordSplit { get; set; }
     }
 }

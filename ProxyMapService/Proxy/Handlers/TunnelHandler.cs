@@ -59,12 +59,7 @@ namespace ProxyMapService.Proxy.Handlers
 
                 using SslStream? incomingSslStream = context.DecryptSSL && isIncomingSSL ? new(context.IncomingStream) : null;
                 using Stream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL
-                    ? context.SslClientConfig.TlsClientType switch
-                    {
-                        TlsClientType.BoringSsl => new BoringSslStream(context.OutgoingStream, context.Host.Hostname),
-                        TlsClientType.Nss => new NssSsl.NssStream(context.OutgoingStream, context.Host.Hostname),
-                        _ => new SslStream(context.OutgoingStream),
-                    }
+                    ? CreateOutgoingSslStream(context)
                     : null;
 
                 using CountingStream? incomingSslCountingStream =
@@ -359,6 +354,31 @@ namespace ProxyMapService.Proxy.Handlers
                         context.ResponseTunnelState);
 
             await requestTunnel.RunAsync();
+        }
+
+        /// <summary>
+        /// Creates the upstream TLS stream over <see cref="SessionContext.OutgoingStream"/>.
+        /// When SslClientOptions:TlsRecordSplit is configured, a <see cref="TlsRecordSplitStream"/>
+        /// is inserted between the TLS implementation and the raw outgoing stream so that the
+        /// first TLS record (ClientHello) is re-chunked into several separate TLS records.
+        /// </summary>
+        private static Stream CreateOutgoingSslStream(SessionContext context)
+        {
+            Stream inner = context.OutgoingStream!;
+
+            var splitSpec = TlsRecordSplitSpec.Parse(context.SslClientConfig.TlsRecordSplit);
+            if (splitSpec != null)
+            {
+                inner = new TlsRecordSplitStream(inner, splitSpec);
+                context.Logger.LogTlsRecordSplit(context.SslClientConfig.TlsRecordSplit!, context.Host);
+            }
+
+            return context.SslClientConfig.TlsClientType switch
+            {
+                TlsClientType.BoringSsl => new BoringSslStream(inner, context.Host.Hostname),
+                TlsClientType.Nss => new NssSsl.NssStream(inner, context.Host.Hostname),
+                _ => new SslStream(inner),
+            };
         }
 
         private static SslApplicationProtocol ToAlpn(string? alpn) =>
