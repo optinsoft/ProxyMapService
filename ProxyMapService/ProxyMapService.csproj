@@ -1,5 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
+	<Target Name="CreatePublishArchive" AfterTargets="Publish" Condition="'$(PublishArchive)' != 'false'">
+		<PropertyGroup>
+			<_ArchiveRid Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' != '*'">-$(RuntimeIdentifier)</_ArchiveRid>
+			<_PublishArchiveDir>$(MSBuildProjectDirectory)/publish</_PublishArchiveDir>
+			<_PublishArchivePath>$(_PublishArchiveDir)/$(AssemblyName)-v$(Version)$(_ArchiveRid).zip</_PublishArchivePath>
+		</PropertyGroup>
+
+		<Message Text="====================================================" Importance="high" />
+		<Message Text="CREATING PUBLISH ARCHIVE..." Importance="high" />
+		<Message Text="====================================================" Importance="high" />
+
+		<MakeDir Directories="$(_PublishArchiveDir)" />
+		<Delete Files="$(_PublishArchivePath)" Condition="Exists($(_PublishArchivePath))" />
+		<ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(_PublishArchivePath)" />
+
+		<Message Text="Publish archive created: $(_PublishArchivePath)" Importance="high" />
+	</Target>
+
 	<Target Name="PublishVueApp" BeforeTargets="ComputeFilesToPublish">
 		<PropertyGroup>
 			<VueAppDir>../dashboard/</VueAppDir>
