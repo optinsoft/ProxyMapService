@@ -2,14 +2,13 @@ namespace ProxyMapService.Proxy.Tls
 {
     /// <summary>
     /// Specification for splitting the first outgoing TLS record (the ClientHello) into
-    /// several separate TLS records on the TLS protocol level itself (like byedpi's
-    /// <c>--split</c>). The resulting records carry the same content type and version as
-    /// the original record and together reassemble into the identical payload, so any
-    /// RFC-conforming TLS server accepts them.
+    /// several separate TLS records on the TLS protocol level itself. The resulting records
+    /// carry the same content type and version as the original record and together
+    /// reassemble into the identical payload, so any RFC-conforming TLS server accepts them.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Positions use the byedpi syntax <c>offset[:repeats:skip][+flag1[flag2]]</c>,
+    /// Positions use the syntax <c>offset[:repeats:skip][+flag1[flag2]]</c>,
     /// measured from the start of the ClientHello itself (the record payload, i.e. without
     /// the 5-byte TLS record header). Examples:
     /// <c>1</c>, <c>3+s</c> (3 bytes after the start of the SNI hostname),
@@ -21,9 +20,8 @@ namespace ProxyMapService.Proxy.Tls
     /// SNI hostname is used. Multiple positions are separated by commas/semicolons.
     /// </para>
     /// <para>
-    /// Note: this kind of splitting operates on the TLS record layer and therefore differs
-    /// from byedpi's TCP-level split/disorder tricks — it is applied by the proxy itself
-    /// on the outgoing connection and works on any platform.
+    /// Note: this kind of splitting operates on the TLS record layer — it is applied by the
+    /// proxy itself on the outgoing connection and works on any platform.
     /// </para>
     /// </remarks>
     public sealed class TlsRecordSplitSpec
@@ -100,6 +98,25 @@ namespace ProxyMapService.Proxy.Tls
         /// <param name="sniEnd">Absolute end offset of the SNI hostname inside the record, if present.</param>
         public byte[]? BuildSplitRecords(ReadOnlySpan<byte> record, int? sniStart, int? sniEnd)
         {
+            var segments = BuildSplitRecordSegments(record, sniStart, sniEnd);
+            if (segments == null) return null;
+            var result = new byte[segments.Sum(s => s.Length)];
+            int target = 0;
+            foreach (var segment in segments)
+            {
+                segment.CopyTo(result, target);
+                target += segment.Length;
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Same as <see cref="BuildSplitRecords"/>, but returns each resulting TLS record as a
+        /// separate segment so that they can be written (and sent) individually — a separate
+        /// write per split record so that DPI sees them as distinct packets.
+        /// </summary>
+        public List<byte[]>? BuildSplitRecordSegments(ReadOnlySpan<byte> record, int? sniStart, int? sniEnd)
+        {
             int recordLen = record.Length;
             int payloadLen = recordLen - 5;
             if (payloadLen <= 0) return null;
@@ -136,14 +153,27 @@ namespace ProxyMapService.Proxy.Tls
             }
 
             // splits produce offsets.Count + 1 records: the first keeps the original header
-            var result = new byte[recordLen + 5 * offsets.Count];
-            int source = 0, target = 0;
+            var result = new List<byte[]>(offsets.Count + 1);
+            int source = 0;
             foreach (int end in offsets)
             {
-                WriteRecord(record, source, end, result, ref target);
+                result.Add(WriteRecord(record, source, end));
                 source = end;
             }
-            WriteRecord(record, source, payloadLen, result, ref target);
+            result.Add(WriteRecord(record, source, payloadLen));
+            return result;
+        }
+
+        /// <summary>Builds one TLS record (5-byte header + payload chunk) from the source record.</summary>
+        private static byte[] WriteRecord(ReadOnlySpan<byte> record, int source, int end)
+        {
+            int length = end - source;
+            var result = new byte[5 + length];
+            record.Slice(0, 5).CopyTo(result);
+            result[3] = (byte)(length >> 8);
+            result[4] = (byte)length;
+            // The payload starts after the 5-byte record header.
+            record.Slice(5 + source, length).CopyTo(result.AsSpan(5));
             return result;
         }
 
@@ -152,7 +182,7 @@ namespace ProxyMapService.Proxy.Tls
             bool hasSni = sniPos.HasValue && sniEndPos.HasValue;
             int pos = point.Offset + (point.Repeats > 1 ? iteration * point.Skip : 0);
 
-            // Like byedpi: a negative offset without flags counts from the end of the message.
+            // A negative offset without flags counts from the end of the message.
             if (point.Offset < 0 && point.Flags.Length == 0)
             {
                 pos += payloadLen;
@@ -194,19 +224,6 @@ namespace ProxyMapService.Proxy.Tls
             }
 
             return pos;
-        }
-
-        private static void WriteRecord(ReadOnlySpan<byte> record, int source, int end, byte[] result, ref int target)
-        {
-            int length = end - source;
-            result[target] = record[0];
-            result[target + 1] = record[1];
-            result[target + 2] = record[2];
-            result[target + 3] = (byte)(length >> 8);
-            result[target + 4] = (byte)length;
-            // The payload starts after the 5-byte record header.
-            record.Slice(5 + source, length).CopyTo(result.AsSpan(target + 5));
-            target += 5 + length;
         }
     }
 }

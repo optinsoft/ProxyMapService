@@ -5,24 +5,30 @@ namespace ProxyMapService.Proxy.Counters
 {
     public class CountingStream(Stream stream, SessionContext context, 
         IBytesReadCounter? readCounter, IBytesSendCounter? sendCounter,
-        long readTunnelId, long sendTunnelId) : Stream
+        long readTunnelId, long sendTunnelId) : Stream, ITunnelStream
     {
         private bool _readCountPaused = false;
         private bool _sendCountPaused = false;
         //private bool? _isTls = null;
         private byte[]? _tlsRecord;
         private bool _tlsPeeked;
+        private EventHandler? _disconnectHandler;
 
         public long ReadTunnelId { get; set; } = readTunnelId;
         public long SendTunnelId { get; set; } = sendTunnelId;
 
-        public event EventHandler? DisconnectHandler;
+        public event EventHandler? DisconnectHandler
+        {
+            add { _disconnectHandler += value; }
+            remove { _disconnectHandler -= value; }
+        }
 
-        public void TransferHandlersTo(CountingStream target)
+        public void TransferHandlersTo(ITunnelStream target)
         {
             if (target == null) return;
-            target.DisconnectHandler = this.DisconnectHandler;
-            this.DisconnectHandler = null;
+            var handlers = _disconnectHandler;
+            _disconnectHandler = null;
+            if (handlers != null) target.DisconnectHandler += handlers;
         }
 
         public virtual void OnBytesRead(int bytesRead, byte[]? bytesData, int startIndex)
@@ -42,8 +48,9 @@ namespace ProxyMapService.Proxy.Counters
 
         public virtual void OnDisconnected()
         {
-            DisconnectHandler?.Invoke(context, EventArgs.Empty);
-            DisconnectHandler = null;
+            var handlers = _disconnectHandler;
+            _disconnectHandler = null;
+            handlers?.Invoke(context, EventArgs.Empty);
         }
 
         public void PauseReadCount() { _readCountPaused = true; }

@@ -32,6 +32,11 @@ namespace ProxyMapService.Proxy.Configurations
         public string? OverrideHostName { get; set; }
         public int? OverrideHostPort { get; set; }
         public bool? DecryptSSL { get; set; }
+        /// <summary>
+        /// Override of the Listen-level TLS record split specification
+        /// (see Listen.TlsRecordSplit for the syntax). Null — inherited.
+        /// </summary>
+        public string? TlsRecordSplit { get; set; }
         public bool? IgnoreCertificateErrors { get; set; }
         public SslMode? SslMode { get; set; }
         public SslMode? UpstreamSslMode { get; set; }

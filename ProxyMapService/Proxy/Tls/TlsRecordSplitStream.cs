@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using ProxyMapService.Proxy.Counters;
 
 namespace ProxyMapService.Proxy.Tls
 {
@@ -11,11 +12,19 @@ namespace ProxyMapService.Proxy.Tls
     /// reads pass through unchanged.
     /// </summary>
     /// <remarks>
+    /// It is also used in passthrough mode (no MITM): there the client's own ClientHello
+    /// travels through the tunnel unchanged, so the splitter is applied directly on the
+    /// outgoing stream and acts as the tunnel destination stream. In both modes byte
+    /// counting and disconnect handling are delegated to the wrapped stream, which is
+    /// a <see cref="CountingStream"/> — the splitter only forwards the
+    /// <see cref="ITunnelStream"/> members to it.
+    /// </remarks>
+    /// <remarks>
     /// The wrapper needs to see whole records, so an incomplete first record is buffered
     /// until enough bytes have been written by the TLS implementation. The maximum TLS
     /// record size is 16 KB + headers, so the buffer never grows beyond that in practice.
     /// </remarks>
-    public sealed class TlsRecordSplitStream : Stream
+    public sealed class TlsRecordSplitStream : Stream, ITunnelStream
     {
         private const int MaxRecordSize = 16384 + 5;
         private const int MaxBuffered = 64 * 1024;
@@ -30,6 +39,19 @@ namespace ProxyMapService.Proxy.Tls
         {
             _inner = inner;
             _spec = spec;
+        }
+
+        /// <summary>The wrapped stream is the counting owner; forward everything to it.</summary>
+        private ITunnelStream? TunnelInner => _inner as ITunnelStream;
+
+        public void OnDisconnected() => TunnelInner?.OnDisconnected();
+
+        public void TransferHandlersTo(ITunnelStream target) => TunnelInner?.TransferHandlersTo(target);
+
+        public event EventHandler? DisconnectHandler
+        {
+            add { var ts = TunnelInner; if (ts != null) ts.DisconnectHandler += value; }
+            remove { var ts = TunnelInner; if (ts != null) ts.DisconnectHandler -= value; }
         }
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
@@ -84,10 +106,14 @@ namespace ProxyMapService.Proxy.Tls
                     sniStart = s;
                     sniEnd = e;
                 }
-                var split = _spec.BuildSplitRecords(_buffer.AsSpan(0, recordLen), sniStart, sniEnd);
-                if (split != null)
+                var segments = _spec.BuildSplitRecordSegments(_buffer.AsSpan(0, recordLen), sniStart, sniEnd);
+                if (segments != null)
                 {
-                    await _inner.WriteAsync(split.AsMemory(), cancellationToken);
+                    // Each resulting TLS record is written separately
+                    foreach (var segment in segments)
+                    {
+                        await _inner.WriteAsync(segment, cancellationToken);
+                    }
                 }
                 else
                 {

@@ -15,8 +15,8 @@ namespace ProxyMapService.Proxy.Tunnels
 
         public HttpResponseTunnel(
             SessionContext context,
-            CountingStream source,
-            CountingStream destination,
+            ITunnelStream source,
+            ITunnelStream destination,
             TaskCompletionSource destinationReady,
             BytesReadCounter readCounter,
             BytesSendCounter sendCounter,

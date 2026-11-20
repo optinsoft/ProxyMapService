@@ -31,6 +31,16 @@
         public int StickyProxyLifetime { get; set; } = 0;
         public ActionEnum Action { get; set; } = ActionEnum.Allow;
         public bool DecryptSSL { get; set; } = false;
+        /// <summary>
+        /// Optional splitting of the first outgoing TLS record (ClientHello) into several
+        /// separate TLS records (like TlsRecordSplit --split). Comma-separated split positions:
+        /// syntax "offset[:repeats:skip][+flag1[flag2]]", e.g. "1", "3+s", "0+sm", "-5".
+        /// Flags: +s — SNI start, +e — end, +m — middle, +n — zero (absolute) offset.
+        /// Null/empty — disabled. Applied whenever the outgoing connection is TLS, both in
+        /// MITM mode (DecryptSSL, the proxy generates the ClientHello) and in passthrough mode
+        /// (the client's own ClientHello is re-chunked on the fly).
+        /// </summary>
+        public string? TlsRecordSplit { get; set; }
         public bool IgnoreCertificateErrors { get; set; } = false;
         public SslMode SslMode { get; set; } = SslMode.Auto;
         public SslMode UpstreamSslMode { get; set; } = SslMode.Auto;

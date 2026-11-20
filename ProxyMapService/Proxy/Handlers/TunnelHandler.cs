@@ -62,6 +62,17 @@ namespace ProxyMapService.Proxy.Handlers
                     ? CreateOutgoingSslStream(context)
                     : null;
 
+                // Passthrough TLS (no MITM): the client's own ClientHello travels through the
+                // tunnel unchanged, so the record splitter is applied directly on the outgoing
+                // stream. The split does not require MITM and works in both modes.
+                using TlsRecordSplitStream? passthroughSplitStream =
+                    !context.DecryptSSL && isOutgoingSSL
+                        ? CreatePassthroughSplitStream(context)
+                        : null;
+
+                // The tunnel destination must implement ITunnelStream (disconnect handling);
+                // the split stream only forwards those members to the inner counting stream.
+
                 using CountingStream? incomingSslCountingStream =
                     incomingSslStream != null
                     ? new CountingStream(incomingSslStream, context,
@@ -79,7 +90,9 @@ namespace ProxyMapService.Proxy.Handlers
                 var outgoingReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
                 var incomingStream = incomingSslCountingStream ?? context.IncomingStream;
-                var outgoingStream = outgoingSslCountingStream ?? context.OutgoingStream;
+                var outgoingStream = outgoingSslCountingStream
+                    ?? (ITunnelStream?)passthroughSplitStream
+                    ?? context.OutgoingStream;
 
                 using var tunnelCts = CancellationTokenSource.CreateLinkedTokenSource(context.Token);
                 context.TunnelToken = tunnelCts.Token;
@@ -207,7 +220,7 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         private static async Task RunRequestTunnel(SessionContext context,
-            SslStream? incomingSslStream, CountingStream incomingStream, CountingStream outgoingStream,
+            SslStream? incomingSslStream, ITunnelStream incomingStream, ITunnelStream outgoingStream,
             TaskCompletionSource incomingReady, TaskCompletionSource outgoingReady)
         {
             try
@@ -244,7 +257,9 @@ namespace ProxyMapService.Proxy.Handlers
                     if (context.TranslateH1ToH2)
                     {
                         context.Logger.LogHttp1to2Translation(context.IncomingEndPoint, context.Host);
-                        context.OutgoingHttp2Client = new Http2ClientConnection(outgoingStream);
+                        // Every ITunnelStream implementation is a Stream (the interface only
+                        // declares the tunnel members, not the full Stream surface).
+                        context.OutgoingHttp2Client = new Http2ClientConnection((Stream)outgoingStream);
                         await context.OutgoingHttp2Client.StartAsync(context.TunnelToken);
                     }
                     else if (context.IncomingHttp2 && context.OutgoingHttp2)
@@ -358,7 +373,7 @@ namespace ProxyMapService.Proxy.Handlers
 
         /// <summary>
         /// Creates the upstream TLS stream over <see cref="SessionContext.OutgoingStream"/>.
-        /// When SslClientOptions:TlsRecordSplit is configured, a <see cref="TlsRecordSplitStream"/>
+        /// When context.TlsRecordSplit is configured, a <see cref="TlsRecordSplitStream"/>
         /// is inserted between the TLS implementation and the raw outgoing stream so that the
         /// first TLS record (ClientHello) is re-chunked into several separate TLS records.
         /// </summary>
@@ -366,11 +381,11 @@ namespace ProxyMapService.Proxy.Handlers
         {
             Stream inner = context.OutgoingStream!;
 
-            var splitSpec = TlsRecordSplitSpec.Parse(context.SslClientConfig.TlsRecordSplit);
+            var splitSpec = TlsRecordSplitSpec.Parse(context.TlsRecordSplit);
             if (splitSpec != null)
             {
                 inner = new TlsRecordSplitStream(inner, splitSpec);
-                context.Logger.LogTlsRecordSplit(context.SslClientConfig.TlsRecordSplit!, context.Host);
+                context.Logger.LogTlsRecordSplit(context.TlsRecordSplit!, context.Host);
             }
 
             return context.SslClientConfig.TlsClientType switch
@@ -379,6 +394,19 @@ namespace ProxyMapService.Proxy.Handlers
                 TlsClientType.Nss => new NssSsl.NssStream(inner, context.Host.Hostname),
                 _ => new SslStream(inner),
             };
+        }
+
+        /// <summary>
+        /// Passthrough mode (no MITM): the client's own ClientHello travels through the tunnel
+        /// unchanged, so the record splitter is applied directly on the outgoing stream.
+        /// </summary>
+        private static TlsRecordSplitStream? CreatePassthroughSplitStream(SessionContext context)
+        {
+            var splitSpec = TlsRecordSplitSpec.Parse(context.TlsRecordSplit);
+            if (splitSpec == null) return null;
+
+            context.Logger.LogTlsRecordSplit(context.TlsRecordSplit!, context.Host);
+            return new TlsRecordSplitStream(context.OutgoingStream!, splitSpec);
         }
 
         private static SslApplicationProtocol ToAlpn(string? alpn) =>
@@ -411,7 +439,7 @@ namespace ProxyMapService.Proxy.Handlers
         }
 
         private static async Task RunResponseTunnel(SessionContext context,
-            Stream? outgoingSslStream, CountingStream incomingStream, CountingStream outgoingStream,
+            Stream? outgoingSslStream, ITunnelStream incomingStream, ITunnelStream outgoingStream,
             TaskCompletionSource incomingReady, TaskCompletionSource outgoingReady)
         {
             try

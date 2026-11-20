@@ -14,8 +14,8 @@ namespace ProxyMapService.Proxy.Tunnels
 
         public H1ToH2RequestTunnel(
             SessionContext context,
-            CountingStream source,
-            CountingStream destination,
+            ITunnelStream source,
+            ITunnelStream destination,
             TaskCompletionSource destinationReady,
             BytesReadCounter readCounter,
             BytesSendCounter sendCounter,
@@ -40,7 +40,7 @@ namespace ProxyMapService.Proxy.Tunnels
             var h = new HttpRequestHeader(lines);
             if (!Http1Http2Converter.TryBuildRequest(h, true, out var headers, out var err))
             {
-                await HttpProto.HttpReplyNotImplemented(_context, h, _source, err);
+                await HttpProto.HttpReplyNotImplemented(_context, h, (Stream)_source, err);
                 throw new IOException(err);
             }
             _streamId = await _conn.BeginRequestAsync(h.HTTPVerb!, h.KeepAlive, headers, endStream: tracker.Completed, token);

@@ -37,6 +37,11 @@ namespace ProxyMapService.Proxy.Sessions
         public SessionAPIConfig SessionAPI { get; set; }
         public SessionAction Action { get; set; }
         public bool DecryptSSL { get; set; }
+        /// <summary>
+        /// TLS record split specification (see Listen.TlsRecordSplit), taken from the Listen
+        /// settings and optionally overridden by a HostRule.
+        /// </summary>
+        public string? TlsRecordSplit { get; set; }
         public bool IgnoreCertificateErrors { get; set; }
         public SslMode SslMode { get; set; }
         public SslMode UpstreamSslMode { get; set; }
@@ -243,6 +248,7 @@ namespace ProxyMapService.Proxy.Sessions
                 _ => SessionActionEnum.Proxy
             };
             DecryptSSL = mapping.Listen.DecryptSSL;
+            TlsRecordSplit = mapping.Listen.TlsRecordSplit;
             IgnoreCertificateErrors = mapping.Listen.IgnoreCertificateErrors;
             SslMode = mapping.Listen.SslMode;
             UpstreamSslMode = mapping.Listen.UpstreamSslMode;

@@ -13,8 +13,8 @@ namespace ProxyMapService.Proxy.Tunnels
 
         public Http2RequestTunnel(
             SessionContext context,
-            CountingStream source,
-            CountingStream destination,
+            ITunnelStream source,
+            ITunnelStream destination,
             TaskCompletionSource destinationReady,
             BytesReadCounter readCounter,
             BytesSendCounter sendCounter,

@@ -12,8 +12,8 @@ namespace ProxyMapService.Proxy.Tunnels
     public abstract partial class HttpTunnel : IDisposable
     {
         protected readonly SessionContext _context;
-        protected readonly CountingStream _source;
-        protected readonly CountingStream _destination;
+        protected readonly ITunnelStream _source;
+        protected readonly ITunnelStream _destination;
         protected readonly TaskCompletionSource _destinationReady;
         protected readonly BytesReadCounter _readCounter;
         protected readonly BytesSendCounter _sendCounter;
@@ -24,8 +24,8 @@ namespace ProxyMapService.Proxy.Tunnels
 
         public HttpTunnel(
             SessionContext context,
-            CountingStream source,
-            CountingStream destination,
+            ITunnelStream source,
+            ITunnelStream destination,
             TaskCompletionSource destinationReady,
             BytesReadCounter readCounter,
             BytesSendCounter sendCounter,
@@ -173,11 +173,11 @@ namespace ProxyMapService.Proxy.Tunnels
 
         #endregion
 
-        protected static async Task ReplyCacheFile(CacheEntry cacheEntry, FileStream cacheFileStream, CountingStream incomingStream, 
+        protected static async Task ReplyCacheFile(CacheEntry cacheEntry, FileStream cacheFileStream, ITunnelStream incomingStream, 
             SessionContext context, HttpRequestHeader? requestHeader)
         {
             context.ProxyCounters.SessionsCounter?.OnCacheResponse(context);
-            await HttpProto.HttpReplyCacheFileStream(context, requestHeader, incomingStream, cacheEntry, cacheFileStream);
+            await HttpProto.HttpReplyCacheFileStream(context, requestHeader, (Stream)incomingStream, cacheEntry, cacheFileStream);
             context.Logger.LogResponseFromCache(cacheFileStream.Name);
         }
 

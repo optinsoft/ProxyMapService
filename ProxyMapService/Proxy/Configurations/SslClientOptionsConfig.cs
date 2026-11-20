@@ -7,16 +7,6 @@
         public string ApplicationProtocols { get; set; } = "http/1.1";
         public List<TrustedCaConfig> TrustedCAs { get; set; } = [];
 
-        /// <summary>
-        /// Optional splitting of the first outgoing TLS record (ClientHello) into several
-        /// separate TLS records (like byedpi --split). Comma-separated split positions in the
-        /// byedpi syntax "offset[:repeats:skip][+flag1[flag2]]", e.g. "1", "3+s", "0+sm", "-5".
-        /// Flags: +s — SNI start, +e — end, +m — middle, +n — zero (absolute) offset.
-        /// Null/empty — disabled. Applied only when the outgoing connection is TLS
-        /// (see TlsClientType) and the proxy generates the ClientHello itself (DecryptSSL).
-        /// </summary>
-        public string? TlsRecordSplit { get; set; }
-
         public SslClientOptionsConfig Clone()
         {
             return new SslClientOptionsConfig
@@ -25,8 +15,7 @@
                 CheckCertificateRevocation = CheckCertificateRevocation,
                 ApplicationProtocols = ApplicationProtocols,
                 TrustedCAs = TrustedCAs,
-                TlsClientType = TlsClientType,
-                TlsRecordSplit = TlsRecordSplit
+                TlsClientType = TlsClientType
             };
         }
 
@@ -60,10 +49,6 @@
             if (overrides.TlsClientType != null)
             {
                 result.TlsClientType = overrides.TlsClientType.Value;
-            }
-            if (overrides.TlsRecordSplit != null)
-            {
-                result.TlsRecordSplit = overrides.TlsRecordSplit;
             }
             return result;
         }

@@ -448,7 +448,7 @@ namespace ProxyMapService.Proxy.Proto
         }
 
         public static async Task HttpReplyCacheFileStream(SessionContext context, HttpRequestHeader? requestHeader, 
-            CountingStream? incomingStream, CacheEntry cacheEntry, FileStream fileStream)
+            Stream? incomingStream, CacheEntry cacheEntry, FileStream fileStream)
         {
             if (incomingStream == null) return;
             var oldCached = context.CachedReply;

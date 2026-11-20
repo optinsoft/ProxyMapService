@@ -28,8 +28,8 @@ namespace ProxyMapService.Proxy.Tunnels
 
         public H2ToH1ResponseTunnel(
             SessionContext context,
-            CountingStream source,
-            CountingStream destination,
+            ITunnelStream source,
+            ITunnelStream destination,
             TaskCompletionSource destinationReady,
             BytesReadCounter readCounter,
             BytesSendCounter sendCounter,
@@ -234,7 +234,7 @@ namespace ProxyMapService.Proxy.Tunnels
             _conn.MarkResponseEnded(reset: true);
             if (!headersSent)
             {
-                await HttpProto.HttpReplyBadGateway(_context, _context.RequestHeader, _destination,
+                await HttpProto.HttpReplyBadGateway(_context, _context.RequestHeader, (Stream)_destination,
                     $"Upstream reset the stream (HTTP/2 error {code})");
                 throw new IOException("Upstream reset the stream before the response");
             }

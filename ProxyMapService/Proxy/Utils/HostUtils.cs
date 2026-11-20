@@ -38,6 +38,10 @@ namespace ProxyMapService.Proxy.Utils
                 {
                     context.DecryptSSL = hostRule.DecryptSSL.Value;
                 }
+                if (hostRule.TlsRecordSplit != null)
+                {
+                    context.TlsRecordSplit = hostRule.TlsRecordSplit;
+                }
                 if (hostRule.IgnoreCertificateErrors != null)
                 {
                     context.IgnoreCertificateErrors = hostRule.IgnoreCertificateErrors.Value;

@@ -5,12 +5,14 @@ using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Tls;
 
 namespace ProxyMapService.Tests
 {
     /// <summary>
-    /// Tests for the SslClientOptions:TlsRecordSplit feature: splitting the first
+    /// Tests for the Listen/HostRule TlsRecordSplit setting: splitting the first
     /// outgoing TLS record (ClientHello) into several separate TLS records.
     /// </summary>
     public class TlsRecordSplitTests
@@ -71,7 +73,7 @@ namespace ProxyMapService.Tests
 
             var payloads = ParseRecords(split);
             Assert.True(payloads.Count == 2, "expected 2 records");
-            // split after the first ClientHello byte (the handshake type), like byedpi "1"
+            // split after the first ClientHello byte (the handshake type), spec "1"
             Assert.True(payloads[0].Length == 1, "first record payload must be 1 byte");
             // the chunks reassemble into the original record payload
             Assert.Equal(MakeRecord()[5..], payloads[0].Concat(payloads[1]).ToArray());
@@ -96,7 +98,7 @@ namespace ProxyMapService.Tests
         [InlineData("0+s", 20, 30, 15)]     // start of SNI
         [InlineData("0+m", 20, 30, 50)]     // middle of the ClientHello
         [InlineData("-5", 20, 30, 95)]      // 5 bytes from the end
-        public void FlagResolution_MatchesByedpiSemantics(string specValue, int sniStart, int sniEnd, int expected)
+        public void FlagResolution_ResolvesExpectedPositions(string specValue, int sniStart, int sniEnd, int expected)
         {
             var spec = TlsRecordSplitSpec.Parse(specValue)!;
             var split = spec.BuildSplitRecords(MakeRecord(), sniStart, sniEnd)!;
@@ -265,6 +267,7 @@ namespace ProxyMapService.Tests
                     await tcp.ConnectAsync(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
                     using var raw = tcp.GetStream();
                     using var splitter = new TlsRecordSplitStream(raw, TlsRecordSplitSpec.Parse("6")!);
+                    // splitter implements ITunnelStream — required by the tunnels
                     using var ssl = new SslStream(splitter);
                     await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
                     {
@@ -307,6 +310,46 @@ namespace ProxyMapService.Tests
             }
 
             Assert.Equal("ping", echo);
+        }
+
+        [Fact]
+        public async Task PassthroughSplit_DelegatesCountingToInnerCountingStream()
+        {
+            // In passthrough mode (no MITM) the splitter replaces context.OutgoingStream as
+            // the tunnel destination; it is a plain ITunnelStream wrapper that only forwards
+            // the tunnel members to the inner CountingStream, which keeps counting raw bytes.
+            var sendCounter = new FakeSendCounter();
+            var memory = new MemoryStream();
+            var inner = new CountingStream(memory, null!, null, sendCounter, 0, 0);
+            using var splitter = new TlsRecordSplitStream(inner, TlsRecordSplitSpec.Parse("6")!);
+
+            var record = MakeRecord();
+            await splitter.WriteAsync(record);
+
+            var payloads = ParseRecords(memory.ToArray());
+            Assert.Equal(2, payloads.Count);
+            Assert.Equal(record[5..], payloads.SelectMany(p => p).ToArray());
+
+            // Counted exactly once — by the inner CountingStream, with the split sizes.
+            Assert.Equal(memory.Length, sendCounter.TotalBytesSent);
+            Assert.Equal(2, sendCounter.Writes.Count);
+            Assert.Equal(11, sendCounter.Writes[0]);           // 5-byte header + 6-byte payload
+            Assert.Equal(5 + PayloadLen - 6, sendCounter.Writes[1]);
+        }
+
+        /// <summary>Fake send counter recording the sizes of counted writes.</summary>
+        private sealed class FakeSendCounter : IBytesSendCounter
+        {
+            public readonly List<int> Writes = [];
+            public StreamDirection Direction => StreamDirection.Upstream;
+            public long TotalBytesSent => Writes.Sum();
+            public long ProxyBytesSent => TotalBytesSent;
+            public long BypassBytesSent => 0;
+            public long CacheBytesSent => 0;
+            public bool IsLogSending => false;
+            public void Reset() => Writes.Clear();
+            public void OnBytesSend(SessionContext context, int bytesSend, byte[]? bytesData, int startIndex, long tunnelId) => Writes.Add(bytesSend);
+            public void OnBytesSent(SessionContext context, int bytesSent, byte[]? bytesData, int startIndex, long tunnelId) { }
         }
 
         /// <summary>Stream wrapper capturing the bytes of the first read(s).</summary>
