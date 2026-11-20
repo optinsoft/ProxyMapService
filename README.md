@@ -279,3 +279,53 @@ dotnet run --project NssJa4Probe         # Firefox-like: t13d1616h2_86a278354501
 ```
 
 Each utility starts a local capture server, performs a TLS handshake against it (BoringSSL-backed or NSS-backed respectively), and prints the JA4 fingerprint of the ClientHello along with the full lists of cipher suites and extensions. The BoringSslStream fingerprint is deterministic (it replicates Chrome's ClientHello byte-for-byte); the NssStream fingerprint depends on the version of the linked NSS library.
+
+---
+
+## TLS Record Split (ClientHello Fragmentation)
+
+Some DPI systems classify HTTPS traffic by inspecting the first outgoing TLS record — the ClientHello, which carries the SNI hostname in plaintext. Proxy Map Service can split this first TLS record into several separate TLS records (fragmentation at the TLS protocol level): the resulting records carry the same content type and version as the original record and together reassemble into the identical payload, so any RFC-conforming TLS server accepts them unchanged.
+
+### How to Enable
+
+Set the `TlsRecordSplit` option in the `Listen` section of a `ProxyMappings` entry:
+
+```json
+"ProxyMappings": [
+	{
+		"Listen": {
+			"Port": 5001,
+			"TlsRecordSplit": "1,0+sm"
+		}
+	}
+]
+```
+
+The value is a comma-separated list of split positions, each in the syntax `offset[:repeats:skip][+flag1[flag2]]`:
+
+* `offset` — split position relative to the start of the ClientHello (the TLS record payload, without the 5-byte record header); a negative offset without flags counts from the end of the ClientHello;
+* `repeats:skip` — optional; repeat the split `repeats` times with a `skip` byte step (e.g. `1:3:5` splits at positions 1, 6 and 11);
+* flags:
+  * `+s` — offset from the start of the SNI hostname;
+  * `+e` — offset from the end of the ClientHello (with `+s` — from the end of the SNI hostname);
+  * `+m` — offset from the middle of the ClientHello (with `+s` — from the middle of the SNI hostname);
+  * `+n` — zero offset (the position stays absolute).
+
+Examples:
+
+* `"1"` — split after the first byte of the ClientHello;
+* `"3+s"` — split 3 bytes after the start of the SNI hostname;
+* `"0+sm"` — split in the middle of the SNI hostname;
+* `"-5"` — split 5 bytes before the end of the ClientHello.
+
+The setting can be overridden per host via a `HostRule` (`"TlsRecordSplit": "..."` next to `DecryptSSL`); when the rule does not set it, the `Listen` value is inherited.
+
+### Notes
+
+* The split is applied to the **outgoing (upstream)** TLS connection and works in both modes:
+  * with SSL decryption enabled (`DecryptSSL: true`) — the proxy generates the ClientHello itself (see [Chrome-like and Firefox-like TLS Fingerprint](#chrome-like-and-firefox-like-tls-fingerprint)) and the split is applied underneath the TLS implementation;
+  * in passthrough mode (no decryption) — the client's own ClientHello travels through the tunnel and is re-chunked on the fly.
+* Each resulting TLS record is written separately, so DPI sees them as distinct packets rather than one reassembled ClientHello.
+* Only the first TLS record (the ClientHello) is split; all subsequent records pass through unchanged.
+* If the specification resolves to nothing to split (e.g. all positions reference the SNI hostname but the record has none, or a position falls on the record boundary), the record is sent as-is.
+* When the split is active, the proxy logs it at debug level (enable TlsHandshakeLog to see it).
