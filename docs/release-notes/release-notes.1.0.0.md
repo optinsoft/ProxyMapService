@@ -1,9 +1,5 @@
 # ProxyMapService 1.0.0 Release Notes
 
-**Version:** 1.0.0
-**Author:** Vitaly Yakovlev (optinosft)
-**Copyright:** Vitaly Yakovlev, vitaly@optinosft.net
-
 ## Highlights
 
 Per-port and per-host SSL/TLS configuration. The global `SslClientOptions` and `SslServerOptions` sections can now be refined — or completely replaced — for individual listening ports and for individual target hosts.

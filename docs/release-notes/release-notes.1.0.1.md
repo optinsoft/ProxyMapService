@@ -1,9 +1,5 @@
 # ProxyMapService 1.0.1 Release Notes
 
-**Version:** 1.0.1
-**Author:** Vitaly Yakovlev (optinosft)
-**Copyright:** Vitaly Yakovlev, vitaly@optinosft.net
-
 ## Highlights
 
 The service can now start with an empty `ProxyMappings` configuration. Instead of failing with a fatal error, it falls back to a built-in `DefaultProxyMappings` section — a plain bypass listener on port 5001 — and keeps the dashboard up and running so the configuration can be edited and the service restarted from the web UI.
