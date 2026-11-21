@@ -103,15 +103,13 @@
             if (addresses.Length == 0)
             {
                 throw new ArgumentException(
-                    "Unable to retrieve address from specified host name.",
-                    hostname
+                    $"Unable to retrieve address from specified host name: {hostname}"
                 );
             }
             else if (throwIfMoreThanOneIP && addresses.Length > 1)
             {
                 throw new ArgumentException(
-                    "There is more that one IP address to the specified host.",
-                    hostname
+                    $"There is more than one IP address to the specified host: {hostname}"
                 );
             }
             var ipEndPoint = new System.Net.IPEndPoint(addresses[0], port);

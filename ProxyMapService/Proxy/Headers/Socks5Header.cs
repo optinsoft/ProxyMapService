@@ -84,8 +84,7 @@ namespace ProxyMapService.Proxy.Headers
                     break;
                 default:
                     throw new ArgumentException(
-                        "Invalid host address family.",
-                        hostEndPoint.Address.AddressFamily.ToString()
+                        $"Invalid host address family: {hostEndPoint.Address.AddressFamily}"
                     );
             }
             requestBytes[0] = 0x05;
