@@ -142,6 +142,11 @@ namespace ProxyMapService.Proxy.Sessions
                             LogNextStep(logger, step);
                         }
                     }
+                    catch (Exception ex) when (ex is IOException or SocketException)
+                    {
+                        context.Logger.LogExceptionWarning(ex.GetType().Name, ex.Message);
+                        step = HandleStep.Terminate;
+                    }
                     catch (Exception ex)
                     {
                         logger.LogError("Error (step {step}): {ErrorMessage}", step, ex.Message);
