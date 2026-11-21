@@ -381,11 +381,23 @@ namespace ProxyMapService.Proxy.Handlers
         {
             Stream inner = context.OutgoingStream!;
 
-            var splitSpec = TlsRecordSplitSpec.Parse(context.TlsRecordSplit);
-            if (splitSpec != null)
+            TlsRecordSplitSpec? splitSpec = null;
+            if (context.TlsRecordSplit != null)
             {
-                inner = new TlsRecordSplitStream(inner, splitSpec, context.Logger);
-                context.Logger.LogTlsRecordSplit(context.TlsRecordSplit!, context.Host);
+                try
+                {
+                    splitSpec = TlsRecordSplitSpec.Parse(context.TlsRecordSplit);
+                }
+                catch (Exception ex)
+                {
+                    context.Logger.LogSpecParseFailed(context.TlsRecordSplit, ex);
+                }
+
+                if (splitSpec != null)
+                {
+                    inner = new TlsRecordSplitStream(inner, splitSpec, context.Logger);
+                    context.Logger.LogTlsRecordSplit(context.TlsRecordSplit, context.Host);
+                }
             }
 
             return context.SslClientConfig.TlsClientType switch
@@ -402,7 +414,19 @@ namespace ProxyMapService.Proxy.Handlers
         /// </summary>
         private static TlsRecordSplitStream? CreatePassthroughSplitStream(SessionContext context)
         {
-            var splitSpec = TlsRecordSplitSpec.Parse(context.TlsRecordSplit);
+            TlsRecordSplitSpec? splitSpec = null;
+            if (context.TlsRecordSplit != null)
+            {
+                try
+                {
+                    splitSpec = TlsRecordSplitSpec.Parse(context.TlsRecordSplit);
+                }
+                catch (Exception ex)
+                {
+                    context.Logger.LogSpecParseFailed(context.TlsRecordSplit, ex);
+                }
+            }
+
             if (splitSpec == null) return null;
 
             context.Logger.LogTlsRecordSplit(context.TlsRecordSplit!, context.Host);

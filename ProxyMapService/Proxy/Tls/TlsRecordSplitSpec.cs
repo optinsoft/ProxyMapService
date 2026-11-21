@@ -143,14 +143,8 @@ namespace ProxyMapService.Proxy.Tls
                 return null;
             }
 
-            var offsets = new List<int>();
-            foreach (int pos in positions)
-            {
-                if (offsets.Count == 0 || offsets[^1] != pos)
-                {
-                    offsets.Add(pos);
-                }
-            }
+            // positions may come in any order and with duplicates: sort and dedupe
+            var offsets = positions.Distinct().OrderBy(p => p).ToList();
 
             // splits produce offsets.Count + 1 records: the first keeps the original header
             var result = new List<byte[]>(offsets.Count + 1);

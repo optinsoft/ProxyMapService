@@ -66,6 +66,13 @@ namespace ProxyMapService.Proxy.Tls
 
             if (buffer.Length > 0)
             {
+                if (_buffered + buffer.Length > MaxBuffered)
+                {
+                    // can't buffer: pass through everything accumulated so far plus the new data
+                    await FlushBufferedAsync(cancellationToken);
+                    await _inner.WriteAsync(buffer, cancellationToken);
+                    return;
+                }
                 buffer.Span.CopyTo(_buffer.AsSpan(_buffered));
                 _buffered += buffer.Length;
             }

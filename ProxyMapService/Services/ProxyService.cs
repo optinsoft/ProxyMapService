@@ -14,6 +14,7 @@ using ProxyMapService.Proxy.Handlers;
 using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.RoutingLoopDetector;
 using ProxyMapService.Proxy.Sessions;
+using ProxyMapService.Proxy.Tls;
 using ProxyMapService.Utils;
 using ProxyMapService.WebLogging;
 using System.Linq;
@@ -204,6 +205,7 @@ namespace ProxyMapService.Services
             Http2Log.DiagnosticsEnabled = detailedLogging.GetValue<bool>("Http2Logging", false);
             HandlerLogExtensions.ConnectionLogEnabled = detailedLogging.GetValue<bool>("LogConnections", false);
             HandlerLogExtensions.TlsHandshakeLogEnabled = detailedLogging.GetValue<bool>("LogTlsHandshake", false);
+            TlsRecordSplitLog.SniSplitDetailedLogEnabled = detailedLogging.GetValue<bool>("LogSniSplitDetails", false);
             HandlerLogExtensions.ProtocolSwitchLogEnabled = detailedLogging.GetValue<bool>("LogProtocolSwitch", false);
             HandlerLogExtensions.ResponseSourceLogEnabled = detailedLogging.GetValue<bool>("LogResponseSource", false);
 

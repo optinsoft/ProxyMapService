@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Configurations;
+﻿using Microsoft.Extensions.Hosting;
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Socks;
 using System.Diagnostics.Eventing.Reader;
@@ -525,14 +526,25 @@ namespace ProxyMapService.Proxy.Handlers
 
         [LoggerMessage(
             EventId = 1317,
-            Level = LogLevel.Debug,
+            Level = LogLevel.Information,
             Message = "TLS record split ({Spec}) applied to the ClientHello for {Hostname}:{Port}")]
         private static partial void LogTlsRecordSplitInternal(this ILogger logger, string spec, string hostname, int port);
+
+        [LoggerMessage(
+            EventId = 1319,
+            Level = LogLevel.Warning,
+            Message = "TLS record split: invalid split specification '{Spec}', record splitting is disabled for this connection")]
+        private static partial void LogSpecParseFailedInternal(this ILogger logger, string spec, Exception ex);
 
         public static void LogTlsRecordSplit(this ILogger logger, string spec, HostAddress host)
         {
             if (!TlsHandshakeLogEnabled) return;
             logger.LogTlsRecordSplitInternal(spec, host.Hostname, host.Port);
+        }
+
+        public static void LogSpecParseFailed(this ILogger logger, string spec, Exception ex)
+        {
+            logger.LogSpecParseFailedInternal(spec, ex);
         }
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)

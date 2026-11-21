@@ -5,13 +5,15 @@ namespace ProxyMapService.Proxy.Tls
 {
     /// <summary>
     /// Diagnostics logging for the TLS record splitter, gated on
-    /// <see cref="HandlerLogExtensions.TlsHandshakeLogEnabled"/> (DetailedLogging:LogTlsHandshake).
+    /// <see cref="SniSplitDetailedLogEnabled"/> (DetailedLogging:LogSniSplitDetails).
     /// </summary>
-    internal static partial class TlsRecordSplitLog
+    public static partial class TlsRecordSplitLog
     {
+        public static volatile bool SniSplitDetailedLogEnabled = false;
+
         [LoggerMessage(
             EventId = 1318,
-            Level = LogLevel.Debug,
+            Level = LogLevel.Information,
             Message = "TLS record split: SNI '{Sni}' ({SniLength} B at record offset {SniStart}..{SniEnd}) -> {RecordCount} record(s): {Layout}")]
         private static partial void LogSniSplitInternal(this ILogger logger, string sni, int sniLength, int sniStart, int sniEnd, int recordCount, string layout);
 
@@ -23,8 +25,18 @@ namespace ProxyMapService.Proxy.Tls
         /// </summary>
         public static void LogSniSplit(ILogger? logger, string sni, int sniStart, int sniEnd, List<byte[]> segments)
         {
-            if (logger == null || !HandlerLogExtensions.TlsHandshakeLogEnabled) return;
-            logger.LogSniSplitInternal(sni, sniEnd - sniStart, sniStart, sniEnd, segments.Count, DescribeLayout(sni, sniStart, sniEnd, segments));
+            if (logger == null || !SniSplitDetailedLogEnabled) return;
+            string layout;
+            try
+            {
+                layout = DescribeLayout(sni, sniStart, sniEnd, segments);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "DescribeLayout failed.");
+                return;
+            }
+            logger.LogSniSplitInternal(sni, sniEnd - sniStart, sniStart, sniEnd, segments.Count, layout);
         }
 
         private static string DescribeLayout(string sni, int sniStart, int sniEnd, List<byte[]> segments)
