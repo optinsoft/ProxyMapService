@@ -39,9 +39,10 @@ namespace ProxyMapService.Proxy.Tls
                 int segEnd = segStart + len;
                 sb.Append('#').Append(i + 1).Append(' ').Append(len).Append(" B");
 
-                // Part of the SNI hostname that falls into this record, in SNI-relative coordinates
-                int from = Math.Max(sniStart, segStart) - segStart;
-                int to = Math.Min(sniEnd, segEnd) - segStart;
+                // Part of the SNI hostname that falls into this record, in SNI-relative coordinates:
+                // a SNI-relative offset x corresponds to record offset sniStart + x.
+                int from = Math.Max(sniStart, segStart) - sniStart;
+                int to = Math.Min(sniEnd, segEnd) - sniStart;
                 if (to > from)
                 {
                     sb.Append(" [SNI ").Append(from).Append("..").Append(to)
