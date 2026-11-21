@@ -31,14 +31,16 @@ namespace ProxyMapService.Proxy.Tls
 
         private readonly Stream _inner;
         private readonly TlsRecordSplitSpec _spec;
+        private readonly ILogger? _logger;
         private readonly byte[] _buffer = new byte[MaxBuffered];
         private int _buffered;
         private bool _firstRecordDone;
 
-        public TlsRecordSplitStream(Stream inner, TlsRecordSplitSpec spec)
+        public TlsRecordSplitStream(Stream inner, TlsRecordSplitSpec spec, ILogger? logger = null)
         {
             _inner = inner;
             _spec = spec;
+            _logger = logger;
         }
 
         /// <summary>The wrapped stream is the counting owner; forward everything to it.</summary>
@@ -101,14 +103,22 @@ namespace ProxyMapService.Proxy.Tls
             if (contentType == 0x16 && recordLen > 5 && _buffer[5] == 0x01)
             {
                 int? sniStart = null, sniEnd = null;
+                string? sni = null;
                 if (TlsClientHelloParser.TryGetSniOffsets(_buffer.AsSpan(0, recordLen), out var s, out var e))
                 {
                     sniStart = s;
                     sniEnd = e;
+                    sni = System.Text.Encoding.ASCII.GetString(_buffer.AsSpan(s, e - s));
                 }
                 var segments = _spec.BuildSplitRecordSegments(_buffer.AsSpan(0, recordLen), sniStart, sniEnd);
                 if (segments != null)
                 {
+                    // Log how the SNI hostname is distributed over the resulting records
+                    if (sni != null)
+                    {
+                        TlsRecordSplitLog.LogSniSplit(_logger, sni, sniStart!.Value, sniEnd!.Value, segments);
+                    }
+
                     // Each resulting TLS record is written separately
                     foreach (var segment in segments)
                     {

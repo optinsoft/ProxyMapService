@@ -384,7 +384,7 @@ namespace ProxyMapService.Proxy.Handlers
             var splitSpec = TlsRecordSplitSpec.Parse(context.TlsRecordSplit);
             if (splitSpec != null)
             {
-                inner = new TlsRecordSplitStream(inner, splitSpec);
+                inner = new TlsRecordSplitStream(inner, splitSpec, context.Logger);
                 context.Logger.LogTlsRecordSplit(context.TlsRecordSplit!, context.Host);
             }
 
@@ -406,7 +406,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (splitSpec == null) return null;
 
             context.Logger.LogTlsRecordSplit(context.TlsRecordSplit!, context.Host);
-            return new TlsRecordSplitStream(context.OutgoingStream!, splitSpec);
+            return new TlsRecordSplitStream(context.OutgoingStream!, splitSpec, context.Logger);
         }
 
         private static SslApplicationProtocol ToAlpn(string? alpn) =>
