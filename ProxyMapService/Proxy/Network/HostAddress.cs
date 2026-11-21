@@ -1,4 +1,7 @@
-﻿namespace ProxyMapService.Proxy.Network
+﻿using System.Net;
+using System.Net.Sockets;
+
+namespace ProxyMapService.Proxy.Network
 {
     public class HostAddress
     {
@@ -19,7 +22,7 @@
 
         public HostAddress(byte[] ipBytes, int port)
         {
-            System.Net.IPAddress ipAddress = new(ipBytes);
+            IPAddress ipAddress = new(ipBytes);
             _originalHostname = ipAddress.ToString();
             _originalPort = port;
             _hostname = _originalHostname;
@@ -86,18 +89,23 @@
             }
         }
 
-        public async Task<System.Net.IPEndPoint> GetIPEndPoint(bool throwIfMoreThanOneIP = false, bool ipv4First = true)
+        public async Task<IPEndPoint> GetIPEndPoint(bool throwIfMoreThanOneIP = false, bool ipv4First = true)
         {
             return await GetIPEndPoint(Hostname, Port, throwIfMoreThanOneIP, ipv4First);
         }
 
-        public static async Task<System.Net.IPEndPoint> GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false, bool ipv4First = true)
+        public static async Task<IPEndPoint> GetIPEndPoint(string hostname, int port, bool throwIfMoreThanOneIP = false, bool ipv4First = true)
         {
-            var addresses = await System.Net.Dns.GetHostAddressesAsync(hostname);
+            if (IPAddress.TryParse(hostname, out var literal))
+            {
+                // if an IP literal is provided, there is nothing to resolve
+                return new IPEndPoint(literal, port);
+            }
+            var addresses = await Dns.GetHostAddressesAsync(hostname);
             if (ipv4First)
             {
                 addresses = addresses
-                    .OrderBy(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork ? 0 : 1)
+                    .OrderBy(a => a.AddressFamily == AddressFamily.InterNetwork ? 0 : 1)
                     .ToArray();
             }
             if (addresses.Length == 0)
@@ -112,10 +120,10 @@
                     $"There is more than one IP address to the specified host: {hostname}"
                 );
             }
-            var ipEndPoint = new System.Net.IPEndPoint(addresses[0], port);
+            var ipEndPoint = new IPEndPoint(addresses[0], port);
             if (ipEndPoint.Address.IsIPv4MappedToIPv6)
             {
-                return new System.Net.IPEndPoint(ipEndPoint.Address.MapToIPv4(), ipEndPoint.Port);
+                return new IPEndPoint(ipEndPoint.Address.MapToIPv4(), ipEndPoint.Port);
             }
             return ipEndPoint;
         }
@@ -127,7 +135,7 @@
 
         public static bool IsHostnameIP(string hostname)
         {
-            return System.Net.IPAddress.TryParse(hostname, out _);
+            return IPAddress.TryParse(hostname, out _);
         }
 
         public static HostAddress? GetHostAddress(string? host, bool isSecure)
