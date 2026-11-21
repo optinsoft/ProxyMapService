@@ -1,2 +1,2 @@
 #!/bin/sh
-dotnet run --project ProxyMapService -- --environment Test &
+dotnet run --project ProxyMapService -- --environment Test
