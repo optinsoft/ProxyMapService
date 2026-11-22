@@ -175,7 +175,7 @@ namespace ProxyMapService.Proxy.Http
             };
         }
 
-        private static bool IsHttpTokenChar(byte c)
+        public static bool IsHttpTokenChar(byte c)
         {
             return (c >= (byte)'A' && c <= (byte)'Z') ||
                    (c >= (byte)'a' && c <= (byte)'z') ||
@@ -187,7 +187,7 @@ namespace ProxyMapService.Proxy.Http
                         (byte)'`' or (byte)'|' or (byte)'~';
         }
 
-        private static bool IsHttpTokenChar(char c)
+        public static bool IsHttpTokenChar(char c)
         {
             return (c >= 'A' && c <= 'Z') ||
                    (c >= 'a' && c <= 'z') ||

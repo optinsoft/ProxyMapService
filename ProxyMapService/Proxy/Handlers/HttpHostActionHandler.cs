@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Handlers
             // context.Host must be initialized in InitializeHandler
             if (context.Host.Hostname.Length == 0)
             {
-                context.Logger.LogNoHost();
+                context.Logger.LogNoTargetHost();
                 context.ProxyCounters.SessionsCounter?.OnNoHost(context);
                 await HttpProto.HttpReplyBadRequest(context, context.Http);
                 return HandleStep.Terminate;

@@ -357,10 +357,22 @@ namespace ProxyMapService.Proxy.Handlers
         public static partial void LogSocks5ProxyIncorrectCredentials(this ILogger logger);
 
         [LoggerMessage(
+            EventId = 1269,
+            Level = LogLevel.Warning,
+            Message = "Failed to read {Protocol} header.")]
+        public static partial void LogReadHeaderFailed(this ILogger logger, string protocol);
+
+        [LoggerMessage(
+            EventId = 1270,
+            Level = LogLevel.Warning,
+            Message = "Unknown protocol")]
+        public static partial void LogUnknownProtocol(this ILogger logger);
+
+        [LoggerMessage(
             EventId = 1271,
             Level = LogLevel.Warning,
-            Message = "No host.")]
-        public static partial void LogNoHost(this ILogger logger);
+            Message = "No target host.")]
+        public static partial void LogNoTargetHost(this ILogger logger);
 
         [LoggerMessage(
             EventId = 1272,

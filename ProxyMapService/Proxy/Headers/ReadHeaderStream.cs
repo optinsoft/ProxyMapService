@@ -1,9 +1,13 @@
-﻿using ProxyMapService.Proxy.Counters;
+﻿using Newtonsoft.Json.Linq;
+using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
 
 namespace ProxyMapService.Proxy.Headers
 {
+    public enum ProtocolTypeEnum { Http, Socks4, Socks5, Unknown };
+
     public class ReadHeaderStream : IDisposable
     {
         private static readonly byte[] Delimiter = [0x0d, 0x0a, 0x0d, 0x0a];
@@ -13,13 +17,19 @@ namespace ProxyMapService.Proxy.Headers
         private readonly byte[] _readBuffer = new byte[BufferSize];
         private int _bufferPos = 0;
         private int _totalRead = 0;
-        private byte _socksVersion = 0x0;
+        private ProtocolTypeEnum? _protocolType = null;
         private int _delimiterCounter = 0;
-        
-        public byte SocksVersion { 
-            get { return _socksVersion; }
-            set { _socksVersion = value; }
+
+        public ProtocolTypeEnum? ProtocolType { 
+            get { return _protocolType; } 
+            set { _protocolType = value; }
         }
+
+        public byte SocksVersion => _protocolType switch { 
+            ProtocolTypeEnum.Socks4 => 0x04,
+            ProtocolTypeEnum.Socks5 => 0x05,
+            _ => 0
+        };
 
         public int DelimiterCounter { 
             get { return _delimiterCounter; } 
@@ -35,17 +45,13 @@ namespace ProxyMapService.Proxy.Headers
                 {
                     return null;
                 }
-                switch (_socksVersion)
+                return _protocolType switch
                 {
-                    case 0x00:
-                        return await ReadHttpHeaderBytes(client, token);
-                    case 0x04:
-                        return await ReadSocks4HeaderBytes(client, token);
-                    case 0x05:
-                        return await ReadSocks5HeaderBytes(client, token);
-                    default:
-                        return null;
-                }
+                    ProtocolTypeEnum.Http => await ReadHttpHeaderBytes(client, token),
+                    ProtocolTypeEnum.Socks4 => await ReadSocks4HeaderBytes(client, token),
+                    ProtocolTypeEnum.Socks5 => await ReadSocks5HeaderBytes(client, token),
+                    _ => null,
+                };
             }
             finally
             {
@@ -71,22 +77,21 @@ namespace ProxyMapService.Proxy.Headers
 
             _memoryStream.Write(_readBuffer, _bufferPos, bytesRead);
 
-            if (_totalRead == 0 && _socksVersion == 0x0)
+            if (_totalRead == 0 && _protocolType == null)
             {
-                switch (_readBuffer[_bufferPos])
+                _protocolType = _readBuffer[_bufferPos] switch
                 {
-                    case 0x04:
-                        _socksVersion = _readBuffer[_bufferPos];
-                        break;
-                    case 0x05:
-                        _socksVersion = _readBuffer[_bufferPos];
-                        break;
-                }
+                    0x04 => ProtocolTypeEnum.Socks4,
+                    0x05 => ProtocolTypeEnum.Socks5,
+                    _ => HttpParser.IsHttpTokenChar(_readBuffer[_bufferPos])
+                        ? ProtocolTypeEnum.Http 
+                        : ProtocolTypeEnum.Unknown
+                };
             }
 
             byte byteValue = _readBuffer[_bufferPos];
 
-            if (_socksVersion == 0x0)
+            if (_protocolType == ProtocolTypeEnum.Http)
             {
                 _delimiterCounter = byteValue == Delimiter[_delimiterCounter] ? _delimiterCounter + 1 : 0;
             }
@@ -99,19 +104,22 @@ namespace ProxyMapService.Proxy.Headers
 
         private async Task<byte[]?> ReadHttpHeaderBytes(CountingStream client, CancellationToken token)
         {
-            while (_socksVersion == 0x0 && _delimiterCounter < Delimiter.Length)
+            if (_protocolType != ProtocolTypeEnum.Http)
+            { 
+                return null;
+            }
+            while (_delimiterCounter < Delimiter.Length)
             {
                 if (await ReadByte(client, token) == null)
                 {
                     break;
                 }
             }
-            return _socksVersion == 0x0 && _delimiterCounter == Delimiter.Length ? _memoryStream.ToArray() : null;
+            return _delimiterCounter == Delimiter.Length ? _memoryStream.ToArray() : null;
         }
 
         private async Task<byte[]?> ReadSocks4HeaderBytes(CountingStream client, CancellationToken token)
         {
-            if (_socksVersion != 0x04) return null;
             byte? CD = await ReadByte(client, token);
             if (CD == null)
             {
@@ -143,8 +151,6 @@ namespace ProxyMapService.Proxy.Headers
 
         private async Task<byte[]?> ReadSocks5HeaderBytes(CountingStream client, CancellationToken token)
         {
-            if (_socksVersion != 0x05) return null;
-
             byte? NMethods = await ReadByte(client, token);
 
             if (NMethods == null)

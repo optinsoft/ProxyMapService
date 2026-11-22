@@ -35,7 +35,7 @@ namespace ProxyMapService.Proxy.Handlers
                 socks5 = new Socks5Header(clientUsername, clientPassword);
             }
 
-            context.OutgoingHeaderStream.SocksVersion = 0x05;
+            context.OutgoingHeaderStream.ProtocolType = ProtocolTypeEnum.Socks5;
 
             string? username = 
                 !String.IsNullOrEmpty(context.ProxyServer?.Username) 

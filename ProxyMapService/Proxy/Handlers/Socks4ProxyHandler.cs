@@ -44,7 +44,7 @@ namespace ProxyMapService.Proxy.Handlers
                     socks4 = new Socks4Header(hostEndPoint, clientUserId);
                 }
 
-                context.OutgoingHeaderStream.SocksVersion = 0x04;
+                context.OutgoingHeaderStream.ProtocolType = ProtocolTypeEnum.Socks4;
 
                 string? userId =
                     !String.IsNullOrEmpty(context.ProxyServer?.Username)

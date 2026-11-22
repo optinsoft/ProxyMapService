@@ -13,7 +13,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.Socks5?.Host == null || context.Socks5.Host.Hostname.Length == 0)
             {
-                context.Logger.LogNoHost();
+                context.Logger.LogNoTargetHost();
                 context.ProxyCounters.SessionsCounter?.OnNoHost(context);
                 await Socks5Proto.Socks5ReplyStatus(context, Socks5Status.HostUnreachable);
                 return HandleStep.Terminate;

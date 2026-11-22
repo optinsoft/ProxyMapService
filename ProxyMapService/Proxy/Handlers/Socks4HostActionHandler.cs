@@ -13,7 +13,7 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (context.Socks4?.Host == null || context.Socks4.Host.Hostname.Length == 0)
             {
-                context.Logger.LogNoHost();
+                context.Logger.LogNoTargetHost();
                 context.ProxyCounters.SessionsCounter?.OnNoHost(context);
                 await Socks4Proto.Socks4ReplyCommand(context, Socks4Command.RequestRejectedOrFailed);
                 return HandleStep.Terminate;
