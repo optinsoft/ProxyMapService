@@ -31,9 +31,11 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.Host.Hostname.Length == 0 && reverseProxy != null && !string.IsNullOrEmpty(reverseProxy.Target.Host))
             {
-                // Target.Port == 0 mirrors the local listening port (useful with PortRange:
-                // a connection to local port N is forwarded to Target.Host:N).
-                var port = reverseProxy.Target.Port != 0 ? reverseProxy.Target.Port : context.InboundEndpoint.Port;
+                // Target.Port == 0 (not set): the default port is derived from the upstream
+                // connection scheme — 443 for TLS upstream, 80 for plaintext.
+                var port = reverseProxy.Target.Port != 0
+                    ? reverseProxy.Target.Port
+                    : (await IsUpstreamTls(context) ? 443 : 80);
                 context.Host = new HostAddress(reverseProxy.Target.Host, port);
             }
             context.UpstreamServerName = reverseProxy?.ServerName;
@@ -87,6 +89,37 @@ namespace ProxyMapService.Proxy.Handlers
         public static ReverseProxyActionHandler Instance()
         {
             return Self;
+        }
+
+        /// <summary>
+        /// Whether the connection to the reverse target should be TLS. Used to pick the
+        /// default upstream port (443/80) when ReverseProxy:Target:Port is not set.
+        /// Mirrors the TunnelHandler heuristics: UpstreamSslMode decides explicitly,
+        /// Auto falls back to the incoming side TLS-ness.
+        /// </summary>
+        private static async Task<bool> IsUpstreamTls(SessionContext context)
+        {
+            switch (context.UpstreamSslMode)
+            {
+                case SslMode.Yes:
+                    return true;
+                case SslMode.No:
+                    return false;
+            }
+
+            // Auto: follow the incoming side. For SslMode.Yes the answer is already known;
+            // for SslMode.No the session is on the HTTP path. For Auto the TLS record was
+            // peeked in InitializeHandler (the peek is cached, so this call is instant).
+            if (context.SslMode == SslMode.Yes)
+            {
+                return true;
+            }
+            if (context.SslMode == SslMode.No)
+            {
+                return false;
+            }
+            return context.IncomingStream != null &&
+                   await context.IncomingStream.PeekTlsRecordAsync(context.Token) != null;
         }
     }
 }

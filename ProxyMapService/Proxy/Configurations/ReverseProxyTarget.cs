@@ -5,8 +5,8 @@
         public string Host { get; set; } = String.Empty;
 
         /// <summary>
-        /// Upstream port. 0 — mirror the local listening port (useful together with
-        /// Listen.PortRange: a connection to local port N is forwarded to Target.Host:N).
+        /// Upstream port. 0 — derive from the upstream connection scheme:
+        /// 443 when the connection to the target is TLS, 80 otherwise.
         /// </summary>
         public int Port { get; set; } = 0;
     }
