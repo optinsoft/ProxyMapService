@@ -41,7 +41,12 @@ namespace ProxyMapService.Proxy.Handlers
             context.UpstreamServerName = reverseProxy?.ServerName;
 
             context.HostAction = context.Action;
-            context.SessionManager.PopulateContext(context);
+
+            // Populate context only when Action is not Deny
+            if (context.HostAction != SessionActionEnum.Deny)
+            {
+                context.SessionManager.PopulateContext(context);
+            }
 
             switch (context.Action.ActionValue)
             {
