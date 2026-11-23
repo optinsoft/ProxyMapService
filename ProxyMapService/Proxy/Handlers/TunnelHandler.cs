@@ -28,8 +28,8 @@ namespace ProxyMapService.Proxy.Handlers
                 try
                 {
                     tlsRecord = context.SslMode == SslMode.No
-                       ? null
-                        : await context.IncomingStream.PeekTlsRecordAsync(TimeSpan.FromMilliseconds(500), context.Token);
+                        ? null
+                        : await context.IncomingStream.PeekTlsRecordAsync(context.Token);
                 }
                 catch (Exception ex) when (ex is IOException or SocketException)
                 {

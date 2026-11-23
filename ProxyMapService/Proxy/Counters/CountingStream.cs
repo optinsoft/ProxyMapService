@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Sessions;
+﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Sessions;
 using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Counters
@@ -107,70 +108,17 @@ namespace ProxyMapService.Proxy.Counters
             if (disposing) stream.Dispose();
             base.Dispose(disposing);
         }
-        /*
-        public async Task<bool> IsTLS(CancellationToken cancellationToken = default)
-        {
-            if (_isTls != null)
-            {
-                return _isTls.Value;
-            }
 
-            if (stream is not NetworkStream networkStream)
-            {
-                return false;
-            }
-
-            Socket socket = networkStream.Socket;
-            byte[] peekBuffer = new byte[1];
-
-            int bytesRead = await socket.ReceiveAsync(
-                new ArraySegment<byte>(peekBuffer),
-                SocketFlags.Peek,
-                cancellationToken
-            );
-
-            if (bytesRead < 1 || peekBuffer[0] != 0x16)
-            {
-                _isTls = false;
-            }
-            else
-            {
-                peekBuffer = new byte[2];
-
-                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(500));
-
-                try
-                {
-                    bytesRead = await socket.ReceiveAsync(
-                       new ArraySegment<byte>(peekBuffer),
-                        SocketFlags.Peek,
-                        timeoutCts.Token
-                    );
-
-                    _isTls = bytesRead >= 2 && peekBuffer[0] == 0x16 && peekBuffer[1] == 0x03;
-                }
-                catch (OperationCanceledException) when (
-                    timeoutCts.IsCancellationRequested &&
-                    !cancellationToken.IsCancellationRequested)
-                {
-                    _isTls = false;
-                }
-            }
-
-            return _isTls.Value;
-        }
-        */
-        public async Task<byte[]?> PeekTlsRecordAsync(TimeSpan timeout, CancellationToken ct = default)
+        public async Task<byte[]?> PeekTlsRecordAsync(CancellationToken ct = default)
         {
             if (_tlsPeeked) return _tlsRecord;
-            _tlsRecord = await PeekCoreAsync(timeout, ct);
+            _tlsRecord = await PeekCoreAsync(TlsDetectionConfig.ClientHelloPeekTimeout, ct);
             _tlsPeeked = true;
             return _tlsRecord;
         }
 
         public async Task<bool> IsTLS(CancellationToken ct = default)
-            => await PeekTlsRecordAsync(TimeSpan.FromMilliseconds(500), ct) != null;
+            => await PeekTlsRecordAsync(ct) != null;
 
         private async Task<byte[]?> PeekCoreAsync(TimeSpan timeout, CancellationToken ct)
         {

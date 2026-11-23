@@ -182,6 +182,7 @@ namespace ProxyMapService.Services
             var sessionAPI = _configuration.GetSection("SessionAPI").Get<SessionAPIConfig>() ?? new SessionAPIConfig();
             var httpConfig = _configuration.GetSection("HTTP").Get<HttpConfig>() ?? new HttpConfig();
             var sslClientOptions = _configuration.GetSection("SslClientOptions").Get<SslClientOptionsConfig>() ?? new SslClientOptionsConfig();
+            
             _sslServerOptions?.Dispose();
             // Bind via ConfigurationTopLayerBinder so that ServerCertificate/CACertificate are
             // taken only from the topmost configuration layer that defines them, instead of
@@ -200,6 +201,7 @@ namespace ProxyMapService.Services
                 _logger.LogWarning("[ProxyService.{}] Failed to load SSL server options certificates: {ErrorMessage}",
                     _serviceId, ex.Message);
             }
+
             var detailedLogging = _configuration.GetSection("DetailedLogging");
             Session.LogStepEnabled = detailedLogging.GetValue<bool>("LogStep", false);
             Http2Log.DiagnosticsEnabled = detailedLogging.GetValue<bool>("Http2Logging", false);
@@ -208,6 +210,12 @@ namespace ProxyMapService.Services
             TlsRecordSplitLog.SniSplitDetailedLogEnabled = detailedLogging.GetValue<bool>("LogSniSplitDetails", false);
             HandlerLogExtensions.ProtocolSwitchLogEnabled = detailedLogging.GetValue<bool>("LogProtocolSwitch", false);
             HandlerLogExtensions.ResponseSourceLogEnabled = detailedLogging.GetValue<bool>("LogResponseSource", false);
+
+            var clientHelloPeekTimeoutMs = _configuration.GetSection("TlsDetection")?.GetValue<int?>("ClientHelloPeekTimeoutMs") ?? 500;
+            if (clientHelloPeekTimeoutMs > 0)
+            {
+                TlsDetectionConfig.ClientHelloPeekTimeout = TimeSpan.FromMilliseconds(clientHelloPeekTimeoutMs);
+            }
 
             if (proxyMappings == null || proxyMappings.Count == 0)
             {
