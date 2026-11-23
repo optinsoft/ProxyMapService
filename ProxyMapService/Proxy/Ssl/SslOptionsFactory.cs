@@ -32,7 +32,7 @@ namespace ProxyMapService.Proxy.Ssl
             var protocols = ParseProtocols(context.SslClientConfig.EnabledSslProtocols);
             var sslOptions = new SslClientAuthenticationOptions
             {
-                TargetHost = context.Host.Hostname,
+                TargetHost = context.UpstreamServerName ?? context.Host.Hostname,
                 EnabledSslProtocols = protocols,
                 CertificateRevocationCheckMode = context.SslClientConfig.CheckCertificateRevocation
                     ? X509RevocationMode.Online

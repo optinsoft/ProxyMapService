@@ -15,6 +15,8 @@ namespace ProxyMapService.Proxy.Sessions
         private static readonly Dictionary<HandleStep, IHandler> Handlers = new()
         {
             { HandleStep.Initialize, InitializeHandler.Instance() },
+            { HandleStep.ReverseProxy, ReverseProxyActionHandler.Instance() },
+            { HandleStep.ReverseProxyHttp, ReverseProxyActionHandler.Instance() },
             { HandleStep.HttpInitialized, HttpAuthenticationHandler.Instance() },
             { HandleStep.HttpAuthenticationNotRequired, HttpHostActionHandler.Instance() },
             { HandleStep.HttpAuthenticated, HttpHostActionHandler.Instance() },

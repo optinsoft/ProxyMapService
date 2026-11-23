@@ -29,6 +29,11 @@
 
         public bool RejectHttpProxy { get; set; } = false;
         public int StickyProxyLifetime { get; set; } = 0;
+        /// <summary>
+        /// Forward (default) — the classic forward proxy; the target host is named by the client.
+        /// Reverse — a reverse proxy; the target host is taken from the ReverseProxy settings.
+        /// </summary>
+        public ModeEnum Mode { get; set; } = ModeEnum.Forward;
         public ActionEnum Action { get; set; } = ActionEnum.Allow;
         public bool DecryptSSL { get; set; } = false;
         /// <summary>

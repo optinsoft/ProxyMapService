@@ -3,6 +3,8 @@
     public enum HandleStep
     {
         Initialize,
+        ReverseProxy,
+        ReverseProxyHttp,
         HttpInitialized,
         HttpAuthenticationNotRequired,
         HttpAuthenticated,

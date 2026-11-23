@@ -96,13 +96,13 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 await HttpProto.HttpReplyConnectionEstablished(context, context.Http);
             }
-            else
+            else if (context.Http != null)
             {
-                var requestFirstLine = $"{context.Http?.HTTPVerb} {context.Http?.HTTPTargetPath} {context.Http?.HTTPProtocol}";
-                var httpRequestBytes = context.Http?.GetBytes(false, null, requestFirstLine, context.Host);
+                var requestFirstLine = $"{context.Http.HTTPVerb} {context.Http.HTTPTargetPath} {context.Http.HTTPProtocol}";
+                var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                 {
-                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context.Http?.RequestId);
+                    context.RequestHeader = new HttpRequestHeader(httpRequestBytes, context.Http.RequestId);
                     if (!context.RequestHeader.BadRequest)
                     {
                         CreateRequestBodyTracker(context, context.RequestHeader, null);

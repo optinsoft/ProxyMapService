@@ -121,6 +121,12 @@ namespace ProxyMapService.Proxy.Sessions
         public string? SessionId { get; set; }
         public int SessionTime { get; set; }
         public string? RootDir { get; set; }
+        /// <summary>
+        /// Optional SNI (TLS TargetHost) override for the upstream connection
+        /// (ReverseProxy.ServerName). Null — context.Host.Hostname is used.
+        /// Affects only the TLS handshake, not the connect endpoint.
+        /// </summary>
+        public string? UpstreamServerName { get; set; }
         public TunnelState RequestTunnelState { get; private set; }
         public TunnelState ResponseTunnelState { get; private set; }
         public bool SwitchProtocol { get; set; }
@@ -256,6 +262,7 @@ namespace ProxyMapService.Proxy.Sessions
             DowngradeToHttp1ForCacheEnabled = !(mapping.Listen.DisableDowngradeToHttp1ForCache ?? httpConfig.DisableDowngradeToHttp1ForCache);
             DowngradeToHttp1ForOverwrittenHostEnabled = mapping.Listen.EnableDowngradeToHttp1ForOverwrittenHost ?? httpConfig.EnableDowngradeToHttp1ForOverwrittenHost;
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;
+            RootDir = mapping.RootDir;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;
             ProxyProvider = proxyProvider;

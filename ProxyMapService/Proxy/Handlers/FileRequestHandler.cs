@@ -548,8 +548,9 @@ namespace ProxyMapService.Proxy.Handlers
             //    return null;
 
             // 4. Reject if the path is an absolute URI (e.g., http://example.com, file://, etc.)
-            Uri? pathUri = null;
-            if (Uri.TryCreate(relativePath, UriKind.Absolute, out pathUri))
+            //    Note: on Unix Uri.TryCreate("/", UriKind.Absolute) succeeds (it becomes a file:// URI),
+            //    so a plain rooted path must not be rejected — detect a real scheme instead.
+            if (relativePath.Contains("://"))
                 return null;
 
             // 5. Strip query string (?a=b)

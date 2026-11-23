@@ -559,6 +559,18 @@ namespace ProxyMapService.Proxy.Handlers
             logger.LogSpecParseFailedInternal(spec, ex);
         }
 
+        [LoggerMessage(
+            EventId = 1320,
+            Level = LogLevel.Warning,
+            Message = "Reverse proxy mode on port {Port} is not configured: ReverseProxy:Target:Host is missing")]
+        public static partial void LogReverseProxyNotConfigured(this ILogger logger, int port);
+
+        [LoggerMessage(
+            EventId = 1321,
+            Level = LogLevel.Warning,
+            Message = "Reverse proxy on port {Port}: Action = File requires a parsed HTTP request; non-HTTP connection is terminated")]
+        public static partial void LogReverseProxyFileRequiresHttp(this ILogger logger, int port);
+
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {
             var remoteEndPoint = client.Client.RemoteEndPoint;

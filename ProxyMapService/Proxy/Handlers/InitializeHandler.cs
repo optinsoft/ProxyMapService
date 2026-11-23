@@ -1,4 +1,5 @@
-﻿using ProxyMapService.Proxy.Headers;
+﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Headers;
 using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
@@ -19,6 +20,12 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.IncomingStream.DisconnectHandler += HandlerLogger.OnClientDisconnected;
                 }
+
+                if (context.Mapping.Listen.Mode == ModeEnum.Reverse)
+                {
+                    return await RunReverse(context);
+                }
+
                 var requestHeaderBytes = await context.IncomingHeaderStream.ReadHeaderBytes(context.IncomingStream, context.Token);
                 switch (context.IncomingHeaderStream.ProtocolType)
                 {
@@ -83,6 +90,65 @@ namespace ProxyMapService.Proxy.Handlers
             }
             context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
             return HandleStep.Terminate;
+        }
+
+        /// <summary>
+        /// Reverse proxy mode. The client protocol is the target server's protocol, not a proxy
+        /// protocol, so it is detected without consuming bytes whenever possible:
+        /// a TLS connection (peeked, not read — TunnelHandler reuses the cached peek record for
+        /// its own detection, MITM and passthrough) and any opaque traffic are tunneled as is;
+        /// only an HTTP request is actually read and parsed, because the HTTP handlers re-send
+        /// the (rewritten) request themselves before tunneling.
+        /// </summary>
+        private async Task<HandleStep> RunReverse(SessionContext context)
+        {
+            try
+            {
+                // SslMode.Yes — trust the configuration, no peek needed.
+                // SslMode.No — TLS is excluded, go straight to the HTTP branch.
+                // SslMode.Auto — peek the TLS record (peek does not consume bytes).
+                bool isTls = context.SslMode switch
+                {
+                    SslMode.Yes => true,
+                    SslMode.No => false,
+                    _ => await context.IncomingStream!.PeekTlsRecordAsync(context.Token) != null
+                };
+                if (isTls)
+                {
+                    return HandleStep.ReverseProxy;
+                }
+
+                // Not TLS: commit to the HTTP path and parse the request header.
+                // The protocol type is preset so that ReadHeaderBytes does not mistake
+                // SOCKS/proxy traffic for something else — in reverse mode everything
+                // that does not parse as HTTP is simply terminated.
+                context.IncomingHeaderStream.ProtocolType = ProtocolTypeEnum.Http;
+                var requestHeaderBytes = await context.IncomingHeaderStream.ReadHeaderBytes(context.IncomingStream, context.Token);
+                if (requestHeaderBytes == null)
+                {
+                    context.Logger.LogReadHeaderFailed("HTTP (reverse)");
+                    context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
+                    return HandleStep.Terminate;
+                }
+                context.InboundType = ProxyType.Http;
+                context.Http = new HttpRequestHeader(requestHeaderBytes);
+                // context.Host is intentionally NOT taken from the request:
+                // in reverse mode it comes from ReverseProxy.Target (ReverseProxyActionHandler).
+                context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.Http);
+                if (context.Http.BadRequest)
+                {
+                    context.Logger.LogHttpBadRequest();
+                    context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
+                    await HttpProto.HttpReplyBadRequest(context, context.Http);
+                    return HandleStep.Terminate;
+                }
+                return HandleStep.ReverseProxyHttp;
+            }
+            catch (Exception)
+            {
+                context.ProxyCounters.SessionsCounter?.OnHeaderFailed(context);
+                throw;
+            }
         }
 
         public static InitializeHandler Instance()

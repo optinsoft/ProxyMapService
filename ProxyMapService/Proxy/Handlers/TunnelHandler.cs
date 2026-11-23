@@ -402,8 +402,8 @@ namespace ProxyMapService.Proxy.Handlers
 
             return context.SslClientConfig.TlsClientType switch
             {
-                TlsClientType.BoringSsl => new BoringSslStream(inner, context.Host.Hostname),
-                TlsClientType.Nss => new NssSsl.NssStream(inner, context.Host.Hostname),
+                TlsClientType.BoringSsl => new BoringSslStream(inner, context.UpstreamServerName ?? context.Host.Hostname),
+                TlsClientType.Nss => new NssSsl.NssStream(inner, context.UpstreamServerName ?? context.Host.Hostname),
                 _ => new SslStream(inner),
             };
         }

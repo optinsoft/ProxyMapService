@@ -324,5 +324,71 @@ namespace ProxyMapService.Tests
             var mapping = Assert.Single(proxyMappings);
             Assert.Equal(9090, mapping.Listen.Port);
         }
+
+        [Fact]
+        public void ProxyMapping_ReverseModeFields_BindCorrectly()
+        {
+            var configuration = BuildConfiguration(
+                """
+                {
+                  "ProxyMappings": [
+                    {
+                      "Listen": {
+                        "Port": 8443,
+                        "Mode": "Reverse",
+                        "Action": "Bypass",
+                        "SslMode": "Yes"
+                      },
+                      "RootDir": "./wwwroot",
+                      "ReverseProxy": {
+                        "Target": {
+                          "Host": "internal.example.com",
+                          "Port": 443
+                        },
+                        "ServerName": "alt.example.com"
+                      }
+                    }
+                  ]
+                }
+                """);
+
+            var proxyMappings = configuration
+                .GetSection("ProxyMappings")
+                .Get<List<ProxyMapping>>();
+
+            Assert.NotNull(proxyMappings);
+            var mapping = Assert.Single(proxyMappings);
+            Assert.Equal(ModeEnum.Reverse, mapping.Listen.Mode);
+            Assert.Equal(ActionEnum.Bypass, mapping.Listen.Action);
+            Assert.Equal(SslMode.Yes, mapping.Listen.SslMode);
+            Assert.Equal("./wwwroot", mapping.RootDir);
+            Assert.NotNull(mapping.ReverseProxy);
+            Assert.Equal("internal.example.com", mapping.ReverseProxy.Target.Host);
+            Assert.Equal(443, mapping.ReverseProxy.Target.Port);
+            Assert.Equal("alt.example.com", mapping.ReverseProxy.ServerName);
+        }
+
+        [Fact]
+        public void ProxyMapping_Defaults_AreForwardMode()
+        {
+            var configuration = BuildConfiguration(
+                """
+                {
+                  "ProxyMappings": [
+                    { "Listen": { "Port": 8080 } }
+                  ]
+                }
+                """);
+
+            var proxyMappings = configuration
+                .GetSection("ProxyMappings")
+                .Get<List<ProxyMapping>>();
+
+            Assert.NotNull(proxyMappings);
+            var mapping = Assert.Single(proxyMappings);
+            Assert.Equal(ModeEnum.Forward, mapping.Listen.Mode);
+            Assert.Null(mapping.ReverseProxy);
+            Assert.Null(mapping.RootDir);
+        }
     }
 }
