@@ -104,7 +104,16 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                     }
 
-                    await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                    if (http.HTTPVerb != "CONNECT")
+                    {
+                        // The request is aimed at the target: delay it when the upstream is TLS.
+                        await HttpProto.SendTargetHttpRequest(context, httpRequestBytes);
+                    }
+                    else
+                    {
+                        // The CONNECT request goes to the proxy server itself, in plaintext.
+                        await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                    }
 
                     if (http.HTTPVerb != "CONNECT")
                     {

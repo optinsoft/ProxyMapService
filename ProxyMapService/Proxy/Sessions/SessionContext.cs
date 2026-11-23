@@ -81,6 +81,22 @@ namespace ProxyMapService.Proxy.Sessions
         public SslApplicationProtocol OutgoingNegotiatedAlpn { get; set; } = new();
         public bool TranslateH1ToH2 { get; set; }
         public bool DowngradeIncomingToHttp1 { get; set; }
+
+        /// <summary>
+        /// Heuristic used by the request-sending handlers (Bypass/Proxy) to decide whether
+        /// the connection to the target will be TLS and therefore the (rewritten) HTTP
+        /// request must not be sent before the upstream TLS handshake (it is stashed in
+        /// <see cref="PendingOutgoingBytes"/> and injected by TunnelHandler afterwards).
+        /// Mirrors the TunnelHandler outgoing-TLS decision for the cases reachable from
+        /// those handlers, where the incoming side is plaintext.
+        /// </summary>
+        public bool IsUpstreamTlsExpected() => UpstreamSslMode switch
+        {
+            SslMode.Yes => true,
+            SslMode.No => false,
+            _ => NetworkSecurityHelper.IsStandardTlsPort(Host.Port)
+                || (!NetworkSecurityHelper.IsStandardCleartextPort(Host.Port) && SslMode == SslMode.Yes)
+        };
         public bool RequiresHttp1Incoming
         {
             get
@@ -121,6 +137,14 @@ namespace ProxyMapService.Proxy.Sessions
         public string? SessionId { get; set; }
         public int SessionTime { get; set; }
         public string? RootDir { get; set; }
+        /// <summary>
+        /// The (rewritten) HTTP request that a request-sending handler (Bypass/Proxy)
+        /// did NOT send because the upstream connection will be TLS: it must go out only
+        /// after the upstream TLS handshake. TunnelHandler injects these bytes into the
+        /// tunnel right after the handshake (raw for h1 upstream, prepended to the source
+        /// stream of the H1->H2 translation tunnel otherwise). Null — nothing pending.
+        /// </summary>
+        public byte[]? PendingOutgoingBytes { get; set; }
         /// <summary>
         /// Optional SNI (TLS TargetHost) override for the upstream connection
         /// (ReverseProxy.ServerName). Null — context.Host.Hostname is used.

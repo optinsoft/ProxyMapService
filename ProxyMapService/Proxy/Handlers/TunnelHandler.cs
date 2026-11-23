@@ -57,16 +57,22 @@ namespace ProxyMapService.Proxy.Handlers
                 context.RequestTunnelState.IsSecure = isIncomingSSL;
                 context.ResponseTunnelState.IsSecure = isOutgoingSSL;
 
-                using SslStream? incomingSslStream = context.DecryptSSL && isIncomingSSL ? new(context.IncomingStream) : null;
-                using Stream? outgoingSslStream = context.DecryptSSL && isOutgoingSSL
+                // TLS streams are created when a side is secure AND either full decryption (MITM)
+                // is enabled, or the security of the two ends differs: TLS cannot be passed
+                // through into plaintext (and plaintext into TLS), so the secure side must be
+                // terminated/initiated even when DecryptSSL is off.
+                using SslStream? incomingSslStream = isIncomingSSL && (context.DecryptSSL || !isOutgoingSSL) ? new(context.IncomingStream) : null;
+                using Stream? outgoingSslStream = isOutgoingSSL && (context.DecryptSSL || !isIncomingSSL)
                     ? CreateOutgoingSslStream(context)
                     : null;
 
                 // Passthrough TLS (no MITM): the client's own ClientHello travels through the
                 // tunnel unchanged, so the record splitter is applied directly on the outgoing
                 // stream. The split does not require MITM and works in both modes.
+                // Only applies when the outgoing TLS stream is NOT created (pure passthrough):
+                // CreateOutgoingSslStream inserts the splitter inside the TLS stream itself.
                 using TlsRecordSplitStream? passthroughSplitStream =
-                    !context.DecryptSSL && isOutgoingSSL
+                    !context.DecryptSSL && isOutgoingSSL && outgoingSslStream == null
                         ? CreatePassthroughSplitStream(context)
                         : null;
 
@@ -132,6 +138,21 @@ namespace ProxyMapService.Proxy.Handlers
         public static TunnelHandler Instance()
         {
             return Self;
+        }
+
+        /// <summary>
+        /// For the H1->H2 translation tunnel the withheld request (context.PendingOutgoingBytes)
+        /// must not be written raw into the h2 connection: it is prepended to the tunnel source,
+        /// so the tunnel parses it like any other client HTTP/1.1 request and re-encodes it.
+        /// </summary>
+        private static ITunnelStream RequestSourceWithPending(SessionContext context, ITunnelStream incomingStream)
+        {
+            if (context.PendingOutgoingBytes is { Length: > 0 } pending)
+            {
+                context.PendingOutgoingBytes = null;
+                return new PendingPrefixTunnelStream(incomingStream, pending);
+            }
+            return incomingStream;
         }
 
         #region High-Performance Logging
@@ -253,17 +274,27 @@ namespace ProxyMapService.Proxy.Handlers
                     context.Logger.LogServerTLSHandshakeSucceeded(context.IncomingEndPoint, incomingSslStream.NegotiatedApplicationProtocol);
                     context.IncomingStream?.TransferHandlersTo(incomingStream);
                     context.IncomingHttp2 = (incomingSslStream.NegotiatedApplicationProtocol == SslApplicationProtocol.Http2);
-                    context.TranslateH1ToH2 = context.H1ToH2TranslationEnabled && context.OutgoingHttp2 && !context.IncomingHttp2;
-                    if (context.TranslateH1ToH2)
-                    {
-                        context.Logger.LogHttp1to2Translation(context.IncomingEndPoint, context.Host);
-                        // Every ITunnelStream implementation is a Stream (the interface only
-                        // declares the tunnel members, not the full Stream surface).
-                        context.OutgoingHttp2Client = new Http2ClientConnection((Stream)outgoingStream);
-                        await context.OutgoingHttp2Client.StartAsync(context.TunnelToken);
-                    }
-                    else if (context.IncomingHttp2 && context.OutgoingHttp2)
-                    {
+                }
+                else
+                {
+                    // Plaintext incoming: make sure the upstream TLS handshake has completed
+                    // before the tunnel kind is chosen (OutgoingHttp2 becomes known).
+                    await outgoingReady.Task.WaitAsync(context.TunnelToken);
+                }
+
+                // H1 -> H2 translation also applies when the incoming side is plaintext:
+                // the client speaks plain HTTP/1.1 while the TLS upstream negotiated h2.
+                context.TranslateH1ToH2 = context.H1ToH2TranslationEnabled && context.OutgoingHttp2 && !context.IncomingHttp2;
+                if (context.TranslateH1ToH2)
+                {
+                    context.Logger.LogHttp1to2Translation(context.IncomingEndPoint, context.Host);
+                    // Every ITunnelStream implementation is a Stream (the interface only
+                    // declares the tunnel members, not the full Stream surface).
+                    context.OutgoingHttp2Client = new Http2ClientConnection((Stream)outgoingStream);
+                    await context.OutgoingHttp2Client.StartAsync(context.TunnelToken);
+                }
+                else if (incomingSslStream != null && context.IncomingHttp2 && context.OutgoingHttp2)
+                {
                         // h2 <-> h2: traffic is parsed by a passive observer (headers and bodies logged)
                         context.Http2Observer = new Http2TrafficObserver(
                             new Http2LoggingSink(context),
@@ -281,7 +312,6 @@ namespace ProxyMapService.Proxy.Handlers
                                 (streamId, headers) => h2RewriteLogger.LogHttp2HostRewritten(streamId, Http2StreamInfo.Find(headers, ":authority")));
                             h2RewriteLogger.LogHttp2HostRewritingEnabled(context.IncomingEndPoint, context.Host);
                         }
-                    }
                 }
                 incomingReady.SetResult();
             }
@@ -350,7 +380,7 @@ namespace ProxyMapService.Proxy.Handlers
                 : context.OutgoingHttp2Client != null
                     ? new H1ToH2RequestTunnel(
                         context,
-                        incomingStream,
+                        RequestSourceWithPending(context, incomingStream),
                         outgoingStream,
                         outgoingReady,
                         context.ProxyCounters.IncomingReadCounter,
@@ -497,13 +527,24 @@ namespace ProxyMapService.Proxy.Handlers
                     context.Logger.LogClientTLSHandshakeSucceeded(context.Host, context.OutgoingNegotiatedAlpn);
                     context.OutgoingStream?.TransferHandlersTo(outgoingStream);
                     context.OutgoingHttp2 = (context.OutgoingNegotiatedAlpn == SslApplicationProtocol.Http2);
+                    if (!context.OutgoingHttp2 && context.PendingOutgoingBytes is { Length: > 0 } pending)
+                    {
+                        // Plaintext-inTLS-upstream (h1): the request withheld until the handshake
+                        // is written before outgoingReady is set, so the request tunnel's writes
+                        // (which wait for it) follow the pending bytes in order.
+                        context.PendingOutgoingBytes = null;
+                        await outgoingStream.WriteAsync(pending, context.TunnelToken);
+                    }
                 }
                 else
                 {
-                    bool downgrade = context.DecryptSSL 
-                        && context.RequestTunnelState.IsSecure 
-                        && context.RequiresHttp1Incoming
-                        && TryDowngradeIncomingToHttp1(context, null);
+                    // Plaintext upstream cannot receive HTTP/2, so when the incoming side is
+                    // secure (TLS terminated), the client must be kept on HTTP/1.1. The existing
+                    // DecryptSSL + RequiresHttp1Incoming case keeps its detailed logic.
+                    bool downgrade = context.RequestTunnelState.IsSecure &&
+                        (context.DecryptSSL && context.RequiresHttp1Incoming
+                            ? TryDowngradeIncomingToHttp1(context, null)
+                            : true);
                     context.DowngradeIncomingToHttp1 = downgrade;
                 }
                 outgoingReady.SetResult();

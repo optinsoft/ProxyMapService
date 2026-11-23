@@ -545,6 +545,23 @@ namespace ProxyMapService.Proxy.Proto
             await SendHttpRequest(context.OutgoingStream, requestBytes, context.Token);
         }
 
+        /// <summary>
+        /// Sends a request aimed at the TARGET host (not at a proxy server). When the upstream
+        /// connection will be TLS, the request is not written into the (still plaintext) socket:
+        /// it is stashed in context.PendingOutgoingBytes and TunnelHandler sends it right after
+        /// the upstream TLS handshake. CONNECT requests to a proxy server must use the regular
+        /// SendHttpRequest — they are addressed to the proxy and always travel in plaintext.
+        /// </summary>
+        public static async Task SendTargetHttpRequest(SessionContext context, byte[] requestBytes)
+        {
+            if (context.IsUpstreamTlsExpected())
+            {
+                context.PendingOutgoingBytes = requestBytes;
+                return;
+            }
+            await SendHttpRequest(context, requestBytes);
+        }
+
         private static string GetContentType(string extension)
         {
             return extension.ToLowerInvariant() switch

@@ -118,12 +118,12 @@ namespace ProxyMapService.Proxy.Handlers
                                         }
                                         else
                                         {
-                                            await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                                            await HttpProto.SendTargetHttpRequest(context, httpRequestBytes);
                                         }
                                     }
                                     else
                                     {
-                                        await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                                        await HttpProto.SendTargetHttpRequest(context, httpRequestBytes);
                                     }
                                 }
                             }

@@ -120,7 +120,7 @@ namespace ProxyMapService.Proxy.Handlers
                             return HandleStep.Tunnel;
                         }
                     }
-                    await HttpProto.SendHttpRequest(context, httpRequestBytes);
+                    await HttpProto.SendTargetHttpRequest(context, httpRequestBytes);
                 }
             }
 
