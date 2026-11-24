@@ -184,7 +184,9 @@ function formatDuration(ms: number): string {
   return `${ms} ms`
 }
 
-const COLUMNS_STORAGE_KEY = 'httpTrafficVisibleColumns'
+// We persist the *hidden* columns rather than the visible ones, so that columns
+// added in newer versions show up by default until the user explicitly hides them.
+const COLUMNS_STORAGE_KEY = 'httpTrafficHiddenColumns'
 const allColumnKeys = allColumns.map(c => c.key)
 
 function loadVisibleColumns(): ColumnKey[] {
@@ -194,8 +196,8 @@ function loadVisibleColumns(): ColumnKey[] {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return allColumnKeys
     // Only keep keys we actually know about, to guard against stale/unknown values.
-    const known = allColumnKeys.filter(key => parsed.includes(key))
-    return known.length ? known : allColumnKeys
+    const hidden = allColumnKeys.filter(key => parsed.includes(key))
+    return allColumnKeys.filter(key => !hidden.includes(key))
   } catch (err) {
     console.error('Failed to load column settings from localStorage:', err)
     return allColumnKeys
@@ -206,7 +208,8 @@ const visibleColumns = ref<ColumnKey[]>(loadVisibleColumns())
 
 watch(visibleColumns, (value) => {
   try {
-    localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(value))
+    const hidden = allColumnKeys.filter(key => !value.includes(key))
+    localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(hidden))
   } catch (err) {
     console.error('Failed to save column settings to localStorage:', err)
   }
