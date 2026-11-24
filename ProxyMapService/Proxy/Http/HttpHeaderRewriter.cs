@@ -1,7 +1,9 @@
 ﻿// Ignore Spelling: Rewriter
 
+using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Http2;
 using ProxyMapService.Proxy.Network;
+using System.Text;
 
 namespace ProxyMapService.Proxy.Http
 {
@@ -86,6 +88,172 @@ namespace ProxyMapService.Proxy.Http
             }
 
             return overwritten;
+        }
+
+        /// <summary>
+        /// Applies a <see cref="HeadersRule"/> to HTTP/1.1 header lines: the first line (request or status
+        /// line) is left unchanged; every other line is either removed (rule.Remove) or replaced by the
+        /// Set value (rule.Set, appended in place of the last occurrence). Empty lines (the end of the
+        /// header section) are never touched; Set headers are inserted before them.
+        /// Returns true when at least one header was modified.
+        /// </summary>
+        public static bool ApplyHeadersRule(HeadersRule? rule, List<string> headerLines)
+        {
+            if (rule == null || rule.IsEmpty || headerLines.Count == 0)
+            {
+                return false;
+            }
+
+            bool changed = false;
+
+            if (rule.Remove is { Count: > 0 })
+            {
+                for (int i = headerLines.Count - 1; i >= 1; i--)
+                {
+                    var line = headerLines[i];
+                    if (line.Length == 0) continue;
+                    foreach (var name in rule.Remove)
+                    {
+                        if (MatchesHeaderName(line, name))
+                        {
+                            headerLines.RemoveAt(i);
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (rule.Set is { Count: > 0 })
+            {
+                int insertAt = headerLines.Count;
+                for (int i = 1; i < headerLines.Count; i++)
+                {
+                    if (headerLines[i].Length == 0)
+                    {
+                        insertAt = i;
+                        break;
+                    }
+                }
+                foreach (var (name, value) in rule.Set)
+                {
+                    for (int i = headerLines.Count - 1; i >= 1; i--)
+                    {
+                        if (headerLines[i].Length > 0 && MatchesHeaderName(headerLines[i], name))
+                        {
+                            headerLines.RemoveAt(i);
+                            if (i < insertAt)
+                            {
+                                insertAt--;
+                            }
+                            changed = true;
+                        }
+                    }
+                    headerLines.Insert(insertAt, $"{name}: {ResolveValuePlaceholders(value)}");
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
+        /// <summary>
+        /// The HTTP/2 counterpart of <see cref="ApplyHeadersRule(HeadersRule?, List&lt;string&gt;)"/> for a decoded
+        /// header block: pseudo-headers (":...") are never touched; Set headers are appended after the
+        /// existing ones. Returns true when at least one header was modified.
+        /// </summary>
+        public static bool ApplyHeadersRule(HeadersRule? rule, List<H2Header> headers)
+        {
+            if (rule == null || rule.IsEmpty)
+            {
+                return false;
+            }
+
+            bool changed = false;
+
+            if (rule.Remove is { Count: > 0 })
+            {
+                for (int i = headers.Count - 1; i >= 0; i--)
+                {
+                    var name = headers[i].Name;
+                    if (name.StartsWith(':')) continue;
+                    foreach (var removeName in rule.Remove)
+                    {
+                        if (name.Equals(removeName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            headers.RemoveAt(i);
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (rule.Set is { Count: > 0 })
+            {
+                foreach (var (name, value) in rule.Set)
+                {
+                    if (name.StartsWith(':')) continue; // pseudo-headers cannot be set
+                    for (int i = headers.Count - 1; i >= 0; i--)
+                    {
+                        if (!headers[i].Name.StartsWith(':') && headers[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            headers.RemoveAt(i);
+                            changed = true;
+                        }
+                    }
+                    headers.Add(new H2Header(name, ResolveValuePlaceholders(value)));
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
+        private static bool MatchesHeaderName(string line, string name)
+        {
+            return line.Length > name.Length
+                && line[name.Length] == ':'
+                && line.StartsWith(name, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Substitutes "${VARIABLE}" placeholders with environment variables (a missing variable is
+        /// substituted with an empty string) and strips CR/LF from the result (header injection guard).
+        /// </summary>
+        private static string ResolveValuePlaceholders(string value)
+        {
+            var result = value;
+            if (result.Contains("${"))
+            {
+                var sb = new StringBuilder();
+                int pos = 0;
+                while (true)
+                {
+                    int start = result.IndexOf("${", pos, StringComparison.Ordinal);
+                    if (start == -1)
+                    {
+                        sb.Append(result, pos, result.Length - pos);
+                        break;
+                    }
+                    sb.Append(result, pos, start - pos);
+                    int end = result.IndexOf('}', start + 2);
+                    if (end == -1)
+                    {
+                        sb.Append(result, start, result.Length - start);
+                        break;
+                    }
+                    var variable = result[(start + 2)..end];
+                    var envValue = Environment.GetEnvironmentVariable(variable);
+                    if (envValue != null)
+                    {
+                        sb.Append(envValue);
+                    }
+                    pos = end + 1;
+                }
+                result = sb.ToString();
+            }
+            return result.Replace("\r", "").Replace("\n", "").Trim();
         }
 
         /// <summary>

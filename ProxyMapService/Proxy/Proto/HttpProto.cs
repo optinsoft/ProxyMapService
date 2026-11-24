@@ -1,5 +1,6 @@
 ﻿using ProxyMapService.Proxy.Cache;
 using ProxyMapService.Proxy.Counters;
+using ProxyMapService.Proxy.Http;
 using ProxyMapService.Proxy.Sessions;
 using System.Text;
 using System.Text.Json;
@@ -467,7 +468,16 @@ namespace ProxyMapService.Proxy.Proto
 
                     context.ResponseHeadersLogger?.OnHttpResponseHeader(context, requestHeader, fileStream.Length <= fileStream.Position, headers);
 
-                    await incomingStream.WriteAsync(headerBuffer.AsMemory(0, headerLength), context.Token);
+                    var outgoingHeaderBuffer = headerBuffer;
+                    if (!context.ResponseHeadersRule.IsEmpty && headers.Length > 0)
+                    {
+                        // re-build the header block with the currently configured response header rules applied
+                        var lineList = new List<string>(headers);
+                        HttpHeaderRewriter.ApplyHeadersRule(context.ResponseHeadersRule, lineList);
+                        outgoingHeaderBuffer = Encoding.UTF8.GetBytes(string.Join("\r\n", lineList) + "\r\n\r\n");
+                    }
+
+                    await incomingStream.WriteAsync(outgoingHeaderBuffer.AsMemory(0, outgoingHeaderBuffer.Length), context.Token);
                 }
 
                 var bodyLength = fileStream.Length - fileStream.Position;

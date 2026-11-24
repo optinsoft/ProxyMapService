@@ -97,7 +97,7 @@ namespace ProxyMapService.Proxy.Handlers
                             else
                             {
                                 var requestFirstLine = $"{context.Http.HTTPVerb} {context.Http.HTTPTargetPath} {context.Http.HTTPProtocol}";
-                                var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host);
+                                var httpRequestBytes = context.Http.GetBytes(false, null, requestFirstLine, context.Host, context.RequestHeadersRule);
                                 if (httpRequestBytes != null && httpRequestBytes.Length > 0)
                                 {
                                     context.RequestHeader = new HttpRequestHeader(httpRequestBytes);

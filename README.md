@@ -257,6 +257,71 @@ The legacy `HostRule`-level `CertificatePath`/`CertificatePassword` properties h
 
 ---
 
+## Editing HTTP Headers (RequestHeaders / ResponseHeaders)
+
+The proxy can edit HTTP headers on the fly: add or replace headers sent to the upstream server (`RequestHeaders`, e.g. to inject an `Authorization` header for upstream authentication) and headers sent back to the client (`ResponseHeaders`, e.g. to strip `Server` or `X-Powered-By`).
+
+The rules are configured at three levels, and the levels are merged:
+
+* **global** — the `HTTP` section (`HTTP:RequestHeaders` / `HTTP:ResponseHeaders`);
+* **`Listen`** — inside a `ProxyMappings` entry, applies to all traffic of that listening port range;
+* **`HostRule`** — inside the `HostRules` section, applies only to the matching host (applied when the rule matches and its action is not `Deny`).
+
+Precedence: global → `Listen` → `HostRule`. When merging, `Set` is merged by key (a higher level replaces values of the same keys and adds new ones) and the `Remove` lists are combined.
+
+Example — global rules plus a per-host `Authorization` injection:
+
+```json
+"ProxyMappings": [
+	{
+		"Listen": {
+			"Port": 5001,
+			"DecryptSSL": true
+		}
+	}
+],
+"HTTP": {
+	"RequestHeaders": {
+		"Set": {
+			"X-Gateway": "ProxyMapService"
+		},
+		"Remove": [
+			"Proxy-Authorization"
+		]
+	},
+	"ResponseHeaders": {
+		"Remove": [
+			"Server",
+			"X-Powered-By"
+		]
+	}
+},
+"HostRules": {
+	"Items": [
+		{
+			"HostName": "api.example.com",
+			"RequestHeaders": {
+				"Set": {
+					"Authorization": "Bearer ${API_TOKEN}"
+				},
+				"Remove": [
+					"Cookie"
+				]
+			}
+		}
+	]
+}
+```
+
+Notes:
+
+* `Set` replaces every existing header with the same name (case-insensitively) and appends the new value; `Remove` deletes every header with the given name (case-insensitively).
+* `Set` values support `${VARIABLE}` placeholders substituted with **environment variables** (e.g. `"Bearer ${API_TOKEN}"`). A missing variable is substituted with an empty string; CR/LF characters are stripped from the resulting value to prevent header injection.
+* Only plain HTTP headers can be edited: HTTP/2 pseudo-headers (`:method`, `:path`, `:authority`, `:status`, ...) are never touched, and transport framing headers (`Content-Length`, `Transfer-Encoding`) must not be modified — the body tracking would break.
+* Supported for HTTP/1.1 in both directions, for HTTP/2 requests (h2 → h2 header rewriting), for responses translated from HTTP/2 to HTTP/1.1 and for responses served from the cache. For h2 → h2 sessions **response** header rules are not applied yet (the responses are forwarded as is) — use the h1 → h2 translation or an HTTP/1.1 upstream if response editing is required; in TLS passthrough mode (no decryption) headers are not edited at all.
+
+---
+
 ## Chrome-like and Firefox-like TLS Fingerprint
 
 When SSL decryption is enabled, the Proxy Map Service terminates the client's TLS connection and opens its own TLS connection to the target server. By default, this upstream connection is made with the standard .NET `SslStream`, whose TLS handshake is easily recognizable as non-browser traffic — some servers and anti-bot systems flag such connections.

@@ -61,6 +61,16 @@
         public bool? EnableDowngradeToHttp1ForOverwrittenHost { get; set; }
         public bool IgnoreHostRules { get; set; } = false;
         /// <summary>
+        /// Rules for editing request headers sent to the upstream server, merged over the global
+        /// HTTP:RequestHeaders (see HeadersRule).
+        /// </summary>
+        public HeadersRule? RequestHeaders { get; set; }
+        /// <summary>
+        /// Rules for editing response headers sent back to the client, merged over the global
+        /// HTTP:ResponseHeaders (see HeadersRule).
+        /// </summary>
+        public HeadersRule? ResponseHeaders { get; set; }
+        /// <summary>
         /// Partial override of the global SslClientOptions for this listening port range.
         /// </summary>
         public SslClientOptionsOverride? SslClientOptions { get; set; }

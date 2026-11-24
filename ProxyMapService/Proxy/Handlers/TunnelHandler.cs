@@ -301,16 +301,28 @@ namespace ProxyMapService.Proxy.Handlers
                             new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize),
                             new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize));
 
-                        if (context.Host.Overwritten)
+                        if (context.Host.Overwritten || !context.RequestHeadersRule.IsEmpty)
                         {
-                            // host override: in addition, every client header block is re-encoded with the new
-                            // :authority before it reaches the server (switching the client to HTTP/1.1 was not possible)
+                            // host override and/or request header rules: in addition, every client header block is
+                            // re-encoded before it reaches the server (switching the client to HTTP/1.1 was not possible)
+                            bool hostOverwritten = context.Host.Overwritten;
                             var h2RewriteLogger = Http2Log.DiagnosticsLogger(context.Logger)!;
                             context.Http2RequestRewriter = new Http2HeaderRewriter(
                                 new HpackDecoderAdapter(Http2TrafficObserver.PassiveMaxDynamicTableSize),
-                                headers => HttpHeaderRewriter.OverrideHostHeader(headers, context.Host),
+                                headers =>
+                                {
+                                    bool changed = hostOverwritten && HttpHeaderRewriter.OverrideHostHeader(headers, context.Host);
+                                    if (HttpHeaderRewriter.ApplyHeadersRule(context.RequestHeadersRule, headers))
+                                    {
+                                        changed = true;
+                                    }
+                                    return changed;
+                                },
                                 (streamId, headers) => h2RewriteLogger.LogHttp2HostRewritten(streamId, Http2StreamInfo.Find(headers, ":authority")));
-                            h2RewriteLogger.LogHttp2HostRewritingEnabled(context.IncomingEndPoint, context.Host);
+                            if (hostOverwritten)
+                            {
+                                h2RewriteLogger.LogHttp2HostRewritingEnabled(context.IncomingEndPoint, context.Host);
+                            }
                         }
                 }
                 incomingReady.SetResult();

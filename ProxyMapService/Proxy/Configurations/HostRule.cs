@@ -44,6 +44,18 @@ namespace ProxyMapService.Proxy.Configurations
         public bool? DisableDowngradeToHttp1ForCache { get; set; }
         public bool? EnableDowngradeToHttp1ForOverwrittenHost { get; set; }
         /// <summary>
+        /// Rules for editing request headers sent to the upstream server, merged over
+        /// Listen.RequestHeaders (see HeadersRule). Applied only when the rule matches the host
+        /// and the rule's action is not Deny.
+        /// </summary>
+        public HeadersRule? RequestHeaders { get; set; }
+        /// <summary>
+        /// Rules for editing response headers sent back to the client, merged over
+        /// Listen.ResponseHeaders (see HeadersRule). Applied only when the rule matches the host
+        /// and the rule's action is not Deny.
+        /// </summary>
+        public HeadersRule? ResponseHeaders { get; set; }
+        /// <summary>
         /// Partial override of the global SslClientOptions for connections to this host.
         /// </summary>
         public SslClientOptionsOverride? SslClientOptions { get; set; }

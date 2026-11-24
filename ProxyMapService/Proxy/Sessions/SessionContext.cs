@@ -49,6 +49,16 @@ namespace ProxyMapService.Proxy.Sessions
         public bool DowngradeToHttp1ForCacheEnabled { get; set; }
         public bool DowngradeToHttp1ForOverwrittenHostEnabled { get; set; }
         public bool IgnoreHostRules { get; set; }
+        /// <summary>
+        /// Rules for editing request headers sent to the upstream server (global HTTP:RequestHeaders
+        /// merged with Listen.RequestHeaders and optionally overridden by a HostRule).
+        /// </summary>
+        public HeadersRule RequestHeadersRule { get; set; }
+        /// <summary>
+        /// Rules for editing response headers sent back to the client (global HTTP:ResponseHeaders
+        /// merged with Listen.ResponseHeaders and optionally overridden by a HostRule).
+        /// </summary>
+        public HeadersRule ResponseHeadersRule { get; set; }
         public SslClientOptionsConfig SslClientConfig { get; set; }
         public SslServerOptionsConfig SslServerConfig { get; set; }
         public X509Certificate2? ServerCertificate { get; set; }
@@ -286,6 +296,8 @@ namespace ProxyMapService.Proxy.Sessions
             DowngradeToHttp1ForCacheEnabled = !(mapping.Listen.DisableDowngradeToHttp1ForCache ?? httpConfig.DisableDowngradeToHttp1ForCache);
             DowngradeToHttp1ForOverwrittenHostEnabled = mapping.Listen.EnableDowngradeToHttp1ForOverwrittenHost ?? httpConfig.EnableDowngradeToHttp1ForOverwrittenHost;
             IgnoreHostRules = mapping.Listen.IgnoreHostRules;
+            RequestHeadersRule = HeadersRule.Merge(httpConfig.RequestHeaders, mapping.Listen.RequestHeaders);
+            ResponseHeadersRule = HeadersRule.Merge(httpConfig.ResponseHeaders, mapping.Listen.ResponseHeaders);
             RootDir = mapping.RootDir;
             ServerCertificate = serverCertificate;
             CACertificate = caCertificate;

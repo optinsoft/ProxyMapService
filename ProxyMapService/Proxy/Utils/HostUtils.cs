@@ -69,6 +69,14 @@ namespace ProxyMapService.Proxy.Utils
                 {
                     context.DowngradeToHttp1ForOverwrittenHostEnabled = hostRule.EnableDowngradeToHttp1ForOverwrittenHost.Value;
                 }
+                if (hostRule.RequestHeaders != null)
+                {
+                    context.RequestHeadersRule = HeadersRule.Merge(context.RequestHeadersRule, hostRule.RequestHeaders);
+                }
+                if (hostRule.ResponseHeaders != null)
+                {
+                    context.ResponseHeadersRule = HeadersRule.Merge(context.ResponseHeadersRule, hostRule.ResponseHeaders);
+                }
                 if (hostRule.SslClientOptions != null)
                 {
                     context.SslClientConfig = context.SslClientConfig.ApplyOverride(hostRule.SslClientOptions);

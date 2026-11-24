@@ -167,6 +167,13 @@ namespace ProxyMapService.Proxy.Tunnels
                 }
             }
 
+            if (!_context.RequestHeadersRule.IsEmpty)
+            {
+                var lines = new List<string>(headerAndTail.HeaderLines);
+                HttpHeaderRewriter.ApplyHeadersRule(_context.RequestHeadersRule, lines);
+                headerAndTail.HeaderLines = [.. lines];
+            }
+
             using var cacheFileStream = requestCacheEntry != null ? GetCacheEntryFileStream(requestCacheEntry) : null;
 
             if (requestCacheEntry != null && cacheFileStream != null)

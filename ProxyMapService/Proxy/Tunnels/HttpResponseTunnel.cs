@@ -236,6 +236,12 @@ namespace ProxyMapService.Proxy.Tunnels
 
         protected override async Task SendHeaderAsync(string[] lines, IHttpBodyTracker tracker, CancellationToken token)
         {
+            if (!_context.ResponseHeadersRule.IsEmpty && lines.Length > 0)
+            {
+                var lineList = new List<string>(lines);
+                HttpHeaderRewriter.ApplyHeadersRule(_context.ResponseHeadersRule, lineList);
+                lines = [.. lineList];
+            }
             string header = string.Join("\r\n", lines);
             byte[] headerBytes = Encoding.ASCII.GetBytes(header);
 

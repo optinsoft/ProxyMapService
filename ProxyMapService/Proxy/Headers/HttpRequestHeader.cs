@@ -45,9 +45,9 @@ namespace ProxyMapService.Proxy.Headers
 
         public bool TryMarkCompleted() => Interlocked.Exchange(ref _completed, 1) == 0;
 
-        public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
+        public byte[] GetBytes(bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host, Configurations.HeadersRule? headersRule = null)
         {
-            return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host);
+            return GetBytes(Headers, keepProxyHeaders, customProxyAuthorization, customFirstLine, host, headersRule);
         }
 
         private static void Parse(HttpRequestHeader self, byte[] array)
@@ -86,7 +86,7 @@ namespace ProxyMapService.Proxy.Headers
             }
         }
 
-        private static byte[] GetBytes(string[]? headers, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host)
+        private static byte[] GetBytes(string[]? headers, bool keepProxyHeaders, string? customProxyAuthorization, string? customFirstLine, HostAddress? host, Configurations.HeadersRule? headersRule = null)
         {
             var builder = new StringBuilder();
 
@@ -98,12 +98,17 @@ namespace ProxyMapService.Proxy.Headers
                         ? headers.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase))
                         : headers.Where(@string => !@string.StartsWith("Proxy-Authorization:", StringComparison.OrdinalIgnoreCase)
                                                   && !@string.StartsWith("Proxy-Connection:", StringComparison.OrdinalIgnoreCase)));
+                var lineList = enumerable.ToList();
+                if (headersRule != null && !headersRule.IsEmpty)
+                {
+                    HttpHeaderRewriter.ApplyHeadersRule(headersRule, lineList);
+                }
                 if (customFirstLine != null)
                 {
                     builder.Append(customFirstLine).Append("\r\n");
                 }
                 var line = 0;
-                foreach (var @string in enumerable)
+                foreach (var @string in lineList)
                 {
                     if (line == 0)
                     {
