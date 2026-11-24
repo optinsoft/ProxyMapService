@@ -155,6 +155,38 @@ The dashboard will now display full HTTP details instead of basic generic `CONNE
 
 ---
 
+## Listening Address
+
+By default, the proxy listeners are bound to the loopback interface (`127.0.0.1`), so the proxy is reachable only from the local machine. The `IPAddress` option in the `Listen` section of a `ProxyMappings` entry controls which network interface the port(s) are opened on. The setting is applied per mapping, so different mappings can listen on different interfaces.
+
+Supported values:
+
+* `"Loopback"` / `"Localhost"` — loopback interface, `127.0.0.1` (default when the option is omitted);
+* a concrete IP address — e.g. `"192.168.1.10"` (a specific interface) or `"::1"` (IPv6 loopback);
+* `"*"` / `"Any"` — all interfaces; the listener socket works in IPv6 dual-mode and accepts both IPv4 and IPv6 connections;
+* `"Any4"` — all IPv4 interfaces only (`0.0.0.0`).
+
+Example — open the port on all interfaces:
+
+```json
+"ProxyMappings": [
+	{
+		"Listen": {
+			"Port": 5001,
+			"IPAddress": "Any",
+			"Action": "Bypass",
+			"DecryptSSL": false
+		}
+	}
+]
+```
+
+An invalid value is logged as a warning and the listener falls back to the loopback interface.
+
+When binding to a non-loopback address, make sure the proxy is not exposed to untrusted networks: consider enabling authentication (`Authentication` section) and review the `Action` setting for the mapping.
+
+---
+
 ## Per-Port and Per-Host SSL Options Overrides
 
 The global `SslClientOptions` (outgoing TLS connections) and `SslServerOptions` (incoming TLS connections when decryption is enabled) can be refined at two levels:
