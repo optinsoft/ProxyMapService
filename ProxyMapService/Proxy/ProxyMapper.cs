@@ -100,7 +100,8 @@ namespace ProxyMapService.Proxy
 
         private async Task StartListenerAsync(int listenPort, ProxyProvider proxyProvider, ProxyAuthenticator proxyAuthenticator)
         {
-            var inboundEndPoint = new System.Net.IPEndPoint(ParseListenAddress(mapping.Listen.IPAddress), listenPort);
+            var (listenAddress, dualMode) = ParseListenAddress(mapping.Listen.IPAddress);
+            var inboundEndPoint = new System.Net.IPEndPoint(listenAddress, listenPort);
 
             // Effective SSL configs for this listening port range:
             // global SslClient/SslServerOptions overridden by mapping.Listen.SslClient/SslServerOptions.
@@ -118,39 +119,44 @@ namespace ProxyMapService.Proxy
                     proxyCounters, sessionLogger, token);
             }
 
-            using var listener = new Listener(inboundEndPoint, incomingClientHandler, serviceLogger);
+            using var listener = new Listener(inboundEndPoint, incomingClientHandler, serviceLogger, dualMode);
             await listener.Start(maxListenerStartRetries, sessionManager, stoppingToken);
         }
 
         /// <summary>
-        /// Resolves the Listen.IPAddress setting into an System.Net.IPAddress.
+        /// Resolves the Listen.IPAddress setting into an System.Net.IPAddress plus a dual-mode flag.
         /// Falls back to the loopback interface when the value is missing or invalid.
         /// </summary>
-        private System.Net.IPAddress ParseListenAddress(string? address)
+        private (System.Net.IPAddress Address, bool DualMode) ParseListenAddress(string? address)
         {
             if (string.IsNullOrWhiteSpace(address))
             {
-                return System.Net.IPAddress.Loopback;
+                return (System.Net.IPAddress.Loopback, false);
             }
 
             switch (address.Trim().ToLowerInvariant())
             {
                 case "loopback":
                 case "localhost":
-                    return System.Net.IPAddress.Loopback;
+                    return (System.Net.IPAddress.Loopback, false);
                 case "*":
                 case "any":
-                    // IPv6Any on a TcpListener socket works in dual-mode and accepts IPv4 too.
-                    return System.Net.IPAddress.IPv6Any;
+                    // All interfaces: bind to :: and enable dual-mode so that
+                    // both IPv4 and IPv6 connections are accepted.
+                    return (System.Net.IPAddress.IPv6Any, true);
+                case "any6":
+                    // All IPv6 interfaces only (IPv6-only socket, no IPv4 mapping).
+                    return (System.Net.IPAddress.IPv6Any, false);
                 case "any4":
-                    return System.Net.IPAddress.Any;
+                    // All IPv4 interfaces only.
+                    return (System.Net.IPAddress.Any, false);
                 default:
                     if (System.Net.IPAddress.TryParse(address.Trim(), out var parsed))
                     {
-                        return parsed;
+                        return (parsed, false);
                     }
                     serviceLogger.LogWarning("Invalid Listen.IPAddress value '{}', falling back to Loopback", address);
-                    return System.Net.IPAddress.Loopback;
+                    return (System.Net.IPAddress.Loopback, false);
             }
         }
     }

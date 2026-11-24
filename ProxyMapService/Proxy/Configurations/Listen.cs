@@ -30,8 +30,8 @@
         /// <summary>
         /// Network address to bind the listener(s) to. Default: "Loopback" (127.0.0.1).
         /// Supported values: "Loopback"/"Localhost", a concrete IP address (e.g. "192.168.1.10",
-        /// "::1"), "*" or "Any" for all interfaces (IPv6 dual-mode), "Any4" for all IPv4
-        /// interfaces only.
+        /// "::1"), "Any" or "*" for all interfaces (IPv6 dual-mode, accepts IPv4 and IPv6),
+        /// "Any6" for all IPv6 interfaces only, "Any4" for all IPv4 interfaces only.
         /// </summary>
         public string? IPAddress { get; set; }
         public bool RejectHttpProxy { get; set; } = false;

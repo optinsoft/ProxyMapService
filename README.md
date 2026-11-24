@@ -164,6 +164,7 @@ Supported values:
 * `"Loopback"` / `"Localhost"` — loopback interface, `127.0.0.1` (default when the option is omitted);
 * a concrete IP address — e.g. `"192.168.1.10"` (a specific interface) or `"::1"` (IPv6 loopback);
 * `"*"` / `"Any"` — all interfaces (bound to `::`); IPv6 dual-mode is explicitly enabled on the listener socket, so both IPv4 and IPv6 connections are accepted;
+* `"Any6"` — all IPv6 interfaces only (bound to `::`, IPv6-only socket, no IPv4 mapping);
 * `"Any4"` — all IPv4 interfaces only (`0.0.0.0`).
 
 Example — open the port on all interfaces:

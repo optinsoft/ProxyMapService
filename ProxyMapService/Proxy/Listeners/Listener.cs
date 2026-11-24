@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace ProxyMapService.Proxy.Listeners
 {
-    public class Listener(System.Net.IPEndPoint inboundEndPoint, Action<TcpClient, CancellationToken> incomingClientHandler, ILogger serviceLogger) : IDisposable
+    public class Listener(System.Net.IPEndPoint inboundEndPoint, Action<TcpClient, CancellationToken> incomingClientHandler, ILogger serviceLogger, bool dualMode = false) : IDisposable
     {
         private TcpListener? _listener;
         private CancellationTokenSource? _cancelSource;
@@ -34,9 +34,9 @@ namespace ProxyMapService.Proxy.Listeners
         public async Task Start(int maxListenerStartRetries, ISessionManager sessionManager, CancellationToken stoppingToken)
         {
             _listener = new TcpListener(inboundEndPoint);
-            if (inboundEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6)
+            if (dualMode && inboundEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6)
             {
-                // Enable dual-mode before binding so IPv6Any ("Any") accepts IPv4 connections too.
+                // Enable dual-mode before binding so an IPv6Any listener accepts IPv4 connections too.
                 _listener.Server.DualMode = true;
             }
 
