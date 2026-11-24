@@ -83,6 +83,7 @@ const mergedTransactions = computed<MergedTrafficEntry[]>(() => {
       id: req.id,
       timestamp: new Date(req.timestamp).toLocaleTimeString(),
       inbound: req.inbound,
+      mode: req.mode,
       clientProto: req.clientProto,
       targetProto: req.targetProto,
       requestURI: req.requestURI,
@@ -224,6 +225,7 @@ const filters = reactive<ColumnFilters>(
 const valueGetters: Record<ColumnKey, (tx: MergedTrafficEntry) => string> = {
   time: tx => tx.timestamp,
   inbound: tx => tx.inbound,
+  mode: tx => tx.mode,
   route: tx => tx.route,
   clientProto: tx => tx.clientProto,
   targetProto: tx => tx.targetProto,
@@ -366,6 +368,9 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
                 <template v-else-if="column.key === 'inbound'">
                   {{ tx.inbound }}
                 </template>
+                <template v-else-if="column.key === 'mode'">
+                  {{ tx.mode }}
+                </template>
                 <template v-else-if="column.key === 'route'">
                   <span
                     :class="[
@@ -443,6 +448,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
           <div class="info-block">
             <p><strong>Time:</strong> <span class="mono">{{ selectedTransaction.timestamp }}</span></p>            
             <p><strong>Inbound:</strong> <span class="mono">{{ selectedTransaction.inbound }}</span></p>
+            <p><strong>Mode:</strong> <span class="mono">{{ selectedTransaction.mode }}</span></p>
             <p><strong>Route:</strong> <span class="mono">{{ selectedTransaction.route }}</span></p>
             <p><strong>Client Protocol:</strong> <span class="mono">{{ selectedTransaction.clientProto || '-' }}</span></p>
             <p><strong>Target Protocol:</strong> <span class="mono">{{ selectedTransaction.targetProto || '-' }}</span></p>
@@ -605,14 +611,15 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
 }
 /* Width distribution metrics */
 .col-time { width: 5%; }
-.col-inbound { width: 12%; }
+.col-inbound { width: 11%; }
+.col-mode { width: 5%; }
 .col-route { width: 11%; }
-.col-clientProto { width: 8%; }
-.col-targetProto { width: 8%; }
-.col-targetHost { width: 15%; }
-.col-requestURI { width: 15%; }
+.col-clientProto { width: 7%; }
+.col-targetProto { width: 7%; }
+.col-targetHost { width: 12%; }
+.col-requestURI { width: 12%; }
 .col-method { width: 5%; }
-.col-status { width: 15%; }
+.col-status { width: 10%; }
 .col-type { width: 5%; }
 .col-size { width: 5%; }
 .col-duration { width: 5%; }
@@ -625,6 +632,7 @@ const filteredTransactions = computed<MergedTrafficEntry[]>(() => {
 
 .cell-time { color: #858585; font-family: monospace; }
 .cell-inbound { color: #e3e3e3; font-family: monospace; }
+.cell-mode { color: #e3e3e3; font-family: monospace; }
 .cell-route { color: #e3e3e3; font-family: monospace; }
 .cell-clientProto { color: #e3e3e3; font-family: monospace; }
 .cell-targetProto { color: #e3e3e3; font-family: monospace; }

@@ -7,7 +7,8 @@
         IHttpCompletionLogger? CompletionLogger { get; }
         IHttpBodyLogger? RequestBodyLogger { get; }
         IHttpBodyLogger? ResponseBodyLogger { get; }
-        string? Inbound {  get; }
+        string? Inbound { get; }
+        string? Mode { get; }
         string? Route { get; }
         string? TargetHost { get; }
         bool ClientHttp2 { get; }

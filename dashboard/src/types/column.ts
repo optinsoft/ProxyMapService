@@ -1,6 +1,7 @@
 export type ColumnKey =
   | 'time'
   | 'inbound'
+  | 'mode'
   | 'route'
   | 'clientProto'
   | 'targetProto'
@@ -22,6 +23,7 @@ export interface Column {
 export const allColumns: Column[] = [
   { key: 'time', label: 'Time' },
   { key: 'inbound', label: 'Inbound' },
+  { key: 'mode', label: 'Mode' },
   { key: 'route', label: 'Route' },
   { key: 'clientProto', label: 'Client Proto' },
   { key: 'targetProto', label: 'Target Proto' },

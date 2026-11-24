@@ -221,6 +221,14 @@ namespace ProxyMapService.Proxy.Sessions
                 _ => null
             });
         }
+        public string? Mode
+        {
+            get => (Mapping.Listen.Mode switch {
+                ModeEnum.Forward => "Forward",
+                ModeEnum.Reverse => "Reverse",
+                _ => null
+            });
+        }
         public string? Route
         {
             get

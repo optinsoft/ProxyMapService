@@ -6,6 +6,7 @@
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public bool Completed { get; set; }
         public string? Inbound { get; set; }
+        public string? Mode { get; set; }
         public string? ClientProto { get; set; }
         public string? TargetProto { get; set; }
         public string? RequestURI { get; set; }

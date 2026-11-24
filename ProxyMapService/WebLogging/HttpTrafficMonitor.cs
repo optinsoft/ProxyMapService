@@ -50,6 +50,7 @@ namespace ProxyMapService.WebLogging
             if (sender is not IHttpLoggersProvider loggersProvider) return;
 
             var inbound = loggersProvider.Inbound;
+            var mode = loggersProvider.Mode;
             var route = loggersProvider.Route;
             var targetHost = loggersProvider.TargetHost;            
             var clientHttp2 = loggersProvider.ClientHttp2;
@@ -62,6 +63,7 @@ namespace ProxyMapService.WebLogging
                 if (HttpHeaderParser.ParseResponseRawHeaders(headers, e.HeaderId, completed) is HttpResponseDto responseDto)
                 {
                     responseDto.Inbound = inbound;
+                    responseDto.Mode = mode;
                     responseDto.Route = route;
                     responseDto.TargetHost = targetHost;
                     websocketLogService.QueueMessage(new HttpResponseMessageEntry(responseDto));
@@ -72,6 +74,7 @@ namespace ProxyMapService.WebLogging
                 if (HttpHeaderParser.ParseRequestRawHeaders(headers, e.HeaderId, completed, clientHttp2, targetHttp2) is HttpRequestDto requestDto)
                 {
                     requestDto.Inbound = inbound;
+                    requestDto.Mode = mode;
                     requestDto.Route = route;
                     requestDto.TargetHost = targetHost;
                     websocketLogService.QueueMessage(new HttpRequestMessageEntry(requestDto));
