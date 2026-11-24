@@ -30,7 +30,7 @@ Supported values:
 | `"Loopback"` / `"Localhost"` | loopback interface, `127.0.0.1` |
 | *omitted* / `null` | loopback interface (default, backward compatible) |
 | a concrete IP address | the specified interface only — e.g. `"192.168.1.10"` or `"::1"` (IPv6 loopback) |
-| `"*"` / `"Any"` | all interfaces; the listener socket works in IPv6 dual-mode and accepts both IPv4 and IPv6 connections |
+| `"*"` / `"Any"` | all interfaces (bound to `::`); IPv6 dual-mode is explicitly enabled on the listener socket, so both IPv4 and IPv6 connections are accepted |
 | `"Any4"` | all IPv4 interfaces only (`0.0.0.0`) |
 
 The setting is applied per mapping, so different mappings can listen on different interfaces (e.g. one port for local tooling on `Loopback` and another for the network on a specific address). An invalid value is logged as a warning (`Invalid Listen.IPAddress value '...'`) and the listener falls back to the loopback interface.

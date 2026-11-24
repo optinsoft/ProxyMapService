@@ -34,6 +34,11 @@ namespace ProxyMapService.Proxy.Listeners
         public async Task Start(int maxListenerStartRetries, ISessionManager sessionManager, CancellationToken stoppingToken)
         {
             _listener = new TcpListener(inboundEndPoint);
+            if (inboundEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6)
+            {
+                // Enable dual-mode before binding so IPv6Any ("Any") accepts IPv4 connections too.
+                _listener.Server.DualMode = true;
+            }
 
             bool retry = false;
             int retryNum = 0;
