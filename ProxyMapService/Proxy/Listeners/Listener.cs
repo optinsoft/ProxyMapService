@@ -33,8 +33,12 @@ namespace ProxyMapService.Proxy.Listeners
 
         public async Task Start(int maxListenerStartRetries, ISessionManager sessionManager, CancellationToken stoppingToken)
         {
+            var dualModeActive = dualMode && inboundEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6;
+            // Shown in log messages, e.g. "[::]:5010 (dual mode)".
+            var endpointDisplay = dualModeActive ? $"{inboundEndPoint} (dual mode)" : inboundEndPoint.ToString();
+
             _listener = new TcpListener(inboundEndPoint);
-            if (dualMode && inboundEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6)
+            if (dualModeActive)
             {
                 // Enable dual-mode before binding so an IPv6Any listener accepts IPv4 connections too.
                 _listener.Server.DualMode = true;
@@ -48,11 +52,11 @@ namespace ProxyMapService.Proxy.Listeners
                 {
                     retry = false;
                     await Task.Delay(1000, stoppingToken);
-                    serviceLogger.LogInformation("Starting listener on {} (retry #{}) ...", inboundEndPoint, retryNum);
+                    serviceLogger.LogInformation("Starting listener on {} (retry #{}) ...", endpointDisplay, retryNum);
                 }
                 else
                 {
-                    serviceLogger.LogInformation("Starting listener on {} ...", inboundEndPoint);
+                    serviceLogger.LogInformation("Starting listener on {} ...", endpointDisplay);
                 }
                 try
                 {
@@ -63,24 +67,24 @@ namespace ProxyMapService.Proxy.Listeners
                     if (ex.ErrorCode == 10048 && retryNum++ < maxListenerStartRetries)
                     {
                         serviceLogger.LogWarning("Unable to start listener on {}\r\n{}",
-                            inboundEndPoint,
+                            endpointDisplay,
                             "Only one usage of each socket address (protocol/network address/port) is normally permitted");
                         retry = true;
                     }
                     else
                     {
-                        serviceLogger.LogError(ex, "Unable to start listener on {}", inboundEndPoint);
+                        serviceLogger.LogError(ex, "Unable to start listener on {}", endpointDisplay);
                         return;
                     }
                 }
                 catch (Exception ex)
                 {
-                    serviceLogger.LogError(ex, "Unable to start listener on {}", inboundEndPoint);
+                    serviceLogger.LogError(ex, "Unable to start listener on {}", endpointDisplay);
                     return;
                 }
             } while (retry);
 
-            serviceLogger.LogInformation("Listening on {} ...", inboundEndPoint);
+            serviceLogger.LogInformation("Listening on {} ...", endpointDisplay);
 
             try
             {
@@ -133,7 +137,7 @@ namespace ProxyMapService.Proxy.Listeners
                 serviceLogger.LogError(ex, "Unexpected Error");
             }
 
-            serviceLogger.LogInformation("Listening on {} has finished", inboundEndPoint);
+            serviceLogger.LogInformation("Listening on {} has finished", endpointDisplay);
         }
 
         protected virtual async Task AcceptClients(TcpListener listener, CancellationToken stoppingToken)
