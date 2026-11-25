@@ -23,6 +23,8 @@ graph TD
         HttpSessionAPIHandler -- HandleSessionAPI --> SessionAPIHandler
         InitializeHandler -- HttpInitialized --> HttpAuthenticationHandler
         ProxyHandler -- HttpProxy --> HttpProxyHandler
+        ReverseProxyActionHandler -- HttpBypass --> HttpBypassHandler
+        ReverseProxyActionHandler -- HttpFile --> HttpFileHandler
     end
 
     subgraph Socks4 [SOCKS4 Protocol]
@@ -84,6 +86,9 @@ graph TD
     class Terminal_Terminate terminal;
         ProxyHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
+        ReverseProxyActionHandler -- Terminate --> Terminal_Terminate([Terminate])
+    class Terminal_Terminate terminal;
+        ReverseProxyActionHandler -- Proxy --> ProxyHandler
         SessionWebSocketHandler -- Terminate --> Terminal_Terminate([Terminate])
     class Terminal_Terminate terminal;
         TunnelHandler -- Terminate --> Terminal_Terminate([Terminate])
