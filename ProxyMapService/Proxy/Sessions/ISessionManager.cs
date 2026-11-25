@@ -14,7 +14,7 @@ namespace ProxyMapService.Proxy.Sessions
         string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList);
         void PopulateContext(SessionContext context);
         void ResetSessionId();
-        string AddOrUpdateUrlSubscription(WsConnection conn, string sessionId, string urlPattern);
+        string? AddUrlSubscription(WsConnection conn, string sessionId, string urlPattern);
         bool RemoveUrlSubscription(WsConnection conn, string subscriptionId);
         void RemoveConnectionSubscriptions(WsConnection conn);
         void NotifyIfRequestUrlMatches(SessionContext context, HttpRequestHeader requestHeader, bool isSecure);

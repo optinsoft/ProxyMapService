@@ -84,8 +84,15 @@ namespace ProxyMapService.Proxy.Handlers
                             case "subscribe":
                                 string pattern = root.TryGetProperty("pattern", out var p) && p.ValueKind == JsonValueKind.String
                                     ? p.GetString()! : ".*";
-                                var newSubId = context.SessionManager.AddOrUpdateUrlSubscription(conn, sessionId, pattern);
-                                await SendJsonAsync(conn, new { status = "subscribed", session_id = sessionId, sub_id = newSubId }, token);
+                                var newSubId = context.SessionManager.AddUrlSubscription(conn, sessionId, pattern);
+                                if (newSubId == null)
+                                {
+                                    await SendJsonAsync(conn, new { error = "too_many_subscriptions" }, token);
+                                }
+                                else
+                                {
+                                    await SendJsonAsync(conn, new { status = "subscribed", session_id = sessionId, sub_id = newSubId }, token);
+                                }
                                 break;
                             case "unsubscribe":
                                 if(!root.TryGetProperty("sub_id", out var s) || s.ValueKind != JsonValueKind.String)

@@ -21,8 +21,9 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly object _lock = new();
 
         private static readonly string _defaultSessionIdPattern = "^[A-Za-z]{8}";
-        private sealed record Subscription(Regex Filter, string SessionId, string Id);
-        private readonly ConcurrentDictionary<WsConnection, Subscription> _subscriptions = new();
+        private sealed record Subscription(WsConnection Connection, Regex Filter, string SessionId);
+        private readonly ConcurrentDictionary<string, Subscription> _subscriptions = new();
+        private const int MaxSubscriptionsPerConnection = 50;
 
         private readonly Channel<(string SessionId, string Method, string Url)> _eventChannel;
 
@@ -178,25 +179,35 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
-        public string AddOrUpdateUrlSubscription(WsConnection conn, string sessionId, string urlPattern)
+        public string? AddUrlSubscription(WsConnection conn, string sessionId, string urlPattern)
         {
+            if (_subscriptions.Values.Count(s => s.Connection == conn) >= MaxSubscriptionsPerConnection)
+            {
+                return null;
+            }
             var regex = new Regex(urlPattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
-            var subscriptionId = Guid.NewGuid().ToString();
-            var subscription = new Subscription(regex, sessionId, subscriptionId);
-            _subscriptions[conn] = subscription;
-            return subscriptionId;
+            var id = Guid.NewGuid().ToString("N");
+            var subscription = new Subscription(conn, regex, sessionId);
+            _subscriptions[id] = subscription;
+            return id;
         }
 
         public bool RemoveUrlSubscription(WsConnection conn, string subscriptionId)
         {
-            return _subscriptions.TryGetValue(conn, out var subscription)
-                && subscription.Id == subscriptionId
-                && _subscriptions.TryRemove(new KeyValuePair<WsConnection, Subscription>(conn, subscription));
+            return _subscriptions.TryGetValue(subscriptionId, out var sub)
+                && sub.Connection == conn
+                && _subscriptions.TryRemove(new KeyValuePair<string, Subscription>(subscriptionId, sub));
         }
 
         public void RemoveConnectionSubscriptions(WsConnection conn)
         {
-            _subscriptions.TryRemove(conn, out _);
+            foreach (var (id, sub) in _subscriptions)
+            {
+                if (sub.Connection == conn)
+                {
+                    _subscriptions.TryRemove(id, out _);
+                }
+            }
         }
 
         public void NotifyIfRequestUrlMatches(SessionContext context, HttpRequestHeader requestHeader, bool isSecure)
@@ -262,9 +273,12 @@ namespace ProxyMapService.Proxy.Sessions
         private async Task DistributeEventToWebSockets(string sessionId, string method, string url, CancellationToken stoppingToken)
         {
             byte[]? bytes = null;
-            foreach (var (conn, sub) in _subscriptions)
+            foreach (var (subId, sub) in _subscriptions)
             {
                 if (sub.SessionId != sessionId) continue;
+
+                var conn = sub.Connection;
+
                 if (!conn.IsOpen()) continue;
 
                 try
@@ -273,7 +287,7 @@ namespace ProxyMapService.Proxy.Sessions
                 }
                 catch (RegexMatchTimeoutException)
                 {
-                    _logger.LogWarning("Regex timeout for subscription {SubId}", sub.Id);
+                    _logger.LogWarning("Regex timeout for subscription {SubId}", subId);
                     continue;
                 }
 
@@ -285,7 +299,7 @@ namespace ProxyMapService.Proxy.Sessions
                 }
                 catch
                 {
-                    RemoveUrlSubscription(conn, sub.Id);
+                    RemoveConnectionSubscriptions(sub.Connection);
                 }
             }
         }
