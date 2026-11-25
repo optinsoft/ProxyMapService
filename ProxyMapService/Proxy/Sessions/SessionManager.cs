@@ -1,5 +1,6 @@
 ﻿using Fare;
 using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Ws;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
@@ -20,7 +21,7 @@ namespace ProxyMapService.Proxy.Sessions
 
         private static readonly string _defaultSessionIdPattern = "^[A-Za-z]{8}";
 
-        private readonly ConcurrentDictionary<string, (WebSocket Socket, Regex Filter)> _urlSubscriptions = new();
+        private readonly ConcurrentDictionary<string, (WsConnection Connection, Regex Filter)> _urlSubscriptions = new();
         private readonly Channel<(string SessionId, string Method, string Url)> _eventChannel;
 
         private readonly ILogger _logger;
@@ -175,10 +176,10 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
-        public void AddOrUpdateUrlSubscription(string sessionId, WebSocket socket, string urlPattern)
+        public void AddOrUpdateUrlSubscription(string sessionId, WsConnection wsConnection, string urlPattern)
         {
-            var regex = new Regex(urlPattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            _urlSubscriptions[sessionId] = (socket, regex);
+            var regex = new Regex(urlPattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
+            _urlSubscriptions[sessionId] = (wsConnection, regex);
         }
 
         public void RemoveUrlSubscription(string sessionId)
@@ -253,9 +254,9 @@ namespace ProxyMapService.Proxy.Sessions
                 return;
             }
 
-            var (socket, filter) = subscription;
+            var (wsConnection, filter) = subscription;
 
-            if (socket.State == WebSocketState.Open && filter.IsMatch(url))
+            if (wsConnection.IsOpen() && filter.IsMatch(url))
             {
 
                 var serializerOptions = new JsonSerializerOptions
@@ -277,12 +278,7 @@ namespace ProxyMapService.Proxy.Sessions
 
                 try
                 {
-                    await socket.SendAsync(
-                        new ArraySegment<byte>(responseBytes),
-                        WebSocketMessageType.Text,
-                        endOfMessage: true,
-                        stoppingToken
-                    );
+                    await wsConnection.SendTextAsync(responseBytes, stoppingToken);
                 }
                 catch
                 {

@@ -53,8 +53,7 @@
     <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
   </ItemGroup>
 
-  <Import Project="local.props"
-    Condition="Exists('local.props')" />
+  <Import Project="local.props" Condition="Exists('local.props')" />
 
   <ItemGroup Condition="'$(UseLocalProjects)' == 'true'">
     <ProjectReference Include="..\..\BoringSslStream\BoringSslStream\BoringSslStream.csproj" />

@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Ws;
 using System.Net.WebSockets;
 using HttpRequestHeader = ProxyMapService.Proxy.Headers.HttpRequestHeader;
 
@@ -13,7 +14,7 @@ namespace ProxyMapService.Proxy.Sessions
         string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList);
         void PopulateContext(SessionContext context);
         void ResetSessionId();
-        void AddOrUpdateUrlSubscription(string sessionId, WebSocket socket, string urlPattern);
+        void AddOrUpdateUrlSubscription(string sessionId, WsConnection wsConnection, string urlPattern);
         void RemoveUrlSubscription(string sessionId);
         void NotifyIfRequestUrlMatches(SessionContext context, HttpRequestHeader requestHeader, bool isSecure);
         Task StartEventProcessingLoop(CancellationToken stoppingToken);
