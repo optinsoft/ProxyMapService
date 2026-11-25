@@ -1,6 +1,7 @@
 ﻿using Fare;
 using ProxyMapService.Proxy.Configurations;
 using ProxyMapService.Proxy.Ws;
+using System;
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
@@ -20,8 +21,9 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly object _lock = new();
 
         private static readonly string _defaultSessionIdPattern = "^[A-Za-z]{8}";
+        private sealed record Subscription(Regex Filter, string SessionId, string Id);
+        private readonly ConcurrentDictionary<WsConnection, Subscription> _subscriptions = new();
 
-        private readonly ConcurrentDictionary<string, (WsConnection Connection, Regex Filter)> _urlSubscriptions = new();
         private readonly Channel<(string SessionId, string Method, string Url)> _eventChannel;
 
         private readonly ILogger _logger;
@@ -176,15 +178,25 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
-        public void AddOrUpdateUrlSubscription(string sessionId, WsConnection wsConnection, string urlPattern)
+        public string AddOrUpdateUrlSubscription(WsConnection conn, string sessionId, string urlPattern)
         {
             var regex = new Regex(urlPattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
-            _urlSubscriptions[sessionId] = (wsConnection, regex);
+            var subscriptionId = Guid.NewGuid().ToString();
+            var subscription = new Subscription(regex, sessionId, subscriptionId);
+            _subscriptions[conn] = subscription;
+            return subscriptionId;
         }
 
-        public void RemoveUrlSubscription(string sessionId)
+        public bool RemoveUrlSubscription(WsConnection conn, string subscriptionId)
         {
-            _urlSubscriptions.TryRemove(sessionId, out _);
+            return _subscriptions.TryGetValue(conn, out var subscription)
+                && subscription.Id == subscriptionId
+                && _subscriptions.TryRemove(new KeyValuePair<WsConnection, Subscription>(conn, subscription));
+        }
+
+        public void RemoveConnectionSubscriptions(WsConnection conn)
+        {
+            _subscriptions.TryRemove(conn, out _);
         }
 
         public void NotifyIfRequestUrlMatches(SessionContext context, HttpRequestHeader requestHeader, bool isSecure)
@@ -197,12 +209,12 @@ namespace ProxyMapService.Proxy.Sessions
             var sessionId = !string.IsNullOrEmpty(context.SessionId) ? context.SessionId : $":{context.Mapping.Listen.Port}"; 
             var method = requestHeader.HTTPVerb;
 
-            if ( /* string.IsNullOrEmpty(sessionId) || */ string.IsNullOrEmpty(method))
+            if (string.IsNullOrEmpty(method))
             {
                 return;
             }
 
-            if (!_urlSubscriptions.ContainsKey(sessionId))
+            if (!_subscriptions.Values.Any(s => s.SessionId == sessionId))
             {
                 return;
             }
@@ -249,40 +261,31 @@ namespace ProxyMapService.Proxy.Sessions
 
         private async Task DistributeEventToWebSockets(string sessionId, string method, string url, CancellationToken stoppingToken)
         {
-            if (!_urlSubscriptions.TryGetValue(sessionId, out var subscription))
+            byte[]? bytes = null;
+            foreach (var (conn, sub) in _subscriptions)
             {
-                return;
-            }
-
-            var (wsConnection, filter) = subscription;
-
-            if (wsConnection.IsOpen() && filter.IsMatch(url))
-            {
-
-                var serializerOptions = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-                    WriteIndented = false
-                };
-
-                var payload = JsonSerializer.Serialize(new
-                {
-                    event_type = "url_matched",
-                    timestamp = DateTime.UtcNow,
-                    session_id = sessionId,
-                    method,
-                    url
-                }, serializerOptions);
-
-                byte[] responseBytes = Encoding.UTF8.GetBytes(payload);
+                if (sub.SessionId != sessionId) continue;
+                if (!conn.IsOpen()) continue;
 
                 try
                 {
-                    await wsConnection.SendTextAsync(responseBytes, stoppingToken);
+                    if (!sub.Filter.IsMatch(url)) continue;
+                }
+                catch (RegexMatchTimeoutException)
+                {
+                    _logger.LogWarning("Regex timeout for subscription {SubId}", sub.Id);
+                    continue;
+                }
+
+                bytes ??= SerializeEvent(sessionId, method, url);
+
+                try
+                {
+                    await conn.SendTextAsync(bytes, stoppingToken);
                 }
                 catch
                 {
-                    _urlSubscriptions.TryRemove(sessionId, out _);
+                    RemoveUrlSubscription(conn, sub.Id);
                 }
             }
         }
@@ -461,5 +464,20 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
+        private static readonly JsonSerializerOptions EventJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+
+        private static byte[] SerializeEvent(string sessionId, string method, string url)
+        {
+            var payload = JsonSerializer.Serialize(new
+            {
+                event_type = "url_matched",
+                timestamp = DateTime.UtcNow,
+                session_id = sessionId,
+                method,
+                url
+            }, EventJsonOptions);
+
+            return Encoding.UTF8.GetBytes(payload);
+        }
     }
 }

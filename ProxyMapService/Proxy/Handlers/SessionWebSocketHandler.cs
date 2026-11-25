@@ -33,13 +33,14 @@ namespace ProxyMapService.Proxy.Handlers
                 keepAliveInterval: TimeSpan.FromSeconds(30)
             );
 
+            WsConnection conn = new(webSocket);
+
             string sessionId = !string.IsNullOrEmpty(context.SessionId) ? context.SessionId : $":{context.Mapping.Listen.Port}"; // : Guid.NewGuid().ToString();
 
             CancellationToken token = context.Token;
 
             try
             {
-                WsConnection wsConnection = new(webSocket);
                 while (webSocket.State == WebSocketState.Open)
                 {
                     (WebSocketMessageType type, string? text) msg;
@@ -74,7 +75,7 @@ namespace ProxyMapService.Proxy.Handlers
                             !root.TryGetProperty("action", out var actionEl) ||
                             actionEl.ValueKind != JsonValueKind.String)
                         {
-                            await SendJsonAsync(wsConnection, new { error = "missing_action" }, token);
+                            await SendJsonAsync(conn, new { error = "missing_action" }, token);
                             continue;
                         }
 
@@ -83,34 +84,50 @@ namespace ProxyMapService.Proxy.Handlers
                             case "subscribe":
                                 string pattern = root.TryGetProperty("pattern", out var p) && p.ValueKind == JsonValueKind.String
                                     ? p.GetString()! : ".*";
-                                context.SessionManager.AddOrUpdateUrlSubscription(sessionId, wsConnection, pattern);
-                                await SendJsonAsync(wsConnection, new { status = "subscribed", session_id = sessionId }, token);
+                                var newSubId = context.SessionManager.AddOrUpdateUrlSubscription(conn, sessionId, pattern);
+                                await SendJsonAsync(conn, new { status = "subscribed", session_id = sessionId, sub_id = newSubId }, token);
+                                break;
+                            case "unsubscribe":
+                                if(!root.TryGetProperty("sub_id", out var s) || s.ValueKind != JsonValueKind.String)
+        {
+                                    await SendJsonAsync(conn, new { error = "missing_sub_id" }, token);
+                                    break;
+                                }
+                                string subId = s.GetString()!;
+                                if (context.SessionManager.RemoveUrlSubscription(conn, subId)) 
+                                {
+                                    await SendJsonAsync(conn, new { status = "unsubscribed", sub_id = subId }, token);
+                                }
+                                else
+                                {
+                                    await SendJsonAsync(conn, new { error = "unknown_sub_id", sub_id = subId }, token);
+                                }
                                 break;
                             default:
-                                await SendJsonAsync(wsConnection, new { error = "unknown_action" }, token);
+                                await SendJsonAsync(conn, new { error = "unknown_action" }, token);
                                 break;
                         }
                     }
                     catch(JsonException)
                     {
-                        await SendJsonAsync(wsConnection, new { error = "invalid_json" }, token);
+                        await SendJsonAsync(conn, new { error = "invalid_json" }, token);
                     }
                     catch (ArgumentException) // RegexParseException inherits from ArgumentException
                     {
-                        await SendJsonAsync(wsConnection, new { error = "invalid_pattern" }, token);
+                        await SendJsonAsync(conn, new { error = "invalid_pattern" }, token);
                     }
                     catch (OperationCanceledException) { 
                         throw; // don't send error to the cancelled socket
                     }
                     catch (Exception)
                     {
-                        await SendJsonAsync(wsConnection, new { error = "internal_error" }, token);
+                        await SendJsonAsync(conn, new { error = "internal_error" }, token);
                     }
                 }
             }
             finally
             {
-                context.SessionManager.RemoveUrlSubscription(sessionId);
+                context.SessionManager.RemoveConnectionSubscriptions(conn);
             }
         }
 
