@@ -40,6 +40,7 @@ namespace ProxyMapService.Proxy.Handlers
                 string jsonBody = await reader.ReadToEndAsync();
 
                 Dictionary<string, string>? parameters = null;
+                string? explicitUserAgent = null;
 
                 if (!string.IsNullOrWhiteSpace(jsonBody))
                 {
@@ -47,10 +48,15 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         using var jsonDocument = JsonDocument.Parse(jsonBody);
                         var root = jsonDocument.RootElement;
-                        if (root.ValueKind == JsonValueKind.Object &&
-                            root.TryGetProperty("UsernameParameters", out var nestedElement))
+                        if (root.ValueKind == JsonValueKind.Object)
                         {
-                            if (nestedElement.ValueKind == JsonValueKind.Object)
+                            if (root.TryGetProperty("UserAgent", out var userAgentElement) &&
+                                userAgentElement.ValueKind == JsonValueKind.String)
+                            {
+                                explicitUserAgent = userAgentElement.GetString();
+                            }
+                            if (root.TryGetProperty("UsernameParameters", out var nestedElement) &&
+                                nestedElement.ValueKind == JsonValueKind.Object)
                             {
                                 parameters = new();
                                 foreach (var property in nestedElement.EnumerateObject())
@@ -75,7 +81,7 @@ namespace ProxyMapService.Proxy.Handlers
                     }
                 }
 
-                await NewSession(context, http, incomingStream, parameters);
+                await NewSession(context, http, incomingStream, parameters, explicitUserAgent);
                 return HandleStep.Continue;
             }
 
@@ -98,12 +104,21 @@ namespace ProxyMapService.Proxy.Handlers
             }
             if (path == "/session/new")
             {
-                Dictionary<string, string>? parameters = queryParams.Count > 0
-                    ? queryParams.ToDictionary(
-                        kvp => kvp.Key,
-                        kvp => kvp.Value.ToString())
-                    : null;
-                await NewSession(context, http, incomingStream, parameters);
+                Dictionary<string, string>? parameters = null;
+                string? explicitUserAgent = null;
+                if (queryParams.Count > 0)
+                {
+                    if (queryParams.TryGetValue("UserAgent", out var userAgentValue))
+                    {
+                        explicitUserAgent = userAgentValue.ToString();
+                    }
+                    parameters = queryParams
+                        .Where(kvp => kvp.Key != "UserAgent")
+                        .ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => kvp.Value.ToString());
+                }
+                await NewSession(context, http, incomingStream, parameters, explicitUserAgent);
                 return HandleStep.Continue;
             }
             if (path == "/session/reset")
@@ -146,8 +161,34 @@ namespace ProxyMapService.Proxy.Handlers
             await HttpProto.HttpReplyJson(context, http, incomingStream, info, headers);
         }
 
-        private static async Task NewSession(SessionContext context, HttpRequestHeader http, Stream incomingStream, Dictionary<string, string>? parameters)
+        private static async Task NewSession(SessionContext context, HttpRequestHeader http, Stream incomingStream,
+            Dictionary<string, string>? parameters, string? explicitUserAgent)
         {
+            // Client User-Agent: an explicit value wins; otherwise, unless an explicit value
+            // is already set for the sticky session, the Session API request's own
+            // User-Agent header is used. An explicit value survives session restarts.
+            string? userAgent;
+            bool userAgentExplicit;
+            if (explicitUserAgent != null)
+            {
+                userAgent = explicitUserAgent;
+                userAgentExplicit = true;
+            }
+            else
+            {
+                var (previousUserAgent, previousExplicit) = context.SessionManager.GetCurrentUserAgent();
+                if (previousExplicit)
+                {
+                    userAgent = previousUserAgent;
+                    userAgentExplicit = true;
+                }
+                else
+                {
+                    userAgent = http.UserAgent;
+                    userAgentExplicit = false;
+                }
+            }
+
             context.SessionManager.ResetSessionId();
             if (parameters != null)
             {
@@ -157,6 +198,7 @@ namespace ProxyMapService.Proxy.Handlers
                     context.UsernameParameters.SetValue(param.Key, param.Value);
                 }
             }
+            context.SessionManager.SetCurrentUserAgent(userAgent, userAgentExplicit);
             context.SessionManager.PopulateContext(context);
             var info = context.SessionManager.CurrentSessionInfo;
             string[] headers = [

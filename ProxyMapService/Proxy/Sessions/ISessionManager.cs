@@ -14,6 +14,8 @@ namespace ProxyMapService.Proxy.Sessions
         string? GetUsernameWithParameters(SessionContext context, string? username, UsernameParameterList? parameterList);
         void PopulateContext(SessionContext context);
         void ResetSessionId();
+        (string? UserAgent, bool Explicit) GetCurrentUserAgent();
+        void SetCurrentUserAgent(string? userAgent, bool explicitSet);
         string? AddUrlSubscription(WsConnection conn, string sessionId, string urlPattern);
         bool RemoveUrlSubscription(WsConnection conn, string subscriptionId);
         void RemoveConnectionSubscriptions(WsConnection conn);

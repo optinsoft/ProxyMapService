@@ -10,6 +10,7 @@ namespace ProxyMapService.Proxy.Sessions
 
         [JsonConverter(typeof(Rfc1123DateTimeConverter))]
         public DateTime? ExpiresAt { get; set; }
+        public string? UserAgent { get; set; }
         public Dictionary<string, string>? UsernameParameters { get; set; }
     }
 }

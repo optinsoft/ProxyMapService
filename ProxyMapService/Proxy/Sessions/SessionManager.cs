@@ -18,6 +18,8 @@ namespace ProxyMapService.Proxy.Sessions
         private int? _currentSessionTime = null;
         private DateTime? _currentSessionExpiresAt = null;
         private UsernameParameterList? _currentSessionUsernameParameters = null;
+        private string? _currentUserAgent = null;
+        private bool _currentUserAgentExplicit = false;
         private readonly object _lock = new();
 
         private static readonly string _defaultSessionIdPattern = "^[A-Za-z]{8}";
@@ -103,6 +105,7 @@ namespace ProxyMapService.Proxy.Sessions
                         SessionId = expired ? null : _currentSessionId,
                         SessionTime = expired ? null : _currentSessionTime,
                         ExpiresAt = expired ? null : _currentSessionExpiresAt,
+                        UserAgent = expired ? null : _currentUserAgent,
                         UsernameParameters = expired ? null : _currentSessionUsernameParameters?.ToDictionary(p => p.Name, p => p.Value, StringComparer.OrdinalIgnoreCase)
                     };
                     return info;
@@ -137,6 +140,7 @@ namespace ProxyMapService.Proxy.Sessions
                 if (!IsCurrentSessionExpired(now))
                 {
                     context.SessionTime = _currentSessionTime ?? context.Mapping.Listen.StickyProxyLifetime;
+                    context.SetClientUserAgent(_currentUserAgent);
                     if (context.UsernameParameters == null)
                     {
                         if (_currentSessionUsernameParameters != null)
@@ -147,6 +151,10 @@ namespace ProxyMapService.Proxy.Sessions
                 }
                 else
                 {
+                    // The sticky session has expired: the client User-Agent is dropped along
+                    // with the rest of the sticky session state.
+                    _currentUserAgent = null;
+                    _currentUserAgentExplicit = false;
                     context.SessionTime = context.Mapping.Listen.StickyProxyLifetime;
                 }
             }
@@ -180,6 +188,34 @@ namespace ProxyMapService.Proxy.Sessions
                 _currentSessionTime = null;
                 _currentSessionExpiresAt = null;
                 _currentSessionUsernameParameters = null;
+                _currentUserAgent = null;
+                _currentUserAgentExplicit = false;
+            }
+        }
+
+        /// <summary>
+        /// Returns the sticky session client User-Agent and whether it was set explicitly
+        /// via the Session API (as opposed to being taken from the Session API request headers).
+        /// </summary>
+        public (string? UserAgent, bool Explicit) GetCurrentUserAgent()
+        {
+            lock (_lock)
+            {
+                return (_currentUserAgent, _currentUserAgentExplicit);
+            }
+        }
+
+        /// <summary>
+        /// Sets the sticky session client User-Agent. explicitSet marks a value given
+        /// explicitly via the Session API: such a value survives session restarts and is
+        /// only replaced by another explicit value (see <see cref="ResetSessionId"/>).
+        /// </summary>
+        public void SetCurrentUserAgent(string? userAgent, bool explicitSet)
+        {
+            lock (_lock)
+            {
+                _currentUserAgent = userAgent;
+                _currentUserAgentExplicit = explicitSet;
             }
         }
 

@@ -72,7 +72,14 @@
         /// <summary>BoringSslStream — BoringSSL-backed, Chrome-like JA4 fingerprint.</summary>
         BoringSsl,
         /// <summary>NssStream — NSS-backed (Mozilla), Firefox-like JA4 fingerprint.</summary>
-        Nss
+        Nss,
+        /// <summary>
+        /// Resolved per session from the client (browser) User-Agent: Firefox → Nss,
+        /// Chrome-based (Chrome/Edge/Opera/Chromium) → BoringSsl, otherwise Native.
+        /// The User-Agent is set explicitly via the Session API (sticky session);
+        /// when unknown, falls back to Native.
+        /// </summary>
+        Auto
     }
 
     /// <summary>

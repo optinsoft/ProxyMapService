@@ -69,7 +69,27 @@ namespace ProxyMapService.Proxy.Sessions
         public List<HostRule> HostRules { get; private set; }
         public List<CacheRule> CacheRules { get; set; }
         public CacheManager CacheManager { get; private set; }
-        public string? UserAgent { get; private set; }
+        /// <summary>
+        /// Configured (HTTP:ConnectUserAgent) User-Agent sent in the CONNECT request
+        /// when chaining to an upstream proxy. Distinct from ClientUserAgent, which is
+        /// the browser User-Agent of the proxied client (set via the Session API).
+        /// </summary>
+        public string? ConnectUserAgent { get; private set; }
+        /// <summary>
+        /// Client (browser) User-Agent set explicitly via the Session API (or taken from
+        /// its request headers); used by TlsClientType.Auto to pick the upstream TLS
+        /// fingerprint. Not to be confused with ConnectUserAgent.
+        /// </summary>
+        public string? ClientUserAgent { get; private set; }
+
+        /// <summary>
+        /// Sets the client (browser) User-Agent, e.g. from the Session API sticky session.
+        /// Used by TlsClientType.Auto to pick the upstream TLS fingerprint.
+        /// </summary>
+        public void SetClientUserAgent(string? userAgent)
+        {
+            ClientUserAgent = userAgent;
+        }
         public ProxyCounters ProxyCounters { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }
@@ -315,7 +335,7 @@ namespace ProxyMapService.Proxy.Sessions
             HostRules = hostRules;
             CacheRules = cacheRules;
             CacheManager = cacheManager;
-            UserAgent = httpConfig.UserAgent;
+            ConnectUserAgent = httpConfig.UserAgent;
             SslClientConfig = sslClientConfig;
             SslServerConfig = sslServerConfig;
             ProxyCounters = proxyCounters;

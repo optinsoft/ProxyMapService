@@ -34,6 +34,7 @@ namespace ProxyMapService.Proxy.Headers
         public bool TransferEncodingChunked { get; private set; }
         public string? ProxyAuthorization { get; private set; }
         public string? Accept { get; private set; }
+        public string? UserAgent { get; private set; }
         public string? XMicrosoftAjax {  get; private set; }
         public string? SecWebSocketKey { get; private set; }
         public string? Connection { get; private set; }
@@ -74,6 +75,7 @@ namespace ProxyMapService.Proxy.Headers
                 self.TransferEncodingChunked = self.TransferEncoding != null && string.Equals("chunked", self.TransferEncoding, StringComparison.OrdinalIgnoreCase);
                 self.ProxyAuthorization = GetBasicProxyAuthorization(strings);
                 self.Accept = GetFirstHeaderValue(strings, "accept:");
+                self.UserAgent = GetFirstHeaderValue(strings, "user-agent:");
                 self.XMicrosoftAjax = GetFirstHeaderValue(strings, "x-microsoftajax:");
                 self.SecWebSocketKey = GetFirstHeaderValue(strings, "sec-websocket-key:");
                 self.Connection = GetFirstHeaderValue(strings, "connection:");

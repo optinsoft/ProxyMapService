@@ -24,9 +24,9 @@ namespace ProxyMapService.Proxy.Handlers
                     $"Host: {context.Host}"
 
                 ];
-                if (!string.IsNullOrEmpty(context.UserAgent))
+                if (!string.IsNullOrEmpty(context.ConnectUserAgent))
                 {
-                    connectHttpCommand.Add($"User-Agent: {context.UserAgent}");
+                    connectHttpCommand.Add($"User-Agent: {context.ConnectUserAgent}");
                 }
                 connectHttpCommand.Add("Proxy-Connection: Keep-Alive");
                 http = new HttpRequestHeader([.. connectHttpCommand]);

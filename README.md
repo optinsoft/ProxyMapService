@@ -371,6 +371,15 @@ Session responses carry the `X-Session-Id`, `X-Session-Time` (lifetime in minute
 * `GET /session/new?country=de&session=10` — every query parameter becomes a username parameter value;
 * `POST /session/new` with a JSON body `{ "UsernameParameters": { "country": "de" } }` — an invalid JSON payload is answered with `400 Bad Request`.
 
+`/session/new` also accepts an optional client User-Agent (top-level `UserAgent` key / `?UserAgent=` query parameter,
+not a username parameter). When it is not given explicitly, the `User-Agent` header of the Session API request
+itself is used. The value is stored for the sticky session and reported as `user_agent` in the session info.
+
+An explicitly set User-Agent survives session rotations (`/session/new`) and is only replaced by another
+explicit value, cleared by `/session/reset`, or dropped when the sticky session expires. It is consumed by
+`SslClientOptions:TlsClientType = "Auto"`: the upstream TLS ClientHello fingerprint (Chrome-like BoringSSL,
+Firefox-like NSS or the system one) is picked from the resolved browser family.
+
 ### WebSocket: `url_matched` events
 
 Connect to `ws://<domain>/session/ws` (text frames, JSON messages). Messages larger than **64 KB** close the socket with `MessageTooBig`, binary frames close it with `InvalidMessageType`; fragmented messages are reassembled.
@@ -452,9 +461,15 @@ Browser-like fingerprinting requires SSL decryption to be enabled (`DecryptSSL: 
 
 Restart the `ProxyMapService.exe` application for the change to take effect.
 
+Alternatively set `"TlsClientType": "Auto"` to pick the fingerprint per session from the client (browser) User-Agent:
+Firefox → NSS (Firefox-like), Chrome-based browsers (Chrome/Edge/Opera) → BoringSSL (Chrome-like), anything else → Native.
+The User-Agent is set via the Session API — `GET /session/new?UserAgent=...` or the top-level `UserAgent` key of the
+`POST /session/new` body (when omitted, the User-Agent header of the Session API request itself is used). When no
+User-Agent is known for the session, the connection falls back to Native and a warning is logged.
+
 ### Notes
 
-* The `TlsClientType` option (`Native` — default `SslStream`, `BoringSsl` — Chrome-like, `Nss` — Firefox-like) only affects the **outgoing (upstream)** TLS connections of decrypted traffic. It does not change how the proxy accepts client connections.
+* The `TlsClientType` option (`Native` — default `SslStream`, `BoringSsl` — Chrome-like, `Nss` — Firefox-like, `Auto` — resolved from the Session API client User-Agent) only affects the **outgoing (upstream)** TLS connections of decrypted traffic. It does not change how the proxy accepts client connections.
 * Because BoringSslStream and NssStream replicate the browser's ClientHello, the `EnabledSslProtocols` setting does not apply to them — the TLS versions and cipher suites are chosen exactly as the browser chooses them.
 * `TlsClientType: "Nss"` uses [NssStream](https://github.com/optinsoft/NssStream) — an NSS-backed TLS stream producing a Firefox-like ClientHello. On Linux the native binary links dynamically against the system NSS/NSPR libraries (`libnss3`, present on virtually every distribution); on Windows the required NSS/NSPR DLLs are shipped inside the NuGet package and are copied to the output directory automatically.
 * The Firefox-like ClientHello produced by NssStream depends on the version of the linked NSS: features unsupported by the linked NSS version (ECH GREASE, ML-KEM `X25519MLKEM768`, ML-DSA signature algorithms, brotli) are silently skipped. For example, on NSS 3.98 the JA4 is `t13d1616h2_86a278354501_0c27189014cf`, while on NSS 3.101+ it includes ML-KEM and therefore differs.
