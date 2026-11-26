@@ -9,7 +9,7 @@ Proxy Map Service may be useful for:
 * **Returning the correct error code** (`407 Proxy Authentication Required`) if authentication is required but the `Proxy-Authorization` header is missing. This fixes incorrect behavior of some proxy servers that simply drop the connection when authentication is absent.
 * **Allowing certain traffic** that is blocked by your server’s IP (e.g., captcha-solving services) to bypass the external proxy.
 
-For security, the Proxy Map Service only listens for incoming connections on the loopback interface (`127.0.0.1`).
+For security, the Proxy Map Service only listens for incoming connections on the loopback interface (`127.0.0.1`). Each mapping can open its port(s) on a different network interface if needed — see **Listening Address**.
 
 ---
 
@@ -61,7 +61,7 @@ Open the provided **Dashboard URL** in your web browser to access the management
 The ProxyMap Dashboard consists of three main tabs:
 * **Stats**: Displays general service information (uptime), active **LISTEN PORTS** (port `5001` is open by default as a proxy port in `appsettings.json`), data transfer counters (bytes sent/received), and current session details.
 * **Event Log**: Displays internal system logs. Click **Resume Capture** to start viewing live log messages.
-* **HTTP Traffic**: Displays HTTP requests passing through the service. Click **Resume Capture** to enable live traffic monitoring.
+* **HTTP Traffic**: Displays HTTP requests passing through the service. Click **Resume Capture** to enable live traffic monitoring. Columns can be shown or hidden to taste (the choice is persisted in the browser).
 
 ---
 
@@ -319,6 +319,109 @@ Notes:
 * `Set` values support `${VARIABLE}` placeholders substituted with **environment variables** (e.g. `"Bearer ${API_TOKEN}"`). A missing variable is substituted with an empty string; CR/LF characters are stripped from the resulting value to prevent header injection.
 * Only plain HTTP headers can be edited: HTTP/2 pseudo-headers (`:method`, `:path`, `:authority`, `:status`, ...) are never touched, and transport framing headers (`Content-Length`, `Transfer-Encoding`) must not be modified — the body tracking would break.
 * Supported for HTTP/1.1 in both directions, for HTTP/2 requests (h2 → h2 header rewriting), for responses translated from HTTP/2 to HTTP/1.1 and for responses served from the cache. For h2 → h2 sessions **response** header rules are not applied yet (the responses are forwarded as is) — use the h1 → h2 translation or an HTTP/1.1 upstream if response editing is required; in TLS passthrough mode (no decryption) headers are not edited at all.
+
+---
+
+## Session API
+
+The Session API is a small HTTP + WebSocket API served by the proxy itself on a dedicated hostname. Requests addressed to this hostname are intercepted by the proxy and never reach the upstream server. It lets an external program manage **proxy sessions** (see *Sessions and Username Parameters* below) and watch the traffic passing through the proxy.
+
+The API is served by every mapping — to reach it, simply send a request through the proxy to the configured domain. It works for plain HTTP requests, for `CONNECT` (HTTPS) requests and for SOCKS4/SOCKS5 connections.
+
+Configuration (top-level `SessionAPI` section):
+
+```json
+"SessionAPI": {
+	"Enabled": true,
+	"WebSocketsEnabled": true,
+	"Domain": "proxymapper"
+}
+```
+
+| Option | Meaning |
+|---|---|
+| `Enabled` | enables the API endpoints (`false` by default) |
+| `WebSocketsEnabled` | enables the `/session/ws` WebSocket endpoint |
+| `Domain` | the hostname that triggers the Session API handler (default `proxymapper`); an empty domain disables the API |
+
+### Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | GET | an HTML page with a link to download the root CA certificate |
+| `/session/` | GET | current session info as JSON |
+| `/session/new` | GET / POST | rotate the session: reset the current session id and start a new one |
+| `/session/reset` | GET | reset the current session (the next request will start a new one) |
+| `/session/certificate` | GET | download the root CA certificate as `ProxyMapRoot.crt` |
+| `/session/ws` | GET (WebSocket) | subscribe to `url_matched` traffic events (requires `WebSocketsEnabled`) |
+
+Session responses carry the `X-Session-Id`, `X-Session-Time` (lifetime in minutes) and `X-Expires-At` (RFC 1123) headers, and the body is JSON with the same information:
+
+```json
+{
+	"session_id": "AbCdEfGh",
+	"session_time": 10,
+	"expires_at": "Wed, 25 Nov 2026 17:00:00 GMT",
+	"username_parameters": { "account": "myuser", "country": "de" }
+}
+```
+
+`/session/new` accepts new username parameter values:
+
+* `GET /session/new?country=de&session=10` — every query parameter becomes a username parameter value;
+* `POST /session/new` with a JSON body `{ "UsernameParameters": { "country": "de" } }` — an invalid JSON payload is answered with `400 Bad Request`.
+
+### WebSocket: `url_matched` events
+
+Connect to `ws://<domain>/session/ws` (text frames, JSON messages). Messages larger than **64 KB** close the socket with `MessageTooBig`, binary frames close it with `InvalidMessageType`; fragmented messages are reassembled.
+
+Subscribe and unsubscribe:
+
+```json
+{"action": "subscribe", "pattern": "/one$"}
+{"status": "subscribed", "session_id": "AbCdEfGh", "sub_id": "3f2a9c..."}
+{"action": "unsubscribe", "sub_id": "3f2a9c..."}
+{"status": "unsubscribed", "sub_id": "3f2a9c..."}
+```
+
+* `pattern` is an optional regular expression (default `.*`); matching is case-insensitive and each match is limited to **100 ms** (client-supplied regexes are protected against ReDoS).
+* A connection can hold up to **50 subscriptions**; the excess `subscribe` is answered with `{"error": "too_many_subscriptions"}`.
+* Unsubscribing someone else's `sub_id` (or an unknown one) returns `{"error": "unknown_sub_id", "sub_id": "..."}`; a missing/non-string `sub_id` returns `{"error": "missing_sub_id"}`.
+* Closing the connection removes all of its subscriptions.
+
+For every proxied request of the session, each matching subscription receives an event:
+
+```json
+{
+	"event_type": "url_matched",
+	"timestamp": "2026-11-25T17:05:12.123Z",
+	"sub_id": "3f2a9c...",
+	"session_id": "AbCdEfGh",
+	"method": "GET",
+	"url": "https://example.com/one"
+}
+```
+
+A URL matching several subscriptions is delivered once per subscription. The subscription is bound to the session that was current when the connection was established: after `/session/new` rotates the session, an old connection keeps receiving events for the old session, and a newly opened connection picks up the new one. When sessions are not used, the session id is `:<listen port>`.
+
+Malformed commands are answered with stable error codes and the connection stays open: `missing_action`, `unknown_action`, `invalid_json`, `invalid_pattern`, `internal_error`.
+
+### Sessions and Username Parameters
+
+The proxy keeps **one current session per mapping**: a session id, its expiry time and a set of username parameter values. Values resolved within a session stay the same for all requests of that session until it expires or is rotated via the Session API — this is how a *sticky* exit IP is maintained with upstream proxies that support a session key in the username.
+
+The building blocks:
+
+* **`Listen.StickyProxyLifetime`** (minutes, `0` = off) — enables sticky sessions: a session id (8 random letters by default) is generated once and reused until the lifetime expires.
+* **`Authentication.ParseUsernameParameters`** — the username the client presents to the proxy is parsed as `account-key1-value1-key2-value2...`; the first part (`account`) is used for verification, the rest become parameter values available to the session.
+* **Username parameters** (`ProxyServer.UsernameParameters` and `Authentication.UsernameParameters`) — each parameter is appended to the upstream proxy username as `username-name-value`. A parameter is configured as `{ "Name": "...", "Value": "...", "Default": "...", "SessionId": false, "SessionTime": false }` where:
+	* `Value` starting with `$` references another parameter by name (e.g. one parsed from the client's username or provided via the Session API);
+	* `Default` starting with `^` is a regular expression — a random value matching the pattern is generated once per session;
+	* `SessionId: true` marks the parameter that carries the sticky session id (persisted by the session manager until the session expires);
+	* `SessionTime: true` marks the parameter that sets the session lifetime in minutes.
+* a parameter named `account` is not appended to the upstream username.
+
+The Session API endpoints above read (`/session/`) and rotate (`/session/new`, `/session/reset`) exactly this per-mapping session, optionally seeding it with new parameter values.
 
 ---
 
