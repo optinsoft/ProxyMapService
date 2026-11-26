@@ -199,18 +199,6 @@ namespace ProxyMapService.Proxy.Handlers
             Message = "[ResponseTunnel] [{hostname}:{port}] {ExceptionName}: {ErrorMessage}")]
         private static partial void LogResponseTunnelHostWarning(ILogger logger, string hostname, int port, string exceptionName, string errorMessage);
 
-        [LoggerMessage(
-            EventId = 1316,
-            Level = LogLevel.Information,
-            Message = "[TLS-ClientType] client User-Agent '{UserAgent}' resolved to {TlsClientType} for [{hostname}]")]
-        private static partial void LogClientUserAgentResolved(ILogger logger, string? userAgent, string tlsClientType, string hostname);
-
-        [LoggerMessage(
-            EventId = 1317,
-            Level = LogLevel.Warning,
-            Message = "[TLS-ClientType] TlsClientType=Auto but no client User-Agent is known for [{hostname}]: falling back to Native")]
-        private static partial void LogClientUserAgentUnknown(ILogger logger, string hostname);
-
         #endregion
 
         /// <summary>
@@ -477,12 +465,12 @@ namespace ProxyMapService.Proxy.Handlers
 
             if (context.ClientUserAgent == null)
             {
-                LogClientUserAgentUnknown(context.Logger, context.Host.Hostname);
+                context.Logger.LogClientUserAgentUnknown(context.Host);
                 return TlsClientType.Native;
             }
 
             var resolved = TlsClientTypeResolver.Resolve(context.ClientUserAgent);
-            LogClientUserAgentResolved(context.Logger, context.ClientUserAgent, resolved.ToString(), context.Host.Hostname);
+            context.Logger.LogClientUserAgentResolved(context.ClientUserAgent, resolved, context.Host);
             return resolved;
         }
 

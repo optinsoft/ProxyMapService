@@ -210,6 +210,7 @@ namespace ProxyMapService.Services
             TlsRecordSplitLog.SniSplitDetailedLogEnabled = detailedLogging.GetValue<bool>("LogSniSplitDetails", false);
             HandlerLogExtensions.ProtocolSwitchLogEnabled = detailedLogging.GetValue<bool>("LogProtocolSwitch", false);
             HandlerLogExtensions.ResponseSourceLogEnabled = detailedLogging.GetValue<bool>("LogResponseSource", false);
+            HandlerLogExtensions.ClientUserAgentLogEnabled = detailedLogging.GetValue<bool>("LogClientUserAgent", false);
 
             var clientHelloPeekTimeoutMs = _configuration.GetSection("TlsDetection")?.GetValue<int?>("ClientHelloPeekTimeoutMs") ?? 500;
             if (clientHelloPeekTimeoutMs > 0)

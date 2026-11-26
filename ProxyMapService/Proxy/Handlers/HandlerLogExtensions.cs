@@ -38,6 +38,13 @@ namespace ProxyMapService.Proxy.Handlers
         /// </summary>
         public static volatile bool ResponseSourceLogEnabled = false;
 
+        /// <summary>
+        /// Switches client User-Agent logging on/off (DetailedLogging:LogClientUserAgent, set by ProxyService).
+        /// Off by default. Covers TlsClientType.Auto resolution messages: the browser family
+        /// resolved from the client User-Agent, and the fallback when no User-Agent is known.
+        /// </summary>
+        public static volatile bool ClientUserAgentLogEnabled = false;
+
         [LoggerMessage(
             EventId = 1201,
             Level = LogLevel.Information,
@@ -849,6 +856,30 @@ namespace ProxyMapService.Proxy.Handlers
         {
             if (!ProtocolSwitchLogEnabled) return;
             logger.LogHttp1to2TranslationInternal(clientEndPoint, host.Hostname, host.Port);
+        }
+
+        [LoggerMessage(
+            EventId = 1324,
+            Level = LogLevel.Information,
+            Message = "Client User-Agent '{userAgent}' resolved to TlsClientType={tlsClientType} for [{hostname}:{port}]")]
+        private static partial void LogClientUserAgentResolvedInternal(this ILogger logger, string? userAgent, string tlsClientType, string hostname, int port);
+
+        public static void LogClientUserAgentResolved(this ILogger logger, string? userAgent, TlsClientType tlsClientType, HostAddress host)
+        {
+            if (!ClientUserAgentLogEnabled) return;
+            logger.LogClientUserAgentResolvedInternal(userAgent, tlsClientType.ToString(), host.Hostname, host.Port);
+        }
+
+        [LoggerMessage(
+            EventId = 1325,
+            Level = LogLevel.Warning,
+            Message = "TlsClientType=Auto but no client User-Agent is known for [{hostname}:{port}]: falling back to Native")]
+        private static partial void LogClientUserAgentUnknownInternal(this ILogger logger, string hostname, int port);
+
+        public static void LogClientUserAgentUnknown(this ILogger logger, HostAddress host)
+        {
+            if (!ClientUserAgentLogEnabled) return;
+            logger.LogClientUserAgentUnknownInternal(host.Hostname, host.Port);
         }
     }
 }
