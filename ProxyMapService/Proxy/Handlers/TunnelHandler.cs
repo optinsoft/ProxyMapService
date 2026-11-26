@@ -8,7 +8,6 @@ using ProxyMapService.Proxy.Sessions;
 using ProxyMapService.Proxy.Ssl;
 using ProxyMapService.Proxy.Tls;
 using ProxyMapService.Proxy.Tunnels;
-using BoringSsl;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -444,7 +443,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             return ResolveTlsClientType(context) switch
             {
-                TlsClientType.BoringSsl => new BoringSslStream(inner, context.UpstreamServerName ?? context.Host.Hostname),
+                TlsClientType.BoringSsl => new BoringSsl.BoringSslStream(inner, context.UpstreamServerName ?? context.Host.Hostname),
                 TlsClientType.Nss => new NssSsl.NssStream(inner, context.UpstreamServerName ?? context.Host.Hostname),
                 _ => new SslStream(inner),
             };
@@ -513,7 +512,7 @@ namespace ProxyMapService.Proxy.Handlers
         private static async Task<SslApplicationProtocol> AuthenticateOutgoingAsClientAsync(
             Stream outgoingSslStream, SslClientAuthenticationOptions sslClientOptions, CancellationToken token)
         {
-            if (outgoingSslStream is BoringSslStream boringSslStream)
+            if (outgoingSslStream is BoringSsl.BoringSslStream boringSslStream)
             {
                 await boringSslStream.AuthenticateAsClientAsync(sslClientOptions, token);
                 return ToAlpn(boringSslStream.AlpnSelected);
