@@ -452,9 +452,10 @@ namespace ProxyMapService.Proxy.Handlers
 
         /// <summary>
         /// Resolves the effective upstream TLS stream implementation. For TlsClientType.Auto
-        /// the choice is driven by the client (browser) User-Agent — set explicitly via the
-        /// Session API, or (when no sticky session User-Agent is known) falls back to Native
-        /// with a warning.
+        /// the choice is driven by the client (browser) User-Agent: first the one set via
+        /// the Session API, then the User-Agent of the incoming request itself (CONNECT for
+        /// HTTP proxying); when neither is known (e.g. SOCKS without a sticky session),
+        /// falls back to Native with a warning.
         /// </summary>
         private static TlsClientType ResolveTlsClientType(SessionContext context)
         {
@@ -463,14 +464,15 @@ namespace ProxyMapService.Proxy.Handlers
                 return context.SslClientConfig.TlsClientType;
             }
 
-            if (context.ClientUserAgent == null)
+            var userAgent = context.ClientUserAgent ?? context.Http?.UserAgent;
+            if (userAgent == null)
             {
                 context.Logger.LogClientUserAgentUnknown(context.Host);
                 return TlsClientType.Native;
             }
 
-            var resolved = TlsClientTypeResolver.Resolve(context.ClientUserAgent);
-            context.Logger.LogClientUserAgentResolved(context.ClientUserAgent, resolved, context.Host);
+            var resolved = TlsClientTypeResolver.Resolve(userAgent);
+            context.Logger.LogClientUserAgentResolved(userAgent, resolved, context.Host);
             return resolved;
         }
 
