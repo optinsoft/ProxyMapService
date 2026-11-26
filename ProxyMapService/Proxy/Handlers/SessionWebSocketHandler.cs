@@ -35,7 +35,9 @@ namespace ProxyMapService.Proxy.Handlers
 
             WsConnection conn = new(webSocket);
 
-            string sessionId = !string.IsNullOrEmpty(context.SessionId) ? context.SessionId : $":{context.Mapping.Listen.Port}"; // : Guid.NewGuid().ToString();
+            string sessionId = !string.IsNullOrEmpty(context.SessionId) 
+                ? context.SessionId 
+                : $":{context.InboundEndpoint.Port}"; // : Guid.NewGuid().ToString();
 
             CancellationToken token = context.Token;
 
@@ -131,6 +133,14 @@ namespace ProxyMapService.Proxy.Handlers
                         await SendJsonAsync(conn, new { error = "internal_error" }, token);
                     }
                 }
+            }
+            catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
+            {
+                context.Logger.LogWebSocketClosedPrematurely(sessionId);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                context.Logger.LogWebSocketCancelled(sessionId);
             }
             finally
             {

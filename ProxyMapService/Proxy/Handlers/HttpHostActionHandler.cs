@@ -1,4 +1,5 @@
 ﻿using ProxyMapService.Proxy.Configurations;
+using ProxyMapService.Proxy.Network;
 using ProxyMapService.Proxy.Proto;
 using ProxyMapService.Proxy.Sessions;
 using static ProxyMapService.Proxy.Utils.HostUtils;
@@ -12,16 +13,15 @@ namespace ProxyMapService.Proxy.Handlers
         public async Task<HandleStep> Run(SessionContext context)
         {
             var httpMode = context.Http?.HTTPVerb != "CONNECT";
-
             if (httpMode)
             {
                 context.SslMode = SslMode.No;
-                // context.Host must be initialized in InitializeHandler
-                if (IsSessionAPIHost(context.SessionAPI, context.Host))
-                {
-                    context.HostAction = SessionActionEnum.SessionAPI;
-                    return HandleStep.HttpSessionAPI;
-                }
+            }
+
+            if (IsSessionAPIHost(context))
+            {
+                context.HostAction = SessionActionEnum.SessionAPI;
+                return HandleStep.HttpSessionAPI;
             }
 
             if (context.Mapping.Listen.RejectHttpProxy && httpMode)

@@ -8,11 +8,6 @@ namespace ProxyMapService.Proxy.Utils
     {
         public static void SetContextHostAction(SessionContext context, bool httpMode)
         {
-            if (IsSessionAPIHost(context.SessionAPI, context.Host))
-            {
-                context.HostAction = SessionActionEnum.SessionAPI;
-                return;
-            }
             HostRule? hostRule = context.IgnoreHostRules ? null : HostRule.FindRule(context.Host, context.HostRules);
             SessionAction hostAction = hostRule?.Action switch
             {
@@ -124,17 +119,20 @@ namespace ProxyMapService.Proxy.Utils
             }
         }
 
-        public static bool IsSessionAPIHost(SessionAPIConfig config, HostAddress? host)
+        public static bool IsSessionAPIHost(SessionContext context)
         {
-            if (!config.Enabled)
+            if (!context.SessionAPI.Enabled)
             {
                 return false;
             }
-            if (string.IsNullOrEmpty(config.Domain))
+            if (string.IsNullOrEmpty(context.SessionAPI.Domain))
             {
                 return false;
             }
-            return config.Domain.Equals(host?.Hostname);
+            var host = context.Http?.Host != null
+                ? HostAddress.GetHostAddress(context.Http.Host, false)
+                : context.Host;
+            return context.SessionAPI.Domain.Equals(host?.Hostname);
         }
     }
 }

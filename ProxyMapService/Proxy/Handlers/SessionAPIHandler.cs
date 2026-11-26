@@ -76,7 +76,7 @@ namespace ProxyMapService.Proxy.Handlers
                 }
 
                 await NewSession(context, http, incomingStream, parameters);
-                return HandleStep.Terminate;
+                return HandleStep.Continue;
             }
 
             if (http.HTTPVerb != "GET")
@@ -89,12 +89,12 @@ namespace ProxyMapService.Proxy.Handlers
             if (path == "/")
             {
                 await ShowDownloadPage(context, http, incomingStream);
-                return HandleStep.Terminate;
+                return HandleStep.Continue;
             }
             if (path == "/session/")
             {
                 await GetSession(context, http, incomingStream);
-                return HandleStep.Terminate;
+                return HandleStep.Continue;
             }
             if (path == "/session/new")
             {
@@ -104,17 +104,17 @@ namespace ProxyMapService.Proxy.Handlers
                         kvp => kvp.Value.ToString())
                     : null;
                 await NewSession(context, http, incomingStream, parameters);
-                return HandleStep.Terminate;
+                return HandleStep.Continue;
             }
             if (path == "/session/reset")
             {
                 await ResetSession(context, http, incomingStream);
-                return HandleStep.Terminate;
+                return HandleStep.Continue;
             }
             if (path == "/session/certificate")
             {
                 await DownloadCertificate(context, http, incomingStream);
-                return HandleStep.Terminate;
+                return HandleStep.Continue;
             }
             if (context.SessionAPI.WebSocketsEnabled && path == "/session/ws")
             {

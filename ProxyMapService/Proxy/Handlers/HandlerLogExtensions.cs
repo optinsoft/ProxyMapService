@@ -423,6 +423,12 @@ namespace ProxyMapService.Proxy.Handlers
         public static partial void LogHttpBadRequest(this ILogger logger);
 
         [LoggerMessage(
+            EventId = 1281,
+            Level = LogLevel.Warning,
+            Message = "Incomplete HTTP request.")]
+        public static partial void LogHttpIncompleteRequest(this ILogger logger);
+
+        [LoggerMessage(
             EventId = 1284,
             Level = LogLevel.Warning,
             Message = "File not found: {path}")]
@@ -570,6 +576,30 @@ namespace ProxyMapService.Proxy.Handlers
             Level = LogLevel.Warning,
             Message = "Reverse proxy on port {Port}: Action = File requires a parsed HTTP request; non-HTTP connection is terminated")]
         public static partial void LogReverseProxyFileRequiresHttp(this ILogger logger, int port);
+
+        [LoggerMessage(
+            EventId = 1322,
+            Level = LogLevel.Information,
+            Message = "WebSocket client disconnected without close handshake (session {SessionId}).")]
+        private static partial void LogWebSocketClosedPrematurelyInternal(this ILogger logger, string sessionId);
+
+        public static void LogWebSocketClosedPrematurely(this ILogger logger, string sessionId)
+        {
+            if (!ConnectionLogEnabled) return;
+            logger.LogWebSocketClosedPrematurelyInternal(sessionId);
+        }
+
+        [LoggerMessage(
+            EventId = 1323,
+            Level = LogLevel.Information,
+            Message = "WebSocket session {SessionId} cancelled.")]
+        private static partial void LogWebSocketCancelledInternal(this ILogger logger, string sessionId);
+
+        public static void LogWebSocketCancelled(this ILogger logger, string sessionId)
+        {
+            if (!ConnectionLogEnabled) return;
+            logger.LogWebSocketCancelledInternal(sessionId);
+        }
 
         private static System.Net.EndPoint? GetTcpClientRemoteEndPoint(TcpClient client)
         {

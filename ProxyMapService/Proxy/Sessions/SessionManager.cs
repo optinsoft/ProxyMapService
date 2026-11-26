@@ -21,8 +21,12 @@ namespace ProxyMapService.Proxy.Sessions
         private readonly object _lock = new();
 
         private static readonly string _defaultSessionIdPattern = "^[A-Za-z]{8}";
-        private sealed record Subscription(WsConnection Connection, Regex Filter, string SessionId);
-        private readonly ConcurrentDictionary<string, Subscription> _subscriptions = new();
+        private sealed record Subscription(string Id, WsConnection Connection, Regex Filter, string SessionId);
+
+        private readonly object _subLock = new();
+        private readonly Dictionary<string, Subscription> _byId = new();
+        private volatile Dictionary<string, Subscription[]> _bySession = new();
+        //private readonly ConcurrentDictionary<string, Subscription> _subscriptions = new();
         private const int MaxSubscriptionsPerConnection = 50;
 
         private readonly Channel<(string SessionId, string Method, string Url)> _eventChannel;
@@ -179,34 +183,50 @@ namespace ProxyMapService.Proxy.Sessions
             }
         }
 
+        private void RebuildIndex() =>
+            _bySession = _byId.Values
+                .GroupBy(s => s.SessionId)
+                .ToDictionary(g => g.Key, g => g.ToArray());
+
         public string? AddUrlSubscription(WsConnection conn, string sessionId, string urlPattern)
         {
-            if (_subscriptions.Values.Count(s => s.Connection == conn) >= MaxSubscriptionsPerConnection)
-            {
-                return null;
-            }
             var regex = new Regex(urlPattern, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(100));
             var id = Guid.NewGuid().ToString("N");
-            var subscription = new Subscription(conn, regex, sessionId);
-            _subscriptions[id] = subscription;
+
+            lock (_subLock)
+            {
+                if (_byId.Values.Count(s => s.Connection == conn) >= MaxSubscriptionsPerConnection)
+                {
+                    return null;
+                }
+                _byId[id] = new Subscription(id, conn, regex, sessionId);
+                RebuildIndex();
+            }
             return id;
         }
 
         public bool RemoveUrlSubscription(WsConnection conn, string subscriptionId)
         {
-            return _subscriptions.TryGetValue(subscriptionId, out var sub)
-                && sub.Connection == conn
-                && _subscriptions.TryRemove(new KeyValuePair<string, Subscription>(subscriptionId, sub));
+            lock (_subLock)
+            {
+                if (!_byId.TryGetValue(subscriptionId, out var sub) || sub.Connection != conn)
+                {
+                    return false;
+                }
+                _byId.Remove(subscriptionId);
+                RebuildIndex();
+                return true;
+            }
         }
 
         public void RemoveConnectionSubscriptions(WsConnection conn)
         {
-            foreach (var (id, sub) in _subscriptions)
+            lock (_subLock)
             {
-                if (sub.Connection == conn)
-                {
-                    _subscriptions.TryRemove(id, out _);
-                }
+                var ids = _byId.Values.Where(s => s.Connection == conn).Select(s => s.Id).ToList();
+                if (ids.Count == 0) return;
+                foreach (var id in ids) _byId.Remove(id);
+                RebuildIndex();
             }
         }
 
@@ -217,7 +237,9 @@ namespace ProxyMapService.Proxy.Sessions
                 return;
             }
 
-            var sessionId = !string.IsNullOrEmpty(context.SessionId) ? context.SessionId : $":{context.Mapping.Listen.Port}"; 
+            var sessionId = !string.IsNullOrEmpty(context.SessionId) 
+                ? context.SessionId 
+                : $":{context.InboundEndpoint.Port}"; 
             var method = requestHeader.HTTPVerb;
 
             if (string.IsNullOrEmpty(method))
@@ -225,12 +247,20 @@ namespace ProxyMapService.Proxy.Sessions
                 return;
             }
 
-            if (!_subscriptions.Values.Any(s => s.SessionId == sessionId))
+            if (!_bySession.ContainsKey(sessionId))
             {
                 return;
             }
 
-            var interceptedUrl = GetHttpRequestUrl(context, requestHeader, isSecure);
+            string? interceptedUrl;
+            try
+            {
+                interceptedUrl  = GetHttpRequestUrl(context, requestHeader, isSecure);
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "Failed to build request URL for session {SessionId}", sessionId);
+                return;
+            }
             if (string.IsNullOrEmpty(interceptedUrl))
             {
                 return;
@@ -273,10 +303,12 @@ namespace ProxyMapService.Proxy.Sessions
         private async Task DistributeEventToWebSockets(string sessionId, string method, string url, CancellationToken stoppingToken)
         {
             byte[]? bytes = null;
-            foreach (var (subId, sub) in _subscriptions)
+            if (!_bySession.TryGetValue(sessionId, out var subs))
             {
-                if (sub.SessionId != sessionId) continue;
-
+                return;
+            }
+            foreach (var sub in subs)
+            {
                 var conn = sub.Connection;
 
                 if (!conn.IsOpen()) continue;
@@ -287,11 +319,11 @@ namespace ProxyMapService.Proxy.Sessions
                 }
                 catch (RegexMatchTimeoutException)
                 {
-                    _logger.LogWarning("Regex timeout for subscription {SubId}", subId);
+                    _logger.LogWarning("Regex timeout for subscription {SubId}", sub.Id);
                     continue;
                 }
 
-                bytes ??= SerializeEvent(sessionId, method, url);
+                bytes ??= SerializeEvent(sub.Id, sessionId, method, url);
 
                 try
                 {
@@ -299,7 +331,7 @@ namespace ProxyMapService.Proxy.Sessions
                 }
                 catch
                 {
-                    RemoveConnectionSubscriptions(sub.Connection);
+                    RemoveConnectionSubscriptions(sub.Connection); // socket is dead, remove all its subscriptions
                 }
             }
         }
@@ -445,47 +477,44 @@ namespace ProxyMapService.Proxy.Sessions
             }
 
             string scheme = isSecure ? "https" : "http";
+            int defaultPort = isSecure ? 443 : 80;
+            string pathAndQuery = string.IsNullOrEmpty(requestHeader.HTTPTargetPath) ? "/" : requestHeader.HTTPTargetPath;
 
             if (!string.IsNullOrEmpty(requestHeader.Host))
             {
-                var builder = new UriBuilder
+                // Host header already looks like "host" or "host:port" (or "[::1]:port"), use it as is,
+                // dropping only the default port
+                string hostAndPort = requestHeader.Host;
+                string defaultSuffix = $":{defaultPort}";
+                if (hostAndPort.EndsWith(defaultSuffix, StringComparison.Ordinal))
                 {
-                    Scheme = scheme,
-                    Path = requestHeader.HTTPTargetPath ?? "/",
-                    Host = requestHeader.Host,
-                };
-
-                return builder.Uri.ToString();
-            }
-            else
-            {
-                var host = requestHeader.HTTPTargetHost ?? context.Host;
-
-                if (host == null)
-                {
-                    return requestHeader.HTTPTargetPath;
+                    hostAndPort = hostAndPort.Substring(0, hostAndPort.Length - defaultSuffix.Length);
                 }
-
-                var builder = new UriBuilder
-                {
-                    Scheme = scheme,
-                    Path = requestHeader.HTTPTargetPath ?? "/",
-                    Host = host.Hostname,
-                    Port = host.Port,
-                };
-
-                return builder.Uri.ToString();
+                return $"{scheme}://{hostAndPort}{pathAndQuery}";
             }
+
+            var host = requestHeader.HTTPTargetHost ?? context.Host;
+            if (host == null)
+            {
+                return requestHeader.HTTPTargetPath;
+            }
+
+            string hostname = host.Hostname.Contains(':') && !host.Hostname.StartsWith('[')
+                ? $"[{host.Hostname}]" // IPv6 literal
+                : host.Hostname;
+            string port = host.Port == defaultPort ? string.Empty : $":{host.Port}";
+            return $"{scheme}://{hostname}{port}{pathAndQuery}";
         }
 
         private static readonly JsonSerializerOptions EventJsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
-        private static byte[] SerializeEvent(string sessionId, string method, string url)
+        private static byte[] SerializeEvent(string subId, string sessionId, string method, string url)
         {
             var payload = JsonSerializer.Serialize(new
             {
                 event_type = "url_matched",
                 timestamp = DateTime.UtcNow,
+                sub_id = subId,
                 session_id = sessionId,
                 method,
                 url

@@ -104,7 +104,6 @@ namespace ProxyMapService.Proxy.Handlers
             while (!token.IsCancellationRequested)
             {
                 using MemoryStream bodyStream = new();
-                bool bodyIncomplete = false;
 
                 if (firstRequestPreParsed)
                 {
@@ -195,15 +194,22 @@ namespace ProxyMapService.Proxy.Handlers
 
                     if (!context.RequestBodyTracker.Completed)
                     {
-                        // Peer closed the connection in the middle of the body: answer, but do not reuse.
-                        bodyIncomplete = true;
+                        context.Logger.LogHttpIncompleteRequest();
+                        await HttpProto.HttpReplyBadRequest(context, http, incomingStream);
+                        return HandleStep.Terminate;
                     }
                 }
 
                 bodyStream.Position = 0;
 
-                await HandleRequest(context, incomingStream, http!, bodyStream);
-                if (bodyIncomplete || !http!.KeepAlive)
+                var nextStep = await HandleRequest(context, incomingStream, http!, bodyStream);
+
+                if (nextStep != HandleStep.Continue)
+                {
+                    return nextStep;
+                }
+
+                if (!http!.KeepAlive)
                 {
                     return HandleStep.Terminate;
                 }
@@ -356,14 +362,14 @@ namespace ProxyMapService.Proxy.Handlers
             return (true, leftover);
         }
 
-        protected virtual async Task HandleRequest(SessionContext context, Stream incomingStream, 
+        protected virtual async Task<HandleStep> HandleRequest(SessionContext context, Stream incomingStream, 
             HttpRequestHeader http, MemoryStream bodyStream)
         {
             if (http.HTTPVerb != "GET")
             {
                 context.Logger.LogHttpMethodNotAllowed(http.HTTPVerb);
                 await HttpProto.HttpReplyMethodNotAllowed(context, http, incomingStream);
-                return;
+                return HandleStep.Terminate;
             }
 
             await using var fileStream = OpenFileFromHttpPath(context.RootDir, http.HTTPTargetPath, ["index.html", "index.htm"]);
@@ -372,12 +378,14 @@ namespace ProxyMapService.Proxy.Handlers
             {
                 context.Logger.LogHttpFileNotFound(http.HTTPTargetPath);
                 await HttpProto.HttpReplyNotFound(context, http, incomingStream);
-                return;
+                return HandleStep.Terminate;
             }
 
             await HttpProto.HttpReplyFileStream(context, http, incomingStream, fileStream);
 
             context.Logger.LogResponseFromFile(fileStream.Name);
+
+            return HandleStep.Continue;
         }
 
         private async Task<HandleStep> RunHttp2(SessionContext context, Stream incomingStream, ReadOnlyMemory<byte> initial)

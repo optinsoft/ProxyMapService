@@ -34,5 +34,6 @@
         HandleSessionAPI,
         HandleSessionWebSocket,
         Terminate,
+        Continue,
     }
 }
