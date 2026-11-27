@@ -188,14 +188,43 @@ namespace ProxyMapService.Proxy.Sessions
                 _currentSessionTime = null;
                 _currentSessionExpiresAt = null;
                 _currentSessionUsernameParameters = null;
+            }
+        }
+
+        /// <summary>
+        /// Clears the sticky session client User-Agent (session reset or sticky session expiry).
+        /// </summary>
+        public void ClearCurrentUserAgent()
+        {
+            lock (_lock)
+            {
                 _currentUserAgent = null;
                 _currentUserAgentExplicit = false;
             }
         }
 
         /// <summary>
+        /// Sets the sticky session client User-Agent. An explicit value (set via the Session
+        /// API) survives session restarts and is only replaced by another explicit value or
+        /// cleared (session reset / sticky session expiry). A value taken passively from
+        /// HTTP request headers (explicitSet=false) never overwrites an explicit value.
+        /// </summary>
+        public void SetCurrentUserAgent(string? userAgent, bool explicitSet)
+        {
+            if (userAgent == null) return;            
+            lock (_lock)
+            {
+                if (explicitSet || !_currentUserAgentExplicit)
+                {
+                    _currentUserAgent = userAgent;
+                    _currentUserAgentExplicit = explicitSet;
+                }
+            }
+        }
+
+        /// <summary>
         /// Returns the sticky session client User-Agent and whether it was set explicitly
-        /// via the Session API (as opposed to being taken from the Session API request headers).
+        /// via the Session API (as opposed to being taken passively from HTTP request headers).
         /// </summary>
         public (string? UserAgent, bool Explicit) GetCurrentUserAgent()
         {
@@ -206,17 +235,18 @@ namespace ProxyMapService.Proxy.Sessions
         }
 
         /// <summary>
-        /// Sets the sticky session client User-Agent. explicitSet marks a value given
-        /// explicitly via the Session API: such a value survives session restarts and is
-        /// only replaced by another explicit value (see <see cref="ResetSessionId"/>).
+        /// Passively updates the client User-Agent from a parsed HTTP request (h1 or h2).
+        /// Never overwrites an explicit value; also records the value on the current session.
         /// </summary>
-        public void SetCurrentUserAgent(string? userAgent, bool explicitSet)
+        public void UpdateClientUserAgent(SessionContext context, HttpRequestHeader requestHeader)
         {
-            lock (_lock)
+            var userAgent = requestHeader.UserAgent;
+            if (string.IsNullOrEmpty(userAgent))
             {
-                _currentUserAgent = userAgent;
-                _currentUserAgentExplicit = explicitSet;
+                return;
             }
+            context.SetClientUserAgent(userAgent);
+            SetCurrentUserAgent(userAgent, explicitSet: false);
         }
 
         private void RebuildIndex() =>

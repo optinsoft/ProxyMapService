@@ -45,6 +45,7 @@ namespace ProxyMapService.Proxy.Handlers
                         }
                         // do not fall back to the Host header when determining the connection target.                        
                         context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.Http);
+                        context.SessionManager.UpdateClientUserAgent(context, context.Http);                        
                         if (context.Http.BadRequest)
                         {
                             context.Logger.LogHttpBadRequest();
@@ -135,6 +136,7 @@ namespace ProxyMapService.Proxy.Handlers
                 // context.Host is intentionally NOT taken from the request:
                 // in reverse mode it comes from ReverseProxy.Target (ReverseProxyActionHandler).
                 context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.Http);
+                context.SessionManager.UpdateClientUserAgent(context, context.Http);
                 if (context.Http.BadRequest)
                 {
                     context.Logger.LogHttpBadRequest();

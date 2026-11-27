@@ -463,8 +463,8 @@ namespace ProxyMapService.Proxy.Handlers
                 return context.SslClientConfig.TlsClientType;
             }
 
-            var userAgent = context.ClientUserAgent ?? context.Http?.UserAgent;
-            if (userAgent == null)
+            var userAgent = context.ClientUserAgent;
+            if (string.IsNullOrEmpty(userAgent))
             {
                 context.Logger.LogClientUserAgentUnknown(context.Host);
                 return TlsClientType.Native;

@@ -76,6 +76,7 @@ namespace ProxyMapService.Proxy.Handlers
                     {
                         // CONNECT request
                         context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.RequestHeader);
+                        context.SessionManager.UpdateClientUserAgent(context,  context.RequestHeader);
                     }
 
                     if (!context.RequestHeader.BadRequest)

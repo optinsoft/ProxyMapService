@@ -247,6 +247,7 @@ namespace ProxyMapService.Proxy.Handlers
                 {
                     context.RequestHeader = new HttpRequestHeader(headerAndTail.HeaderLines);
                     context.RequestHeadersLogger?.OnHttpRequestHeader(context, context.RequestHeader);
+                    context.SessionManager.UpdateClientUserAgent(context, context.RequestHeader);
                     if (!context.RequestHeader.BadRequest)
                     {
                         context.SessionManager.NotifyIfRequestUrlMatches(context, context.RequestHeader, isSecure);
@@ -427,6 +428,7 @@ namespace ProxyMapService.Proxy.Handlers
 
             context.RequestHeader = request; // assigns RequestNum and puts the header into RequestHeaderHistory
             context.RequestHeadersLogger?.OnHttpRequestHeader(context, request);
+            context.SessionManager.UpdateClientUserAgent(context, context.RequestHeader);
             if (request.BadRequest)
             {
                 context.Logger.LogHttpBadRequest();

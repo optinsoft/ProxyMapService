@@ -164,31 +164,10 @@ namespace ProxyMapService.Proxy.Handlers
         private static async Task NewSession(SessionContext context, HttpRequestHeader http, Stream incomingStream,
             Dictionary<string, string>? parameters, string? explicitUserAgent)
         {
-            // Client User-Agent: an explicit value wins; otherwise, unless an explicit value
-            // is already set for the sticky session, the Session API request's own
-            // User-Agent header is used. An explicit value survives session restarts.
-            string? userAgent;
-            bool userAgentExplicit;
-            if (explicitUserAgent != null)
-            {
-                userAgent = explicitUserAgent;
-                userAgentExplicit = true;
-            }
-            else
-            {
-                var (previousUserAgent, previousExplicit) = context.SessionManager.GetCurrentUserAgent();
-                if (previousExplicit)
-                {
-                    userAgent = previousUserAgent;
-                    userAgentExplicit = true;
-                }
-                else
-                {
-                    userAgent = http.UserAgent;
-                    userAgentExplicit = false;
-                }
-            }
-
+            // Client User-Agent: an explicit value always wins; otherwise the Session API
+            // request's own User-Agent header is taken. SetCurrentUserAgent never overwrites
+            // an explicit value with a non-explicit one, so an explicit value survives
+            // session restarts (ResetSessionId no longer clears it).
             context.SessionManager.ResetSessionId();
             if (parameters != null)
             {
@@ -198,7 +177,10 @@ namespace ProxyMapService.Proxy.Handlers
                     context.UsernameParameters.SetValue(param.Key, param.Value);
                 }
             }
-            context.SessionManager.SetCurrentUserAgent(userAgent, userAgentExplicit);
+            if (!string.IsNullOrEmpty(explicitUserAgent))
+            {
+                context.SessionManager.SetCurrentUserAgent(explicitUserAgent, true);
+            }
             context.SessionManager.PopulateContext(context);
             var info = context.SessionManager.CurrentSessionInfo;
             string[] headers = [
@@ -212,6 +194,7 @@ namespace ProxyMapService.Proxy.Handlers
         private static async Task ResetSession(SessionContext context, HttpRequestHeader http, Stream incomingStream)
         {
             context.SessionManager.ResetSessionId();
+            context.SessionManager.ClearCurrentUserAgent();
             var response = new
             {
                 Success = true,

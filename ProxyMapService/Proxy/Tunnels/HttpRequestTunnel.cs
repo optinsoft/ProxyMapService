@@ -142,6 +142,7 @@ namespace ProxyMapService.Proxy.Tunnels
             var requestHeader = new HttpRequestHeader(headerAndTail.HeaderLines);
             _context.RequestHeader = requestHeader;
             _context.RequestHeadersLogger?.OnHttpRequestHeader(_context, requestHeader);
+            _context.SessionManager.UpdateClientUserAgent(_context, requestHeader);
 
             if (requestHeader.BadRequest)
             {

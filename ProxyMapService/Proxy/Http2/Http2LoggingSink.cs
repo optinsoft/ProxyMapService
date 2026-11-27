@@ -53,6 +53,7 @@ namespace ProxyMapService.Proxy.Http2
             State(stream).Request = request;
             context.RequestHeader = request; // assigns RequestNum and puts the header into RequestHeaderHistory
             context.RequestHeadersLogger?.OnHttpRequestHeader(context, request);
+            context.SessionManager.UpdateClientUserAgent(context, request);
             if (!request.BadRequest)
             {
                 context.SessionManager.NotifyIfRequestUrlMatches(context, request, context.RequestTunnelState.IsSecure);

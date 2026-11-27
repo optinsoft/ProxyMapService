@@ -375,10 +375,12 @@ Session responses carry the `X-Session-Id`, `X-Session-Time` (lifetime in minute
 not a username parameter). When it is not given explicitly, the `User-Agent` header of the Session API request
 itself is used. The value is stored for the sticky session and reported as `user_agent` in the session info.
 
-An explicitly set User-Agent survives session rotations (`/session/new`) and is only replaced by another
-explicit value, cleared by `/session/reset`, or dropped when the sticky session expires. It is consumed by
-`SslClientOptions:TlsClientType = "Auto"`: the upstream TLS ClientHello fingerprint (Chrome-like BoringSSL,
-Firefox-like NSS or the system one) is picked from the resolved browser family.
+An explicitly set User-Agent is never overwritten by passive detection: it is replaced only by another explicit
+value, cleared by `/session/reset`, or dropped when the sticky session expires. Without an explicit value the
+User-Agent is updated passively: every parsed HTTP request (HTTP/1.1 and HTTP/2) whose `User-Agent` is non-empty
+updates the sticky session value. The current value is consumed by `SslClientOptions:TlsClientType = "Auto"`:
+the upstream TLS ClientHello fingerprint (Chrome-like BoringSSL, Firefox-like NSS or the system one) is picked
+from the resolved browser family.
 
 ### WebSocket: `url_matched` events
 
