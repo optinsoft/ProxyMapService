@@ -24,7 +24,7 @@ namespace ProxyMapService.Proxy.Handlers
             if (IsSessionAPIHost(context))
             {
                 context.HostAction = SessionActionEnum.SessionAPI;
-                return HandleStep.HttpSessionAPI;
+                return HandleStep.Socks5SessionAPI;
             }
 
             SetContextHostAction(context, false);
