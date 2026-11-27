@@ -81,15 +81,14 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public void ResetSessionId_KeepsUserAgent()
+        public void ResetSessionId_ShouldResetUserAgent()
         {
-            // ResetSessionId (session rotation via /session/new) must not drop the
-            // User-Agent: it survives session restarts (explicit) or stays passive-filled.
+            // ResetSessionId (session rotation via /session/new) must drop the User-Agent
             _manager.SetCurrentUserAgent("Mozilla/5.0 ... Chrome/131.0", explicitSet: true);
             _manager.ResetSessionId();
             var (userAgent, explicitSet) = _manager.GetCurrentUserAgent();
-            Assert.Equal("Mozilla/5.0 ... Chrome/131.0", userAgent);
-            Assert.True(explicitSet);
+            Assert.Null(userAgent);
+            Assert.False(explicitSet);
         }
 
         [Fact]
