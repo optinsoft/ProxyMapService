@@ -184,7 +184,7 @@ namespace ProxyMapService.Proxy.Sessions
         {
             lock (_lock)
             {
-                _currentSessionId = string.Empty;
+                _currentSessionId = null;
                 _currentSessionTime = null;
                 _currentSessionExpiresAt = null;
                 _currentSessionUsernameParameters = null;
