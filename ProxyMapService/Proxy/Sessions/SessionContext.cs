@@ -35,6 +35,7 @@ namespace ProxyMapService.Proxy.Sessions
         public ProxyMapping Mapping { get; private set; }
         public IRoutingLoopDetector RoutingLoopDetector { get; private set; }
         public SessionAPIConfig SessionAPI { get; set; }
+        public int StickyProxyLifetime { get; set; }
         public SessionAction Action { get; set; }
         public bool DecryptSSL { get; set; }
         /// <summary>
@@ -303,6 +304,7 @@ namespace ProxyMapService.Proxy.Sessions
             Mapping = mapping;
             RoutingLoopDetector = loopDetector;
             SessionAPI = sessionAPI;
+            StickyProxyLifetime = mapping.Listen.StickyProxyLifetime ?? SessionAPI.StickyProxyLifetime;
             Action = mapping.Listen.Action switch {
                 ActionEnum.Allow => SessionActionEnum.Proxy,
                 ActionEnum.Deny => SessionActionEnum.Deny,

@@ -139,7 +139,7 @@ namespace ProxyMapService.Proxy.Sessions
             {
                 if (!IsCurrentSessionExpired(now))
                 {
-                    context.SessionTime = _currentSessionTime ?? context.Mapping.Listen.StickyProxyLifetime;
+                    context.SessionTime = _currentSessionTime ?? context.StickyProxyLifetime;
                     if (context.UsernameParameters == null)
                     {
                         if (_currentSessionUsernameParameters != null)
@@ -150,7 +150,7 @@ namespace ProxyMapService.Proxy.Sessions
                 }
                 else
                 {
-                    context.SessionTime = context.Mapping.Listen.StickyProxyLifetime;
+                    context.SessionTime = context.StickyProxyLifetime;
                     // The sticky session has expired: the explicit User-Agent is dropped along
                     // with the rest of the sticky session state.
                     _currentUserAgent = context.LastRequestUserAgent;
@@ -164,7 +164,7 @@ namespace ProxyMapService.Proxy.Sessions
                 ResolveSessionTime(context, now);
                 ResolveSessionId(context, now);
             }
-            else if (context.Mapping.Listen.StickyProxyLifetime > 0)
+            else if (context.StickyProxyLifetime > 0)
             {
                 // Resolve SessionTime first (before SessionId)
                 ResolveSessionTime(context, now);

@@ -35,7 +35,7 @@
         /// </summary>
         public string? IPAddress { get; set; }
         public bool RejectHttpProxy { get; set; } = false;
-        public int StickyProxyLifetime { get; set; } = 0;
+        public int? StickyProxyLifetime { get; set; }
         /// <summary>
         /// Forward (default) — the classic forward proxy; the target host is named by the client.
         /// Reverse — a reverse proxy; the target host is taken from the ReverseProxy settings.
