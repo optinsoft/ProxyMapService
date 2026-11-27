@@ -194,7 +194,6 @@ namespace ProxyMapService.Proxy.Handlers
         private static async Task ResetSession(SessionContext context, HttpRequestHeader http, Stream incomingStream)
         {
             context.SessionManager.ResetSessionId();
-            context.SessionManager.ClearCurrentUserAgent();
             var response = new
             {
                 Success = true,

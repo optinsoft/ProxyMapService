@@ -80,16 +80,12 @@ namespace ProxyMapService.Proxy.Sessions
         /// its request headers); used by TlsClientType.Auto to pick the upstream TLS
         /// fingerprint. Not to be confused with ConnectUserAgent.
         /// </summary>
-        public string? ClientUserAgent { get; private set; }
-
+        public string? ClientUserAgent { get; set; }
         /// <summary>
-        /// Sets the client (browser) User-Agent, e.g. from the Session API sticky session.
-        /// Used by TlsClientType.Auto to pick the upstream TLS fingerprint.
+        /// Last HTTP request User-Agent; SetClientUsetAgent() set it. Used by SessionManager
+        /// to restore _currentUserAgent when sticky session expired
         /// </summary>
-        public void SetClientUserAgent(string? userAgent)
-        {
-            ClientUserAgent = userAgent;
-        }
+        public string? LastRequestUserAgent { get; set; }
         public ProxyCounters ProxyCounters { get; private set; }
         public ILogger Logger { get; private set; }
         public CancellationToken Token { get; private set; }

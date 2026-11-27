@@ -81,16 +81,6 @@ namespace ProxyMapService.Tests
         }
 
         [Fact]
-        public void ClearCurrentUserAgent_ClearsValue()
-        {
-            _manager.SetCurrentUserAgent("Mozilla/5.0 ... Chrome/131.0", explicitSet: true);
-            _manager.ClearCurrentUserAgent();
-            var (userAgent, explicitSet) = _manager.GetCurrentUserAgent();
-            Assert.Null(userAgent);
-            Assert.False(explicitSet);
-        }
-
-        [Fact]
         public void ResetSessionId_KeepsUserAgent()
         {
             // ResetSessionId (session rotation via /session/new) must not drop the
