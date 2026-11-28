@@ -63,7 +63,7 @@ namespace ProxyMapService.Proxy.Handlers
                     }
 
                     if (msg.text == null) 
-{
+                    {
                         await webSocket.CloseAsync(WebSocketCloseStatus.InvalidMessageType, "Text only", token);
                         break;
                     }
@@ -98,7 +98,7 @@ namespace ProxyMapService.Proxy.Handlers
                                 break;
                             case "unsubscribe":
                                 if(!root.TryGetProperty("sub_id", out var s) || s.ValueKind != JsonValueKind.String)
-        {
+                                {
                                     await SendJsonAsync(conn, new { error = "missing_sub_id" }, token);
                                     break;
                                 }
