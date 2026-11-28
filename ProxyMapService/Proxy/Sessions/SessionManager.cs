@@ -362,7 +362,6 @@ namespace ProxyMapService.Proxy.Sessions
 
         private async Task DistributeEventToWebSockets(string sessionId, string method, string url, CancellationToken stoppingToken)
         {
-            byte[]? bytes = null;
             if (!_bySession.TryGetValue(sessionId, out var subs))
             {
                 return;
@@ -383,7 +382,7 @@ namespace ProxyMapService.Proxy.Sessions
                     continue;
                 }
 
-                bytes ??= SerializeEvent(sub.Id, sessionId, method, url);
+                var bytes = SerializeEvent(sub.Id, sessionId, method, url);
 
                 try
                 {
